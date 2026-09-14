@@ -1,0 +1,23 @@
+package com.cyclosa.role.dto.response;
+
+import com.cyclosa.common.enums.DataScope;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.UUID;
+
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class EffectivePermissionResponse {
+
+    private UUID permissionId;
+    private String permissionCode;
+    private String module;
+    private String action;
+    private String description;
+    private DataScope dataScope;
+}
