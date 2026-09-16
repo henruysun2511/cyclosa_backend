@@ -1,6 +1,7 @@
 package com.cyclosa.role.controller;
 
 import com.cyclosa.common.annotation.RequirePermission;
+import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.role.dto.request.AssignUserRolesRequest;
 import com.cyclosa.role.dto.response.EffectivePermissionResponse;
 import com.cyclosa.role.service.UserRoleService;
@@ -18,7 +19,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "02. Roles", description = "Gán vai trò và tra cứu quyền hạn người dùng")
+@Tag(name = "Roles", description = "Gán vai trò và tra cứu quyền hạn người dùng")
 public class UserRoleController {
 
     private final UserRoleService userRoleService;
@@ -27,19 +28,19 @@ public class UserRoleController {
     @PreAuthorize("@perm.has('user.assign_role')")
     @RequirePermission("user.assign_role")
     @Operation(summary = "Gán danh sách vai trò cho một người dùng")
-    public ResponseEntity<Void> assignRolesToUser(
+    public ResponseEntity<ApiResponse<Void>> assignRolesToUser(
             @PathVariable UUID userId,
             @Valid @RequestBody AssignUserRolesRequest req
     ) {
         userRoleService.assignRolesToUser(userId, req);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok(ApiResponse.noContent("Gán vai trò cho người dùng thành công"));
     }
 
     @GetMapping("/{userId}/effective-permissions")
     @PreAuthorize("@perm.has('role.view')")
     @RequirePermission("role.view")
     @Operation(summary = "Lấy danh sách toàn bộ quyền thực tế kèm DataScope cao nhất của người dùng")
-    public ResponseEntity<List<EffectivePermissionResponse>> getEffectivePermissions(@PathVariable UUID userId) {
-        return ResponseEntity.ok(userRoleService.getEffectivePermissions(userId));
+    public ResponseEntity<ApiResponse<List<EffectivePermissionResponse>>> getEffectivePermissions(@PathVariable UUID userId) {
+        return ResponseEntity.ok(ApiResponse.ok(userRoleService.getEffectivePermissions(userId), "Lấy danh sách quyền hạn thành công"));
     }
 }

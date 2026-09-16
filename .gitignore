@@ -4,9 +4,6 @@ target/
 !**/src/main/**/target/
 !**/src/test/**/target/
 
-### Docs ###
-/docs/
-
 ### Local config with secrets ###
 application-local.properties
 application-dev.properties

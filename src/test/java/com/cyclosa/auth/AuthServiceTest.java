@@ -117,7 +117,7 @@ class AuthServiceTest {
 
             assertThatThrownBy(() -> authService.register(req))
                     .isInstanceOf(AppException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.USER_EMAIL_EXISTS);
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.auth.exception.AuthErrorCode.USER_EMAIL_EXISTS);
         }
     }
 
@@ -145,18 +145,96 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("Lỗi: mật khẩu không đúng")
-        void wrongPassword() {
+        @DisplayName("Lỗi: tài khoản chưa kích hoạt (PENDING_ACTIVATION)")
+        void pendingActivation() {
+            activeUser.setStatus(UserStatus.PENDING_ACTIVATION);
             LoginRequest req = new LoginRequest();
             req.setEmail("test@cyclosa.com");
-            req.setPassword("WrongPassword");
+            req.setPassword("Password@123");
 
             given(userRepository.findByEmailWithRoles("test@cyclosa.com")).willReturn(Optional.of(activeUser));
-            given(passwordEncoder.matches("WrongPassword", "$2a$hashed")).willReturn(false);
+            given(passwordEncoder.matches("Password@123", "$2a$hashed")).willReturn(true);
 
             assertThatThrownBy(() -> authService.login(req))
                     .isInstanceOf(AppException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.INVALID_CREDENTIALS);
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.auth.exception.AuthErrorCode.ACCOUNT_PENDING_ACTIVATION);
+        }
+
+        @Test
+        @DisplayName("Lỗi: tài khoản bị tạm khóa (LOCKED)")
+        void accountLocked() {
+            activeUser.setStatus(UserStatus.LOCKED);
+            LoginRequest req = new LoginRequest();
+            req.setEmail("test@cyclosa.com");
+            req.setPassword("Password@123");
+
+            given(userRepository.findByEmailWithRoles("test@cyclosa.com")).willReturn(Optional.of(activeUser));
+            given(passwordEncoder.matches("Password@123", "$2a$hashed")).willReturn(true);
+
+            assertThatThrownBy(() -> authService.login(req))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.auth.exception.AuthErrorCode.ACCOUNT_LOCKED);
+        }
+    }
+
+    @Nested
+    @DisplayName("activateAccount()")
+    class ActivateAccountTests {
+
+        @Test
+        @DisplayName("Thành công: token hợp lệ, đặt mật khẩu và kích hoạt tài khoản")
+        void success() {
+            com.cyclosa.auth.dto.request.ActivateAccountRequest req =
+                    new com.cyclosa.auth.dto.request.ActivateAccountRequest("token-123", "NewPass@123", "NewPass@123");
+
+            User pendingUser = User.builder()
+                    .email("pending@cyclosa.com")
+                    .fullName("Pending User")
+                    .status(UserStatus.PENDING_ACTIVATION)
+                    .version(0)
+                    .build();
+            pendingUser.setId(testUserId);
+
+            given(redisTemplate.opsForValue()).willReturn(valueOps);
+            given(valueOps.get(AuthService.ACTIVATION_TOKEN_PREFIX + "token-123")).willReturn(testUserId.toString());
+            given(userRepository.findByIdWithRoles(testUserId)).willReturn(Optional.of(pendingUser));
+            given(passwordEncoder.encode("NewPass@123")).willReturn("$2a$newPassHash");
+            given(userRepository.save(any(User.class))).willReturn(pendingUser);
+            given(jwtUtil.generateAccessToken(eq(testUserId), eq("pending@cyclosa.com"), anyList())).willReturn("access-token");
+            given(jwtUtil.generateRefreshToken(testUserId, "pending@cyclosa.com")).willReturn("refresh-token");
+
+            TokenResponse res = authService.activateAccount(req);
+
+            assertThat(res.getAccessToken()).isEqualTo("access-token");
+            assertThat(pendingUser.getStatus()).isEqualTo(UserStatus.ACTIVE);
+            assertThat(pendingUser.getPasswordHash()).isEqualTo("$2a$newPassHash");
+            verify(redisTemplate).delete(AuthService.ACTIVATION_TOKEN_PREFIX + "token-123");
+            verify(redisTemplate).delete(AuthService.USER_ACTIVATION_PREFIX + testUserId);
+        }
+
+        @Test
+        @DisplayName("Lỗi: mật khẩu xác nhận không khớp")
+        void passwordMismatch() {
+            com.cyclosa.auth.dto.request.ActivateAccountRequest req =
+                    new com.cyclosa.auth.dto.request.ActivateAccountRequest("token-123", "NewPass@123", "Mismatch@123");
+
+            assertThatThrownBy(() -> authService.activateAccount(req))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.common.exception.CommonErrorCode.VALIDATION_FAILED);
+        }
+
+        @Test
+        @DisplayName("Lỗi: token không tồn tại hoặc đã hết hạn trong Redis")
+        void invalidToken() {
+            com.cyclosa.auth.dto.request.ActivateAccountRequest req =
+                    new com.cyclosa.auth.dto.request.ActivateAccountRequest("expired-token", "NewPass@123", "NewPass@123");
+
+            given(redisTemplate.opsForValue()).willReturn(valueOps);
+            given(valueOps.get(AuthService.ACTIVATION_TOKEN_PREFIX + "expired-token")).willReturn(null);
+
+            assertThatThrownBy(() -> authService.activateAccount(req))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.auth.exception.AuthErrorCode.ACTIVATION_TOKEN_INVALID);
         }
     }
 }

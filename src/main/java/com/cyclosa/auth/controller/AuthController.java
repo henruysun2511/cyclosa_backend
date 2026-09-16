@@ -2,9 +2,9 @@ package com.cyclosa.auth.controller;
 
 import com.cyclosa.role.dto.response.EffectivePermissionResponse;
 import com.cyclosa.role.service.UserRoleService;
+import com.cyclosa.auth.dto.request.ActivateAccountRequest;
 import com.cyclosa.auth.dto.request.LoginRequest;
 import com.cyclosa.auth.dto.request.RefreshTokenRequest;
-import com.cyclosa.auth.dto.request.RegisterRequest;
 import com.cyclosa.auth.dto.response.TokenResponse;
 import com.cyclosa.auth.dto.response.UserInfo;
 import com.cyclosa.auth.service.AuthService;
@@ -28,21 +28,20 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Authentication", description = "Xác thực: đăng ký, đăng nhập, refresh token, logout, lấy thông tin cá nhân & quyền hạn")
+@Tag(name = "Auth", description = "Xác thực: kích hoạt, đăng nhập, refresh token, logout, lấy thông tin cá nhân & quyền hạn")
 public class AuthController {
 
     private final AuthService authService;
     private final UserRoleService userRoleService;
 
-    @PostMapping("/register")
-    @Operation(summary = "Đăng ký tài khoản", description = "Tạo tài khoản EMPLOYEE mới và trả về access token & refresh token")
-    public ResponseEntity<ApiResponse<TokenResponse>> register(
-            @Valid @RequestBody RegisterRequest request) {
+    @PostMapping("/activate")
+    @Operation(summary = "Kích hoạt tài khoản nhân viên", description = "Nhân viên dùng mã kích hoạt từ email để đặt mật khẩu lần đầu và nhận token đăng nhập")
+    public ResponseEntity<ApiResponse<TokenResponse>> activate(
+            @Valid @RequestBody ActivateAccountRequest request) {
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ApiResponse.created(
-                        authService.register(request),
-                        "Đăng ký tài khoản thành công"));
+        return ResponseEntity.ok(ApiResponse.ok(
+                authService.activateAccount(request),
+                "Kích hoạt tài khoản và thiết lập mật khẩu thành công"));
     }
 
     @PostMapping("/login")
@@ -50,7 +49,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<TokenResponse>> login(
             @Valid @RequestBody LoginRequest request) {
 
-        return ResponseEntity.ok(ApiResponse.ok(authService.login(request)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.login(request), "Đăng nhập thành công"));
     }
 
     @PostMapping("/refresh")
@@ -58,7 +57,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<TokenResponse>> refresh(
             @Valid @RequestBody RefreshTokenRequest request) {
 
-        return ResponseEntity.ok(ApiResponse.ok(authService.refreshToken(request)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.refreshToken(request), "Làm mới token thành công"));
     }
 
     @PostMapping("/logout")
@@ -76,7 +75,7 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<UserInfo>> getCurrentUser(Authentication authentication) {
         UUID userId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(ApiResponse.ok(authService.getCurrentUser(userId)));
+        return ResponseEntity.ok(ApiResponse.ok(authService.getCurrentUser(userId), "Lấy thông tin tài khoản thành công"));
     }
 
     @GetMapping("/me/permissions")
@@ -84,7 +83,7 @@ public class AuthController {
     @SecurityRequirement(name = "bearerAuth")
     public ResponseEntity<ApiResponse<List<EffectivePermissionResponse>>> getMyPermissions(Authentication authentication) {
         UUID userId = SecurityUtils.currentUserId(authentication);
-        return ResponseEntity.ok(ApiResponse.ok(userRoleService.getEffectivePermissions(userId)));
+        return ResponseEntity.ok(ApiResponse.ok(userRoleService.getEffectivePermissions(userId), "Lấy danh sách quyền hạn thành công"));
     }
 
     private String extractToken(HttpServletRequest request) {

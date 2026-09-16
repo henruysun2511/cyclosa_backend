@@ -73,3 +73,11 @@ JWT_SECRET=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
 ### Swagger UI API Docs:
 - `http://localhost:8080/swagger-ui.html`
 - `http://localhost:8080/v3/api-docs`
+
+---
+
+## 5. Quy chuẩn Phát triển & Kiến trúc (Coding Standards)
+
+Mọi module và tính năng mới bắt buộc tuân thủ tài liệu quy chuẩn:
+👉 **[Tài liệu Quy chuẩn Phát triển Backend CYCLOSA (BACKEND_STANDARDS.md)](docs/BACKEND_STANDARDS.md)**
+

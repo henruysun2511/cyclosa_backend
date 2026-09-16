@@ -4,6 +4,7 @@ import lombok.Getter;
 
 @Getter
 public enum UserStatus {
+    PENDING_ACTIVATION("Chờ kích hoạt"),
     ACTIVE("Đang hoạt động"),
     LOCKED("Tạm khóa"),
     DISABLED("Vô hiệu hóa");

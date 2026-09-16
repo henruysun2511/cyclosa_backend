@@ -15,6 +15,7 @@ import com.cyclosa.role.mapper.RoleMapperImpl;
 import com.cyclosa.role.repository.RolePermissionRepository;
 import com.cyclosa.role.repository.RoleRepository;
 import com.cyclosa.role.service.RoleService;
+import com.cyclosa.role.service.UserRoleService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -41,6 +42,7 @@ class RoleServiceTest {
     @Mock RoleRepository              roleRepository;
     @Mock RolePermissionRepository    rolePermissionRepository;
     @Mock PermissionService           permissionService; // Calling service of permission module
+    @Mock UserRoleService             userRoleService; // Intra-module service call
 
     @Spy RoleMapper roleMapper = new RoleMapperImpl();
 
@@ -84,7 +86,9 @@ class RoleServiceTest {
             RoleResponse res = roleService.createRole(req);
 
             assertThat(res.getId()).isEqualTo(roleId);
+            assertThat(res.getName()).isEqualTo("Line Manager");
             assertThat(res.getCode()).isEqualTo("LINE_MANAGER");
+            assertThat(res.isSystemRole()).isFalse();
             verify(roleRepository).save(any(Role.class));
         }
 
@@ -100,7 +104,7 @@ class RoleServiceTest {
 
             assertThatThrownBy(() -> roleService.createRole(req))
                     .isInstanceOf(AppException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.CONFLICT);
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.common.exception.CommonErrorCode.CONFLICT);
         }
     }
 
@@ -116,7 +120,30 @@ class RoleServiceTest {
 
             assertThatThrownBy(() -> roleService.deleteRole(roleId))
                     .isInstanceOf(AppException.class)
-                    .hasFieldOrPropertyWithValue("errorCode", ErrorCode.FORBIDDEN);
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.role.exception.RoleErrorCode.CANNOT_DELETE_SYSTEM_ROLE);
+        }
+
+        @Test
+        @DisplayName("Lỗi: vai trò đang được gán cho người dùng")
+        void cannotDeleteRoleInUse() {
+            given(roleRepository.findById(roleId)).willReturn(Optional.of(testRole));
+            given(userRoleService.countUsersWithRole(roleId)).willReturn(3L);
+
+            assertThatThrownBy(() -> roleService.deleteRole(roleId))
+                    .isInstanceOf(AppException.class)
+                    .hasFieldOrPropertyWithValue("errorCode", com.cyclosa.role.exception.RoleErrorCode.ROLE_IN_USE);
+        }
+
+        @Test
+        @DisplayName("Thành công: xóa vai trò không sử dụng")
+        void success() {
+            given(roleRepository.findById(roleId)).willReturn(Optional.of(testRole));
+            given(userRoleService.countUsersWithRole(roleId)).willReturn(0L);
+
+            roleService.deleteRole(roleId);
+
+            verify(roleRepository).delete(testRole);
+            verify(userRoleService).evictAllPermissionCache();
         }
     }
 
@@ -150,6 +177,7 @@ class RoleServiceTest {
             verify(permissionService).findAllById(List.of(permId));
             verify(rolePermissionRepository).deleteByRoleId(roleId);
             verify(rolePermissionRepository).saveAll(any());
+            verify(userRoleService).evictAllPermissionCache();
         }
     }
 }

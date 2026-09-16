@@ -1,10 +1,13 @@
 package com.cyclosa.role.service;
 
 import com.cyclosa.common.exception.AppException;
+import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.permission.entity.Permission;
 import com.cyclosa.permission.service.PermissionService;
 import com.cyclosa.role.dto.request.AssignRolePermissionsRequest;
 import com.cyclosa.role.dto.request.RoleRequest;
+import com.cyclosa.role.dto.request.RoleFilter;
 import com.cyclosa.role.dto.response.RoleDetailResponse;
 import com.cyclosa.role.dto.response.RoleResponse;
 import com.cyclosa.role.entity.Role;
@@ -13,12 +16,16 @@ import com.cyclosa.role.mapper.RoleMapper;
 import com.cyclosa.role.repository.RolePermissionRepository;
 import com.cyclosa.role.repository.RoleRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RoleService {
@@ -26,14 +33,18 @@ public class RoleService {
     private final RoleRepository roleRepository;
     private final RolePermissionRepository rolePermissionRepository;
     private final PermissionService permissionService; // Only calling PermissionService from permission module!
+    private final UserRoleService userRoleService; // Intra-module service call
     private final RoleMapper roleMapper;
 
+    /** Allowed sort fields for roles */
+    private static final Set<String> SORT_FIELDS = Set.of("name", "code", "createdAt");
+
     @Transactional(readOnly = true)
-    public List<RoleResponse> getRoles(UUID companyId) {
-        List<Role> roles = (companyId != null)
-                ? roleRepository.findByCompanyIdOrCompanyIdIsNull(companyId)
-                : roleRepository.findByCompanyIdIsNull();
-        return roleMapper.toResponseList(roles);
+    public PageData<RoleResponse> getRoles(RoleFilter req) {
+        String kw = PageableUtils.normalizeKeyword(req.getKeyword());
+        Pageable pageable = req.toPageable("name", SORT_FIELDS);
+        Page<Role> result = roleRepository.search(kw, req.getCompanyId(), req.getIsSystemRole(), pageable);
+        return PageData.of(result, roleMapper::toResponse);
     }
 
     @Transactional(readOnly = true)
@@ -77,9 +88,16 @@ public class RoleService {
     public void deleteRole(UUID id) {
         Role role = findRoleById(id);
         if (role.isSystemRole()) {
-            throw AppException.forbidden("Không thể xóa vai trò hệ thống");
+            throw AppException.cannotDeleteSystemRole();
         }
+
+        long inUseCount = userRoleService.countUsersWithRole(id);
+        if (inUseCount > 0) {
+            throw AppException.roleInUse(inUseCount);
+        }
+
         roleRepository.delete(role);
+        userRoleService.evictAllPermissionCache();
     }
 
     @Transactional
@@ -117,6 +135,7 @@ public class RoleService {
             role.getRolePermissions().addAll(newPermissions);
         }
 
+        userRoleService.evictAllPermissionCache();
         return roleMapper.toDetailResponse(role);
     }
 

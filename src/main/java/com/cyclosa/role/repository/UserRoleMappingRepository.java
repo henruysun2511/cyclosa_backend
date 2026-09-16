@@ -16,4 +16,6 @@ public interface UserRoleMappingRepository extends JpaRepository<UserRoleMapping
     List<UserRoleMapping> findByUserIdWithRole(@Param("userId") UUID userId);
 
     void deleteByUserId(UUID userId);
+
+    long countByRoleId(UUID roleId);
 }

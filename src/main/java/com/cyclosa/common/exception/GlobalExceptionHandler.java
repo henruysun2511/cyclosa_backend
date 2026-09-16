@@ -39,7 +39,7 @@ public class GlobalExceptionHandler {
                 .toList();
 
         log.warn("[Validation] {} error(s)", fieldErrors.size());
-        ErrorCode ec = ErrorCode.VALIDATION_FAILED;
+        CommonErrorCode ec = CommonErrorCode.VALIDATION_FAILED;
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage(),
                         ValidationErrorData.of(fieldErrors)));
@@ -48,14 +48,14 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiResponse<Void>> handleConstraint(ConstraintViolationException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(ApiResponse.error(ErrorCode.VALIDATION_FAILED.getCode(), ex.getMessage()));
+                .body(ApiResponse.error(CommonErrorCode.VALIDATION_FAILED.getCode(), ex.getMessage()));
     }
 
     @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ApiResponse<Void>> handleOptimisticLock(
             ObjectOptimisticLockingFailureException ex) {
         log.warn("[OptimisticLock] entity={}", ex.getPersistentClassName());
-        ErrorCode ec = ErrorCode.OPTIMISTIC_LOCK;
+        CommonErrorCode ec = CommonErrorCode.OPTIMISTIC_LOCK;
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage()));
     }
@@ -64,21 +64,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleDataIntegrity(
             DataIntegrityViolationException ex) {
         log.warn("[DataIntegrity] {}", ex.getMostSpecificCause().getMessage());
-        ErrorCode ec = ErrorCode.CONFLICT;
+        CommonErrorCode ec = CommonErrorCode.CONFLICT;
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage()));
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAccessDenied(AccessDeniedException ex) {
-        ErrorCode ec = ErrorCode.FORBIDDEN;
+        CommonErrorCode ec = CommonErrorCode.FORBIDDEN;
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage()));
     }
 
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuth(AuthenticationException ex) {
-        ErrorCode ec = ErrorCode.UNAUTHORIZED;
+        CommonErrorCode ec = CommonErrorCode.UNAUTHORIZED;
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage()));
     }
@@ -86,7 +86,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneral(Exception ex) {
         log.error("[UnhandledException]", ex);
-        ErrorCode ec = ErrorCode.INTERNAL_ERROR;
+        CommonErrorCode ec = CommonErrorCode.INTERNAL_ERROR;
         return ResponseEntity.status(ec.getHttpStatus())
                 .body(ApiResponse.error(ec.getCode(), ec.getMessage()));
     }

@@ -54,6 +54,11 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 // 01. Organization
                 p("org.view", "organization", "view", "Xem thông tin cơ cấu tổ chức"),
                 p("org.manage", "organization", "manage", "Quản lý cơ cấu tổ chức (công ty, phòng ban, chức vụ)"),
+                p("organization.view", "organization", "view", "Xem cơ cấu tổ chức, phòng ban, chi nhánh"),
+                p("organization.create", "organization", "create", "Tạo mới phòng ban, chi nhánh, chức danh"),
+                p("organization.update", "organization", "update", "Cập nhật phòng ban, chi nhánh, chức danh"),
+                p("organization.delete", "organization", "delete", "Xóa phòng ban, chi nhánh, chức danh"),
+                p("organization.manage", "organization", "manage", "Toàn quyền quản trị cơ cấu tổ chức và tái cấu trúc"),
 
                 // 02. Recruitment
                 p("recruitment.view", "recruitment", "view", "Xem tin tuyển dụng và ứng viên"),
@@ -108,7 +113,15 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 p("report.view", "report", "view", "Xem báo cáo phân tích và dashboard"),
                 p("report.export", "report", "export", "Xuất file báo cáo tổng hợp"),
 
-                // 21. System Admin
+                // 21. System Admin & RBAC
+                p("role.view", "role", "view", "Xem danh sách và chi tiết vai trò, phân quyền"),
+                p("role.create", "role", "create", "Tạo vai trò tùy biến mới"),
+                p("role.update", "role", "update", "Cập nhật thông tin vai trò"),
+                p("role.delete", "role", "delete", "Xóa vai trò tùy biến"),
+                p("role.assign", "role", "assign", "Gán quyền hạn và phạm vi dữ liệu cho vai trò"),
+                p("user.view", "user", "view", "Xem danh sách và chi tiết tài khoản người dùng"),
+                p("user.manage", "user", "manage", "Tạo, khóa, mở khóa tài khoản nhân viên"),
+                p("user.assign_role", "user", "assign_role", "Gán vai trò cho người dùng"),
                 p("admin.role.manage", "system_admin", "manage", "Quản lý vai trò và phân quyền (RBAC)"),
                 p("admin.user.manage", "system_admin", "manage", "Quản trị tài khoản người dùng"),
                 p("admin.audit.view", "system_admin", "view", "Xem nhật ký hệ thống (Audit Log)")

@@ -27,6 +27,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
+import com.cyclosa.auth.dto.request.ActivateAccountRequest;
+
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -42,9 +44,46 @@ public class AuthService {
     @Value("${app.jwt.access-token-expiry:86400000}")
     private long accessTokenExpiry;
 
-    private static final String BLACKLIST_PREFIX     = "blacklist:";
-    private static final String REFRESH_TOKEN_PREFIX = "refresh:";
+    public static final String BLACKLIST_PREFIX          = "blacklist:";
+    public static final String REFRESH_TOKEN_PREFIX      = "refresh:";
+    public static final String ACTIVATION_TOKEN_PREFIX   = "activation:";
+    public static final String USER_ACTIVATION_PREFIX    = "user_activation:";
 
+    @Transactional
+    public TokenResponse activateAccount(ActivateAccountRequest req) {
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            throw AppException.validationFailed("Mật khẩu xác nhận không khớp");
+        }
+
+        String redisKey = ACTIVATION_TOKEN_PREFIX + req.getToken().trim();
+        String userIdStr = redisTemplate.opsForValue().get(redisKey);
+        if (userIdStr == null) {
+            throw AppException.activationTokenInvalid();
+        }
+
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdStr);
+        } catch (IllegalArgumentException e) {
+            throw AppException.activationTokenInvalid();
+        }
+
+        User user = userRepository.findByIdWithRoles(userId)
+                .orElseThrow(() -> AppException.userNotFound(userId));
+
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        user.setStatus(UserStatus.ACTIVE);
+        user.setLastLoginAt(LocalDateTime.now());
+        userRepository.save(user);
+
+        // Invalidate token
+        redisTemplate.delete(redisKey);
+        redisTemplate.delete(USER_ACTIVATION_PREFIX + userId);
+
+        return generateTokenResponse(user);
+    }
+
+    @Deprecated
     @Transactional
     public TokenResponse register(RegisterRequest req) {
         String cleanEmail = req.getEmail().toLowerCase().trim();
@@ -76,6 +115,9 @@ public class AuthService {
                 .orElseThrow(AppException::invalidCredentials);
 
         if (user.getPasswordHash() == null) {
+            if (user.getStatus() == UserStatus.PENDING_ACTIVATION) {
+                throw AppException.accountPendingActivation();
+            }
             throw AppException.invalidCredentials();
         }
 
@@ -83,6 +125,12 @@ public class AuthService {
             throw AppException.invalidCredentials();
         }
 
+        if (user.getStatus() == UserStatus.PENDING_ACTIVATION) {
+            throw AppException.accountPendingActivation();
+        }
+        if (user.getStatus() == UserStatus.LOCKED) {
+            throw AppException.accountLocked();
+        }
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw AppException.accountDisabled();
         }
@@ -161,7 +209,7 @@ public class AuthService {
             throw AppException.refreshTokenInvalid();
         }
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithRoles(userId)
                 .orElseThrow(AppException::unauthorized);
 
         String newAccessToken = jwtUtil.generateAccessToken(
@@ -197,7 +245,7 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public UserInfo getCurrentUser(UUID userId) {
-        User user = userRepository.findById(userId)
+        User user = userRepository.findByIdWithRoles(userId)
                 .orElseThrow(() -> AppException.userNotFound(userId));
         return authMapper.toUserInfo(user);
     }

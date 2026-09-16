@@ -1,6 +1,7 @@
 package com.cyclosa.permission.controller;
 
 import com.cyclosa.common.annotation.RequirePermission;
+import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.permission.dto.response.PermissionResponse;
 import com.cyclosa.permission.service.PermissionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -18,7 +19,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/permissions")
 @RequiredArgsConstructor
-@Tag(name = "03. Permissions", description = "Danh mục quyền hạn trong hệ thống")
+@Tag(name = "Permissions", description = "Danh mục quyền hạn trong hệ thống")
 public class PermissionController {
 
     private final PermissionService permissionService;
@@ -27,15 +28,15 @@ public class PermissionController {
     @PreAuthorize("@perm.has('role.view')")
     @RequirePermission("role.view")
     @Operation(summary = "Lấy toàn bộ danh mục quyền hệ thống")
-    public ResponseEntity<List<PermissionResponse>> getAllPermissions() {
-        return ResponseEntity.ok(permissionService.getAllPermissions());
+    public ResponseEntity<ApiResponse<List<PermissionResponse>>> getAllPermissions() {
+        return ResponseEntity.ok(ApiResponse.ok(permissionService.getAllPermissions(), "Lấy danh mục quyền hạn thành công"));
     }
 
     @GetMapping("/grouped")
     @PreAuthorize("@perm.has('role.view')")
     @RequirePermission("role.view")
     @Operation(summary = "Lấy danh mục quyền gom nhóm theo module")
-    public ResponseEntity<Map<String, List<PermissionResponse>>> getPermissionsGrouped() {
-        return ResponseEntity.ok(permissionService.getPermissionsGroupedByModule());
+    public ResponseEntity<ApiResponse<Map<String, List<PermissionResponse>>>> getPermissionsGrouped() {
+        return ResponseEntity.ok(ApiResponse.ok(permissionService.getPermissionsGroupedByModule(), "Lấy danh mục quyền hạn theo nhóm thành công"));
     }
 }
