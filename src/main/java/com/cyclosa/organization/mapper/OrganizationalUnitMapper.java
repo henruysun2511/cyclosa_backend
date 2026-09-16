@@ -1,9 +1,11 @@
 package com.cyclosa.organization.mapper;
 
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
 import com.cyclosa.organization.dto.response.OrgUnitTreeResponse;
 import com.cyclosa.organization.entity.OrganizationalUnit;
+import com.cyclosa.organization.entity.OrganizationalUnitHistory;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingConstants;
@@ -33,4 +35,14 @@ public interface OrganizationalUnitMapper {
     @Mapping(target = "costCenterName", source = "costCenter.name")
     @Mapping(target = "children", ignore = true)
     OrgUnitTreeResponse toTreeResponse(OrganizationalUnit unit);
+
+    @Mapping(target = "parentUnitName", ignore = true)
+    OrgUnitHistoryResponse toHistoryResponse(OrganizationalUnitHistory history);
+
+    List<OrgUnitHistoryResponse> toHistoryResponseList(List<OrganizationalUnitHistory> histories);
+
+    @Mapping(target = "id", source = "unitId")
+    @Mapping(target = "costCenterName", ignore = true)
+    @Mapping(target = "children", ignore = true)
+    OrgUnitTreeResponse historyToTreeResponse(OrganizationalUnitHistory history);
 }

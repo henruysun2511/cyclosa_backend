@@ -13,4 +13,7 @@ public class MoveOrgUnitRequest {
 
     @Schema(description = "ID đơn vị cha mới (để null nếu muốn chuyển thành cấp cao nhất - Root unit)", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
     private UUID targetParentId;
+
+    @Schema(description = "Lý do điều chuyển / Số quyết định tái cơ cấu", example = "Quyết định số 123/QĐ-BGD ngày 16/09/2026")
+    private String changeReason;
 }

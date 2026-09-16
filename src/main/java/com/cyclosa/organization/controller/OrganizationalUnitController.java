@@ -5,6 +5,7 @@ import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
 import com.cyclosa.organization.dto.request.MoveOrgUnitRequest;
 import com.cyclosa.organization.dto.request.UpdateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitImpactPreviewResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
 import com.cyclosa.organization.dto.response.OrgUnitTreeResponse;
@@ -14,12 +15,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @RestController
@@ -33,15 +37,17 @@ public class OrganizationalUnitController {
     @GetMapping("/tree")
     @PreAuthorize("@perm.has('organization.view')")
     @RequirePermission("organization.view")
-    @Operation(summary = "Lấy toàn bộ cây sơ đồ phòng ban phân cấp theo công ty")
+    @Operation(summary = "Lấy toàn bộ cây sơ đồ phòng ban phân cấp theo công ty (hỗ trợ truy vấn lịch sử qua atDate)")
     public ResponseEntity<ApiResponse<List<OrgUnitTreeResponse>>> getUnitTree(
             @Parameter(description = "ID công ty")
             @RequestParam(required = false) UUID companyId,
+            @Parameter(description = "Thời điểm truy vấn lịch sử cây tổ chức (ISO 8601: yyyy-MM-dd'T'HH:mm:ss)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime atDate,
             @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
     ) {
         UUID effectiveCompanyId = companyId != null ? companyId : headerCompanyId;
         return ResponseEntity.ok(ApiResponse.ok(
-                orgUnitService.getUnitTree(effectiveCompanyId),
+                orgUnitService.getUnitTree(effectiveCompanyId, atDate),
                 "Lấy cây sơ đồ phòng ban thành công"));
     }
 
@@ -124,5 +130,31 @@ public class OrganizationalUnitController {
         return ResponseEntity.ok(ApiResponse.ok(
                 orgUnitService.moveUnit(headerCompanyId, id, request),
                 "Điều chuyển phòng ban thành công"));
+    }
+
+    @GetMapping("/{id}/history")
+    @PreAuthorize("@perm.has('organization.view')")
+    @RequirePermission("organization.view")
+    @Operation(summary = "Xem lịch sử thay đổi / tái cơ cấu của phòng ban theo thời gian")
+    public ResponseEntity<ApiResponse<List<OrgUnitHistoryResponse>>> getUnitHistory(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                orgUnitService.getUnitHistory(headerCompanyId, id),
+                "Lấy lịch sử phòng ban thành công"));
+    }
+
+    @GetMapping("/{id}/descendant-ids")
+    @PreAuthorize("@perm.has('organization.view')")
+    @RequirePermission("organization.view")
+    @Operation(summary = "Lấy toàn bộ ID của phòng ban và các đơn vị con trực thuộc (phục vụ kế thừa phân quyền dữ liệu)")
+    public ResponseEntity<ApiResponse<Set<UUID>>> getDescendantUnitIds(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
+    ) {
+        return ResponseEntity.ok(ApiResponse.ok(
+                orgUnitService.getSelfAndDescendantUnitIds(headerCompanyId, id),
+                "Lấy danh sách ID phòng ban và con cháu thành công"));
     }
 }

@@ -40,9 +40,15 @@ $$\text{Nhân sự} = \text{Đơn vị tổ chức (Phòng ban)} + \text{Địa 
 
 ### 2.1. Chiều 1: Đơn vị Tổ chức (`organizational_units`)
 - **Cấu trúc Cây tự tham chiếu:** Mỗi đơn vị trỏ tới đơn vị cha qua `parent_unit_id`. Không giới hạn số tầng phân cấp (Khối $\rightarrow$ Ban $\rightarrow$ Phòng $\rightarrow$ Tổ/Nhóm...).
+- **Phiên bản theo thời gian (Temporal Hierarchy & Effective Dating):**
+  - Mọi sự thay đổi cấu trúc cây (tạo mới, điều chuyển cha-con `/move`, đổi tên) đều được lưu phiên bản vào bảng `organizational_unit_history` với dải thời gian `effective_from` và `effective_to`.
+  - Hỗ trợ tái dựng toàn bộ cây tổ chức tại bất kỳ thời điểm nào trong quá khứ thông qua tham số `atDate` trong API `GET /api/v1/organizational-units/tree?atDate=...`. Điều này phục vụ kiểm toán (Audit): Một quyết định phê duyệt/phân quyền trong quá khứ luôn giải thích được bằng cơ cấu tổ chức tại đúng thời điểm đó.
+  - Cung cấp API `GET /api/v1/organizational-units/{id}/history` để tra cứu lịch sử điều chuyển, tái cơ cấu của phòng ban.
+- **Kế thừa quyền xuống đơn vị con (Permission & Data Scope Inheritance):**
+  - Cung cấp API `GET /api/v1/organizational-units/{id}/descendant-ids` và service method `getSelfAndDescendantUnitIds(companyId, unitId)` gom đệ quy toàn bộ danh sách ID của phòng ban và các con/cháu.
+  - Phục vụ cơ chế DataScope `DEPARTMENT`: Người dùng có quyền tại một phòng ban sẽ tự động kế thừa quyền kiểm soát dữ liệu trên toàn bộ các đơn vị con trực thuộc.
 - **Người đứng đầu đơn vị:** `manager_employee_id` (chỉ định Trưởng phòng/Trưởng bộ phận).
 - **Trung tâm chi phí:** Gán `cost_center_id` để phân bổ ngân sách và chi phí lương.
-- **Kế thừa quyền:** Cơ chế DataScope `DEPARTMENT` sẽ tự động bao gồm dữ liệu của toàn bộ các đơn vị con cháu trực thuộc.
 
 #### Nghiệp vụ Tái cơ cấu Tổ chức (Move Unit & Impact Preview):
 1. **Kiểm tra chống lặp vòng cha-con (Circular Hierarchy Prevention):**
@@ -164,13 +170,15 @@ Mọi endpoint đều được bảo vệ bằng `@PreAuthorize("@perm.has('orga
 | `GET` | `/api/v1/companies` | Danh sách công ty có phân trang | `organization.view` |
 | `GET` | `/api/v1/companies/{id}` | Xem chi tiết thông tin công ty | `organization.view` |
 | `PUT` | `/api/v1/companies/{id}` | Cập nhật thông tin công ty | `organization.manage` |
-| `GET` | `/api/v1/organizational-units/tree` | Lấy toàn bộ cây sơ đồ phòng ban phân cấp | `organization.view` |
+| `GET` | `/api/v1/organizational-units/tree` | Lấy cây sơ đồ phòng ban phân cấp (hỗ trợ `?atDate=...` truy vấn lịch sử) | `organization.view` |
 | `GET` | `/api/v1/organizational-units/{id}` | Lấy chi tiết thông tin một đơn vị | `organization.view` |
 | `POST` | `/api/v1/organizational-units` | Tạo mới phòng ban / đơn vị | `organization.create` |
 | `PUT` | `/api/v1/organizational-units/{id}` | Cập nhật thông tin phòng ban | `organization.update` |
 | `DELETE`| `/api/v1/organizational-units/{id}` | Xóa phòng ban (ràng buộc an toàn) | `organization.delete` |
 | `GET` | `/api/v1/organizational-units/{id}/impact-preview` | Xem trước tác động khi tái cơ cấu | `organization.manage` |
-| `PUT` | `/api/v1/organizational-units/{id}/move` | Điều chuyển đơn vị sang nhánh cha mới | `organization.manage` |
+| `PUT` | `/api/v1/organizational-units/{id}/move` | Điều chuyển đơn vị sang nhánh cha mới (kèm lý do) | `organization.manage` |
+| `GET` | `/api/v1/organizational-units/{id}/history` | Xem lịch sử phiên bản / tái cơ cấu của phòng ban | `organization.view` |
+| `GET` | `/api/v1/organizational-units/{id}/descendant-ids` | Lấy toàn bộ ID đơn vị và con cháu (kế thừa phân quyền dữ liệu) | `organization.view` |
 | `GET` | `/api/v1/geography/tree` | Lấy danh sách vùng miền kèm các chi nhánh | `organization.view` |
 | `POST` | `/api/v1/regions` | Tạo mới vùng miền | `organization.manage` |
 | `POST` | `/api/v1/branches` | Tạo mới chi nhánh (tọa độ GPS, bán kính) | `organization.manage` |

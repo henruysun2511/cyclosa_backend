@@ -4,14 +4,17 @@ import com.cyclosa.common.exception.AppException;
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
 import com.cyclosa.organization.dto.request.MoveOrgUnitRequest;
 import com.cyclosa.organization.dto.request.UpdateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitImpactPreviewResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
 import com.cyclosa.organization.dto.response.OrgUnitTreeResponse;
 import com.cyclosa.organization.entity.CostCenter;
 import com.cyclosa.organization.entity.OrganizationalUnit;
+import com.cyclosa.organization.entity.OrganizationalUnitHistory;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
 import com.cyclosa.organization.mapper.OrganizationalUnitMapper;
 import com.cyclosa.organization.repository.CostCenterRepository;
+import com.cyclosa.organization.repository.OrganizationalUnitHistoryRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitRepository;
 import com.cyclosa.organization.service.OrganizationalUnitService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Slf4j
@@ -27,6 +31,7 @@ import java.util.*;
 public class OrganizationalUnitServiceImpl implements OrganizationalUnitService {
 
     private final OrganizationalUnitRepository orgUnitRepository;
+    private final OrganizationalUnitHistoryRepository historyRepository;
     private final CostCenterRepository costCenterRepository;
     private final OrganizationalUnitMapper orgUnitMapper;
 
@@ -58,6 +63,24 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         }
 
         unit = orgUnitRepository.save(unit);
+
+        // Lưu phiên bản lịch sử ban đầu (Effective Dating)
+        OrganizationalUnitHistory initialHistory = OrganizationalUnitHistory.builder()
+                .unitId(unit.getId())
+                .companyId(effectiveCompanyId)
+                .parentUnitId(unit.getParentUnit() != null ? unit.getParentUnit().getId() : null)
+                .costCenterId(unit.getCostCenter() != null ? unit.getCostCenter().getId() : null)
+                .managerEmployeeId(unit.getManagerEmployeeId())
+                .code(unit.getCode())
+                .name(unit.getName())
+                .unitType(unit.getUnitType())
+                .effectiveFrom(LocalDateTime.now())
+                .effectiveTo(null)
+                .changeReason("Khởi tạo đơn vị tổ chức mới")
+                .status(unit.getStatus())
+                .build();
+        historyRepository.save(initialHistory);
+
         log.info("Created OrganizationalUnit id={}, code={}, companyId={}", unit.getId(), unit.getCode(), effectiveCompanyId);
         return orgUnitMapper.toResponse(unit);
     }
@@ -86,9 +109,20 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
             unit.setCostCenter(null);
         }
 
-        unit = orgUnitRepository.save(unit);
-        log.info("Updated OrganizationalUnit id={}", unit.getId());
-        return orgUnitMapper.toResponse(unit);
+        OrganizationalUnit savedUnit = orgUnitRepository.save(unit);
+
+        // Cập nhật thông tin trên phiên bản lịch sử đang hiệu lực
+        historyRepository.findCurrentActive(id).ifPresent(curr -> {
+            curr.setName(savedUnit.getName());
+            curr.setUnitType(savedUnit.getUnitType());
+            curr.setManagerEmployeeId(savedUnit.getManagerEmployeeId());
+            curr.setCostCenterId(savedUnit.getCostCenter() != null ? savedUnit.getCostCenter().getId() : null);
+            curr.setStatus(savedUnit.getStatus());
+            historyRepository.save(curr);
+        });
+
+        log.info("Updated OrganizationalUnit id={}", savedUnit.getId());
+        return orgUnitMapper.toResponse(savedUnit);
     }
 
     @Override
@@ -104,6 +138,13 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         if (orgUnitRepository.countByParentUnitId(id) > 0) {
             throw new AppException(OrganizationErrorCode.CANNOT_DELETE_UNIT_WITH_CHILDREN);
         }
+
+        // Đóng phiên bản hiệu lực lịch sử
+        historyRepository.findCurrentActive(id).ifPresent(curr -> {
+            curr.setEffectiveTo(LocalDateTime.now());
+            curr.setChangeReason("Xóa/giải thể đơn vị tổ chức");
+            historyRepository.save(curr);
+        });
 
         orgUnitRepository.delete(unit);
         log.info("Soft-deleted OrganizationalUnit id={}", id);
@@ -123,11 +164,33 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
 
     @Override
     @Transactional(readOnly = true)
-    public List<OrgUnitTreeResponse> getUnitTree(UUID companyId) {
+    public List<OrgUnitTreeResponse> getUnitTree(UUID companyId, LocalDateTime atDate) {
         if (companyId == null) {
             throw AppException.badRequest("Yêu cầu cung cấp ID công ty");
         }
 
+        // KỊCH BẢN 1: Nếu có tham số atDate -> Tái dựng cây tổ chức tại thời điểm quá khứ đó (Temporal Versioning)
+        if (atDate != null) {
+            List<OrganizationalUnitHistory> histories = historyRepository.findByCompanyIdAtTimestamp(companyId, atDate);
+            Map<UUID, OrgUnitTreeResponse> historyNodeMap = new LinkedHashMap<>();
+            for (OrganizationalUnitHistory h : histories) {
+                historyNodeMap.put(h.getUnitId(), orgUnitMapper.historyToTreeResponse(h));
+            }
+
+            List<OrgUnitTreeResponse> rootNodes = new ArrayList<>();
+            for (OrganizationalUnitHistory h : histories) {
+                OrgUnitTreeResponse currentNode = historyNodeMap.get(h.getUnitId());
+                if (h.getParentUnitId() != null && historyNodeMap.containsKey(h.getParentUnitId())) {
+                    OrgUnitTreeResponse parentNode = historyNodeMap.get(h.getParentUnitId());
+                    parentNode.getChildren().add(currentNode);
+                } else {
+                    rootNodes.add(currentNode);
+                }
+            }
+            return rootNodes;
+        }
+
+        // KỊCH BẢN 2: Lấy cây cơ cấu hiện tại (Current State)
         List<OrganizationalUnit> allUnits = orgUnitRepository.findAllByCompanyIdWithDetails(companyId);
 
         Map<UUID, OrgUnitTreeResponse> nodeMap = new LinkedHashMap<>();
@@ -181,7 +244,6 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
             }
         }
 
-        // Đếm tổng số đơn vị con cháu trực thuộc
         int affectedSubUnitsCount = countDescendants(id);
 
         String message = isCircularLoop
@@ -223,8 +285,77 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         }
 
         unit = orgUnitRepository.save(unit);
-        log.info("Moved OrganizationalUnit id={} to new targetParentId={}", id, request.getTargetParentId());
+
+        // 1. Chốt phiên bản hiệu lực cũ
+        LocalDateTime now = LocalDateTime.now();
+        historyRepository.findCurrentActive(id).ifPresent(curr -> {
+            curr.setEffectiveTo(now);
+            historyRepository.save(curr);
+        });
+
+        // 2. Mở phiên bản hiệu lực mới với thông tin cha mới và lý do điều chuyển
+        String reason = (request.getChangeReason() != null && !request.getChangeReason().isBlank())
+                ? request.getChangeReason()
+                : "Điều chuyển nhánh cây tổ chức";
+
+        OrganizationalUnitHistory newHistory = OrganizationalUnitHistory.builder()
+                .unitId(unit.getId())
+                .companyId(unit.getCompanyId())
+                .parentUnitId(unit.getParentUnit() != null ? unit.getParentUnit().getId() : null)
+                .costCenterId(unit.getCostCenter() != null ? unit.getCostCenter().getId() : null)
+                .managerEmployeeId(unit.getManagerEmployeeId())
+                .code(unit.getCode())
+                .name(unit.getName())
+                .unitType(unit.getUnitType())
+                .effectiveFrom(now)
+                .effectiveTo(null)
+                .changeReason(reason)
+                .status(unit.getStatus())
+                .build();
+        historyRepository.save(newHistory);
+
+        log.info("Moved OrganizationalUnit id={} to targetParentId={}, history version recorded", id, request.getTargetParentId());
         return orgUnitMapper.toResponse(unit);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<OrgUnitHistoryResponse> getUnitHistory(UUID companyId, UUID id) {
+        // Đảm bảo đơn vị tồn tại
+        getUnitById(companyId, id);
+
+        List<OrganizationalUnitHistory> histories = historyRepository.findByUnitIdOrderByEffectiveFromDesc(id);
+        List<OrgUnitHistoryResponse> responses = orgUnitMapper.toHistoryResponseList(histories);
+
+        // Bổ sung tên đơn vị cha nếu có
+        for (OrgUnitHistoryResponse res : responses) {
+            if (res.getParentUnitId() != null) {
+                orgUnitRepository.findById(res.getParentUnitId())
+                        .ifPresent(p -> res.setParentUnitName(p.getName()));
+            } else {
+                res.setParentUnitName("Gốc (Root)");
+            }
+        }
+        return responses;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Set<UUID> getSelfAndDescendantUnitIds(UUID companyId, UUID unitId) {
+        // Đảm bảo đơn vị tồn tại
+        getUnitById(companyId, unitId);
+
+        Set<UUID> resultSet = new LinkedHashSet<>();
+        collectDescendantsRecursively(unitId, resultSet);
+        return resultSet;
+    }
+
+    private void collectDescendantsRecursively(UUID parentId, Set<UUID> collected) {
+        collected.add(parentId);
+        List<OrganizationalUnit> directChildren = orgUnitRepository.findByParentUnitId(parentId);
+        for (OrganizationalUnit child : directChildren) {
+            collectDescendantsRecursively(child.getId(), collected);
+        }
     }
 
     private int countDescendants(UUID parentId) {

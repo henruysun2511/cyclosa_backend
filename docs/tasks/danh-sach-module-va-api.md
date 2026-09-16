@@ -95,21 +95,23 @@
 | 3.8 | `PUT` | `/api/v1/organizational-units/{id}` | Cập nhật tên, mã phòng ban hoặc thông tin | `organization.update` | [x] ✅ Đã hoàn thành |
 | 3.9 | `DELETE` | `/api/v1/organizational-units/{id}` | Xóa phòng ban (ràng buộc không còn đơn vị con) | `organization.delete` | [x] ✅ Đã hoàn thành |
 | 3.10 | `GET` | `/api/v1/organizational-units/{id}/impact-preview` | Dự báo tác động trước khi điều chuyển cây | `organization.manage` | [x] ✅ Đã hoàn thành |
-| 3.11 | `PUT` | `/api/v1/organizational-units/{id}/move` | Điều chuyển phòng ban sang nhánh cha mới (chống loop) | `organization.manage` | [x] ✅ Đã hoàn thành |
-| 3.12 | `GET` | `/api/v1/geography/tree` | Lấy cây địa lý vùng miền kèm chi nhánh | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.13 | `POST` | `/api/v1/geography/regions` | Tạo mới vùng miền địa lý | `organization.manage` | [x] ✅ Đã hoàn thành |
-| 3.14 | `GET` | `/api/v1/geography/branches` | Danh sách chi nhánh làm việc | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.15 | `GET` | `/api/v1/geography/branches/{id}` | Chi tiết chi nhánh làm việc | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.16 | `POST` | `/api/v1/geography/branches` | Tạo mới chi nhánh làm việc (tọa độ GPS & bán kính) | `organization.create` | [x] ✅ Đã hoàn thành |
-| 3.17 | `PUT` | `/api/v1/geography/branches/{id}` | Cập nhật thông tin chi nhánh | `organization.update` | [x] ✅ Đã hoàn thành |
-| 3.18 | `GET` | `/api/v1/job-levels` | Danh sách cấp bậc công việc theo thứ bậc | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.19 | `POST` | `/api/v1/job-levels` | Tạo mới cấp bậc công việc | `organization.manage` | [x] ✅ Đã hoàn thành |
-| 3.20 | `GET` | `/api/v1/positions` | Danh sách chức danh / vị trí công việc có phân trang | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.21 | `GET` | `/api/v1/positions/{id}` | Chi tiết chức danh việc làm | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.22 | `POST` | `/api/v1/positions` | Tạo mới chức danh việc làm | `organization.create` | [x] ✅ Đã hoàn thành |
-| 3.23 | `PUT` | `/api/v1/positions/{id}` | Cập nhật chức danh việc làm | `organization.update` | [x] ✅ Đã hoàn thành |
-| 3.24 | `GET` | `/api/v1/cost-centers` | Danh sách trung tâm chi phí | `organization.view` | [x] ✅ Đã hoàn thành |
-| 3.25 | `POST` | `/api/v1/cost-centers` | Tạo mới trung tâm chi phí | `organization.manage` | [x] ✅ Đã hoàn thành |
+| 3.11 | `PUT` | `/api/v1/organizational-units/{id}/move` | Điều chuyển phòng ban sang nhánh cha mới (chống loop, ghi nhận lịch sử) | `organization.manage` | [x] ✅ Đã hoàn thành |
+| 3.12 | `GET` | `/api/v1/organizational-units/{id}/history` | Xem lịch sử phiên bản / tái cơ cấu của phòng ban theo thời gian | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.13 | `GET` | `/api/v1/organizational-units/{id}/descendant-ids` | Lấy toàn bộ ID phòng ban và con cháu (kế thừa phân quyền dữ liệu) | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.14 | `GET` | `/api/v1/geography/tree` | Lấy cây địa lý vùng miền kèm chi nhánh | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.15 | `POST` | `/api/v1/geography/regions` | Tạo mới vùng miền địa lý | `organization.manage` | [x] ✅ Đã hoàn thành |
+| 3.16 | `GET` | `/api/v1/geography/branches` | Danh sách chi nhánh làm việc | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.17 | `GET` | `/api/v1/geography/branches/{id}` | Chi tiết chi nhánh làm việc | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.18 | `POST` | `/api/v1/geography/branches` | Tạo mới chi nhánh làm việc (tọa độ GPS & bán kính) | `organization.create` | [x] ✅ Đã hoàn thành |
+| 3.19 | `PUT` | `/api/v1/geography/branches/{id}` | Cập nhật thông tin chi nhánh | `organization.update` | [x] ✅ Đã hoàn thành |
+| 3.20 | `GET` | `/api/v1/job-levels` | Danh sách cấp bậc công việc theo thứ bậc | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.21 | `POST` | `/api/v1/job-levels` | Tạo mới cấp bậc công việc | `organization.manage` | [x] ✅ Đã hoàn thành |
+| 3.22 | `GET` | `/api/v1/positions` | Danh sách chức danh / vị trí công việc có phân trang | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.23 | `GET` | `/api/v1/positions/{id}` | Chi tiết chức danh việc làm | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.24 | `POST` | `/api/v1/positions` | Tạo mới chức danh việc làm | `organization.create` | [x] ✅ Đã hoàn thành |
+| 3.25 | `PUT` | `/api/v1/positions/{id}` | Cập nhật chức danh việc làm | `organization.update` | [x] ✅ Đã hoàn thành |
+| 3.26 | `GET` | `/api/v1/cost-centers` | Danh sách trung tâm chi phí | `organization.view` | [x] ✅ Đã hoàn thành |
+| 3.27 | `POST` | `/api/v1/cost-centers` | Tạo mới trung tâm chi phí | `organization.manage` | [x] ✅ Đã hoàn thành |
 
 ---
 
