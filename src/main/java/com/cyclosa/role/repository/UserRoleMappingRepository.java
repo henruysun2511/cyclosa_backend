@@ -18,4 +18,7 @@ public interface UserRoleMappingRepository extends JpaRepository<UserRoleMapping
     void deleteByUserId(UUID userId);
 
     long countByRoleId(UUID roleId);
+
+    @Query("SELECT urm.user.id FROM UserRoleMapping urm WHERE urm.role.id = :roleId AND (urm.companyId IS NULL OR urm.companyId = :companyId)")
+    List<UUID> findUserIdsByRoleIdAndCompanyId(@Param("roleId") UUID roleId, @Param("companyId") UUID companyId);
 }

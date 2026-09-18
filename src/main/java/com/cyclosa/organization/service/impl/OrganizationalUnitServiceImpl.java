@@ -4,6 +4,7 @@ import com.cyclosa.common.exception.AppException;
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
 import com.cyclosa.organization.dto.request.MoveOrgUnitRequest;
 import com.cyclosa.organization.dto.request.UpdateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitDetailResponse;
 import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitImpactPreviewResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
@@ -16,6 +17,7 @@ import com.cyclosa.organization.mapper.OrganizationalUnitMapper;
 import com.cyclosa.organization.repository.CostCenterRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitHistoryRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitRepository;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.organization.service.OrganizationalUnitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
     private final OrganizationalUnitHistoryRepository historyRepository;
     private final CostCenterRepository costCenterRepository;
     private final OrganizationalUnitMapper orgUnitMapper;
+    private final CompanyService companyService;
 
     @Override
     @Transactional
@@ -82,7 +85,9 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         historyRepository.save(initialHistory);
 
         log.info("Created OrganizationalUnit id={}, code={}, companyId={}", unit.getId(), unit.getCode(), effectiveCompanyId);
-        return orgUnitMapper.toResponse(unit);
+        OrgUnitResponse response = orgUnitMapper.toResponse(unit);
+        response.setCompany(companyService.getCompanySummary(effectiveCompanyId));
+        return response;
     }
 
     @Override
@@ -122,7 +127,9 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         });
 
         log.info("Updated OrganizationalUnit id={}", savedUnit.getId());
-        return orgUnitMapper.toResponse(savedUnit);
+        OrgUnitResponse updateResponse = orgUnitMapper.toResponse(savedUnit);
+        updateResponse.setCompany(companyService.getCompanySummary(savedUnit.getCompanyId()));
+        return updateResponse;
     }
 
     @Override
@@ -152,14 +159,17 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
 
     @Override
     @Transactional(readOnly = true)
-    public OrgUnitResponse getUnitById(UUID companyId, UUID id) {
+    public OrgUnitDetailResponse getUnitById(UUID companyId, UUID id) {
         OrganizationalUnit unit = orgUnitRepository.findById(id)
                 .orElseThrow(() -> new AppException(OrganizationErrorCode.ORG_UNIT_NOT_FOUND));
 
         if (companyId != null && !unit.getCompanyId().equals(companyId)) {
             throw new AppException(OrganizationErrorCode.ORG_UNIT_NOT_FOUND);
         }
-        return orgUnitMapper.toResponse(unit);
+        OrgUnitDetailResponse detailResponse = orgUnitMapper.toDetailResponse(unit);
+        detailResponse.setCompany(companyService.getCompanySummary(unit.getCompanyId()));
+        detailResponse.setChildUnitsCount(orgUnitRepository.countByParentUnitId(id));
+        return detailResponse;
     }
 
     @Override
@@ -315,7 +325,9 @@ public class OrganizationalUnitServiceImpl implements OrganizationalUnitService 
         historyRepository.save(newHistory);
 
         log.info("Moved OrganizationalUnit id={} to targetParentId={}, history version recorded", id, request.getTargetParentId());
-        return orgUnitMapper.toResponse(unit);
+        OrgUnitResponse moveResponse = orgUnitMapper.toResponse(unit);
+        moveResponse.setCompany(companyService.getCompanySummary(unit.getCompanyId()));
+        return moveResponse;
     }
 
     @Override

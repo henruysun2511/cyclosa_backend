@@ -121,15 +121,20 @@
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 4.1 | `GET` | `/api/v1/employees` | Lấy danh sách nhân viên theo DataScope (`EmployeeFilter`) | `employee.view` | [ ] ⏳ Chưa làm |
-| 4.2 | `GET` | `/api/v1/employees/{id}` | Xem chi tiết hồ sơ nhân sự (lọc theo DataScope) | `employee.view` | [ ] ⏳ Chưa làm |
-| 4.3 | `POST` | `/api/v1/employees` | Tiếp nhận nhân sự mới (tạo hồ sơ + liên kết User) | `employee.create` | [ ] ⏳ Chưa làm |
-| 4.4 | `PUT` | `/api/v1/employees/{id}` | Cập nhật thông tin cá nhân & lý lịch | `employee.update` | [ ] ⏳ Chưa làm |
-| 4.5 | `PUT` | `/api/v1/employees/{id}/job-info` | Điều chuyển phòng ban, bổ nhiệm chức danh, thay đổi quản lý | `employee.manage_job` | [ ] ⏳ Chưa làm |
-| 4.6 | `PUT` | `/api/v1/employees/{id}/status` | Đổi trạng thái làm việc (Thử việc -> Chính thức -> Nghỉ việc) | `employee.manage_status`| [ ] ⏳ Chưa làm |
-| 4.7 | `GET` | `/api/v1/employees/{id}/dependents` | Lấy danh sách người phụ thuộc phục vụ giảm trừ thuế | `employee.view` | [ ] ⏳ Chưa làm |
-| 4.8 | `POST` | `/api/v1/employees/{id}/dependents` | Thêm người phụ thuộc cho nhân viên | `employee.update` | [ ] ⏳ Chưa làm |
-| 4.9 | `POST` | `/api/v1/employees/import` | Nhập danh sách nhân viên hàng loạt bằng Excel | `employee.import` | [ ] ⏳ Chưa làm |
+| 4.1 | `GET` | `/api/v1/employees` | Lấy danh sách nhân viên phân trang theo DataScope | `employee.view` | [x] ✅ Đã hoàn thành |
+| 4.2 | `GET` | `/api/v1/employees/{id}` | Xem chi tiết hồ sơ toàn diện (lọc theo DataScope) | `employee.view` | [x] ✅ Đã hoàn thành |
+| 4.3 | `POST` | `/api/v1/employees` | Tiếp nhận nhân sự mới (hồ sơ 3 chiều + User linking) | `employee.create` | [x] ✅ Đã hoàn thành |
+| 4.4 | `PUT` | `/api/v1/employees/{id}/personal-info` | Cập nhật thông tin cá nhân, CCCD, thuế, ngân hàng | `employee.update` | [x] ✅ Đã hoàn thành |
+| 4.5 | `PUT` | `/api/v1/employees/{id}/employment-info` | Điều chuyển phòng ban, bổ nhiệm chức danh (ghi log lịch sử) | `employee.manage_job` | [x] ✅ Đã hoàn thành |
+| 4.6 | `PUT` | `/api/v1/employees/{id}/status` | Đổi trạng thái làm việc (tự động khóa User khi thôi việc/sa thải) | `employee.manage_status`| [x] ✅ Đã hoàn thành |
+| 4.7 | `GET` | `/api/v1/employees/{id}/dependents` | Lấy danh sách người phụ thuộc giảm trừ gia cảnh thuế TNCN | `employee.view` | [x] ✅ Đã hoàn thành |
+| 4.8 | `POST` | `/api/v1/employees/{id}/dependents` | Đăng ký người phụ thuộc mới cho nhân sự | `employee.update` | [x] ✅ Đã hoàn thành |
+| 4.9 | `DELETE`| `/api/v1/employees/{id}/dependents/{depId}` | Xóa thông tin người phụ thuộc | `employee.update` | [x] ✅ Đã hoàn thành |
+| 4.10 | `GET` | `/api/v1/employees/{id}/emergency-contacts` | Lấy danh sách người liên hệ khẩn cấp | `employee.view` | [x] ✅ Đã hoàn thành |
+| 4.11 | `POST` | `/api/v1/employees/{id}/emergency-contacts` | Thêm người liên hệ khẩn cấp | `employee.update` | [x] ✅ Đã hoàn thành |
+| 4.12 | `DELETE`| `/api/v1/employees/{id}/emergency-contacts/{contactId}` | Xóa người liên hệ khẩn cấp | `employee.update` | [x] ✅ Đã hoàn thành |
+| 4.13 | `GET` | `/api/v1/employees/{id}/history` | Xem toàn bộ lịch sử biến động công tác (Audit Trail) | `employee.view` | [x] ✅ Đã hoàn thành |
+| 4.14 | `POST` | `/api/v1/employees/import` | Nhập danh sách nhân viên hàng loạt bằng Excel | `employee.import` | [ ] ⏳ Chưa làm |
 
 ---
 

@@ -8,6 +8,7 @@ import com.cyclosa.organization.dto.request.CreatePositionRequest;
 import com.cyclosa.organization.dto.request.PositionFilter;
 import com.cyclosa.organization.dto.request.UpdatePositionRequest;
 import com.cyclosa.organization.dto.response.JobLevelResponse;
+import com.cyclosa.organization.dto.response.PositionDetailResponse;
 import com.cyclosa.organization.dto.response.PositionResponse;
 import com.cyclosa.organization.service.PositionService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -77,7 +78,7 @@ public class PositionController {
     @PreAuthorize("@perm.has('organization.view')")
     @RequirePermission("organization.view")
     @Operation(summary = "Lấy chi tiết thông tin chức danh việc làm")
-    public ResponseEntity<ApiResponse<PositionResponse>> getPositionById(
+    public ResponseEntity<ApiResponse<PositionDetailResponse>> getPositionById(
             @PathVariable UUID id,
             @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
     ) {

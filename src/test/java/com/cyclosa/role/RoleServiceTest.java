@@ -5,6 +5,7 @@ import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.exception.ErrorCode;
 import com.cyclosa.permission.entity.Permission;
 import com.cyclosa.permission.service.PermissionService;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.role.dto.request.AssignRolePermissionsRequest;
 import com.cyclosa.role.dto.request.RoleRequest;
 import com.cyclosa.role.dto.response.RoleDetailResponse;
@@ -43,6 +44,7 @@ class RoleServiceTest {
     @Mock RolePermissionRepository    rolePermissionRepository;
     @Mock PermissionService           permissionService; // Calling service of permission module
     @Mock UserRoleService             userRoleService; // Intra-module service call
+    @Mock CompanyService              companyService;
 
     @Spy RoleMapper roleMapper = new RoleMapperImpl();
 

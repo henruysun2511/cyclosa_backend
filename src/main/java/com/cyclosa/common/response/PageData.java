@@ -21,6 +21,13 @@ public class PageData<T> {
                 .build();
     }
 
+    public static <S, T> PageData<T> of(Page<S> page, List<T> items) {
+        return PageData.<T>builder()
+                .items(items)
+                .pagination(Pagination.from(page))
+                .build();
+    }
+
     @Getter
     @Builder
     public static class Pagination {

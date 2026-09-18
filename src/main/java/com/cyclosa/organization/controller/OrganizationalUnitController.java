@@ -5,6 +5,7 @@ import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
 import com.cyclosa.organization.dto.request.MoveOrgUnitRequest;
 import com.cyclosa.organization.dto.request.UpdateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitDetailResponse;
 import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitImpactPreviewResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
@@ -55,7 +56,7 @@ public class OrganizationalUnitController {
     @PreAuthorize("@perm.has('organization.view')")
     @RequirePermission("organization.view")
     @Operation(summary = "Lấy chi tiết thông tin phòng ban theo ID")
-    public ResponseEntity<ApiResponse<OrgUnitResponse>> getUnitById(
+    public ResponseEntity<ApiResponse<OrgUnitDetailResponse>> getUnitById(
             @PathVariable UUID id,
             @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
     ) {

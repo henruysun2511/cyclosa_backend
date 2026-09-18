@@ -6,6 +6,7 @@ import com.cyclosa.organization.dto.request.CreatePositionRequest;
 import com.cyclosa.organization.dto.request.PositionFilter;
 import com.cyclosa.organization.dto.request.UpdatePositionRequest;
 import com.cyclosa.organization.dto.response.JobLevelResponse;
+import com.cyclosa.organization.dto.response.PositionDetailResponse;
 import com.cyclosa.organization.dto.response.PositionResponse;
 
 import java.util.List;
@@ -21,7 +22,7 @@ public interface PositionService {
 
     PositionResponse updatePosition(UUID companyId, UUID id, UpdatePositionRequest request);
 
-    PositionResponse getPositionById(UUID companyId, UUID id);
+    PositionDetailResponse getPositionById(UUID companyId, UUID id);
 
     PageData<PositionResponse> getPositions(UUID companyId, PositionFilter filter);
 }

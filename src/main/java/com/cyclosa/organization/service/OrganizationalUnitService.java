@@ -3,6 +3,7 @@ package com.cyclosa.organization.service;
 import com.cyclosa.organization.dto.request.CreateOrgUnitRequest;
 import com.cyclosa.organization.dto.request.MoveOrgUnitRequest;
 import com.cyclosa.organization.dto.request.UpdateOrgUnitRequest;
+import com.cyclosa.organization.dto.response.OrgUnitDetailResponse;
 import com.cyclosa.organization.dto.response.OrgUnitHistoryResponse;
 import com.cyclosa.organization.dto.response.OrgUnitImpactPreviewResponse;
 import com.cyclosa.organization.dto.response.OrgUnitResponse;
@@ -21,7 +22,7 @@ public interface OrganizationalUnitService {
 
     void deleteUnit(UUID companyId, UUID id);
 
-    OrgUnitResponse getUnitById(UUID companyId, UUID id);
+    OrgUnitDetailResponse getUnitById(UUID companyId, UUID id);
 
     /**
      * Lấy cây sơ đồ tổ chức. Nếu atDate != null, tái dựng cây theo cơ cấu lịch sử tại thời điểm đó.

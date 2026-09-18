@@ -1,13 +1,15 @@
 package com.cyclosa.role.service;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.common.util.PageableUtils;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.permission.entity.Permission;
 import com.cyclosa.permission.service.PermissionService;
 import com.cyclosa.role.dto.request.AssignRolePermissionsRequest;
-import com.cyclosa.role.dto.request.RoleRequest;
 import com.cyclosa.role.dto.request.RoleFilter;
+import com.cyclosa.role.dto.request.RoleRequest;
 import com.cyclosa.role.dto.response.RoleDetailResponse;
 import com.cyclosa.role.dto.response.RoleResponse;
 import com.cyclosa.role.entity.Role;
@@ -32,8 +34,9 @@ public class RoleService {
 
     private final RoleRepository roleRepository;
     private final RolePermissionRepository rolePermissionRepository;
-    private final PermissionService permissionService; // Only calling PermissionService from permission module!
-    private final UserRoleService userRoleService; // Intra-module service call
+    private final PermissionService permissionService;
+    private final UserRoleService userRoleService;
+    private final CompanyService companyService;
     private final RoleMapper roleMapper;
 
     /** Allowed sort fields for roles */
@@ -44,7 +47,22 @@ public class RoleService {
         String kw = PageableUtils.normalizeKeyword(req.getKeyword());
         Pageable pageable = req.toPageable("name", SORT_FIELDS);
         Page<Role> result = roleRepository.search(kw, req.getCompanyId(), req.getIsSystemRole(), pageable);
-        return PageData.of(result, roleMapper::toResponse);
+
+        Set<UUID> companyIds = result.getContent().stream()
+                .map(Role::getCompanyId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Map<UUID, CompanySummary> companyMap = companyService.getCompanySummaries(companyIds);
+
+        List<RoleResponse> items = result.getContent().stream().map(role -> {
+            RoleResponse response = roleMapper.toResponse(role);
+            if (role.getCompanyId() != null) {
+                response.setCompany(companyMap.get(role.getCompanyId()));
+            }
+            return response;
+        }).toList();
+
+        return PageData.of(result, items);
     }
 
     @Transactional(readOnly = true)
@@ -52,7 +70,12 @@ public class RoleService {
         Role role = findRoleById(id);
         List<RolePermission> permissions = rolePermissionRepository.findByRoleIdWithPermission(id);
         role.setRolePermissions(permissions);
-        return roleMapper.toDetailResponse(role);
+
+        RoleDetailResponse response = roleMapper.toDetailResponse(role);
+        if (role.getCompanyId() != null) {
+            response.setCompany(companyService.getCompanySummary(role.getCompanyId()));
+        }
+        return response;
     }
 
     @Transactional
@@ -68,7 +91,12 @@ public class RoleService {
         Role role = roleMapper.toEntity(req);
         role.setSystemRole(false);
         Role saved = roleRepository.save(role);
-        return roleMapper.toResponse(saved);
+
+        RoleResponse response = roleMapper.toResponse(saved);
+        if (saved.getCompanyId() != null) {
+            response.setCompany(companyService.getCompanySummary(saved.getCompanyId()));
+        }
+        return response;
     }
 
     @Transactional
@@ -81,7 +109,13 @@ public class RoleService {
 
         role.setName(req.getName());
         role.setDescription(req.getDescription());
-        return roleMapper.toResponse(roleRepository.save(role));
+        Role saved = roleRepository.save(role);
+
+        RoleResponse response = roleMapper.toResponse(saved);
+        if (saved.getCompanyId() != null) {
+            response.setCompany(companyService.getCompanySummary(saved.getCompanyId()));
+        }
+        return response;
     }
 
     @Transactional
@@ -136,7 +170,12 @@ public class RoleService {
         }
 
         userRoleService.evictAllPermissionCache();
-        return roleMapper.toDetailResponse(role);
+
+        RoleDetailResponse response = roleMapper.toDetailResponse(role);
+        if (role.getCompanyId() != null) {
+            response.setCompany(companyService.getCompanySummary(role.getCompanyId()));
+        }
+        return response;
     }
 
     public Role findRoleById(UUID id) {

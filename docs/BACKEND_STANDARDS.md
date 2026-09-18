@@ -379,7 +379,29 @@ public PageData<RoleResponse> getRoles(RoleFilter req) {
   ```
 - Tuyệt đối không viết mapper thủ công bằng tay lặp qua từng phần tử trong Service.
 
-### 8.3. Response DTO
+### 8.3. Chiến lược DTO Response & Dữ liệu quan hệ liên bảng (Nested Summary Object & Detail DTO)
+
+#### 1. API Danh sách (`GET /api/v1/...`): BẮT BUỘC ÁP DỤNG CHIẾN LƯỢC 2 (Nested Summary Object)
+- **Quy tắc cốt lõi:** Tuyệt đối không chỉ trả về ID ngoại lai thô (`companyId`, `branchId`, `positionId`...). Phía UI luôn cần hiển thị nhãn (tên, mã) kèm theo mà không cần phải gọi thêm nhiều API phụ.
+- **Quy chuẩn Nested Summary:** Thay thế các trường ID phẳng bằng đối tượng tóm tắt thu gọn (`Nested Summary Object`):
+  - Thay `UUID companyId` bằng `CompanySummary company` (`{ id, code, name }`)
+  - Thay `UUID branchId` bằng `BranchSummary branch` (`{ id, code, name }`)
+  - Thay `UUID organizationalUnitId` bằng `OrgUnitSummary organizationalUnit` (`{ id, code, name, unitType }`)
+  - Thay `UUID positionId` bằng `PositionSummary position` (`{ id, code, name }`)
+  - Thay `UUID jobLevelId` bằng `JobLevelSummary jobLevel` (`{ id, name, rankOrder }`)
+  - Thay `UUID costCenterId` bằng `CostCenterSummary costCenter` (`{ id, code, name }`)
+  - Thay `UUID managerEmployeeId` bằng `EmployeeSummary manager` (`{ id, employeeCode, fullName, photoUrl, companyEmail }`)
+- **Vị trí lưu trữ:** Toàn bộ các DTO Summary dùng chung được đặt tập trung tại `com.cyclosa.common.dto.summary.*` để đảm bảo tái sử dụng toàn hệ thống và triệt tiêu phụ thuộc vòng tròn giữa các module.
+- **Kỹ thuật chống N+1 Query (Batch Enrichment):**
+  - Trong Service của API danh sách, **TUYỆT ĐỐI KHÔNG** gọi query cơ sở dữ liệu lặp trong vòng lặp chuyển đổi DTO.
+  - Phải thu thập tập hợp ID của trang (`Set<UUID> ids = page.getContent().stream().map(...).collect(Collectors.toSet())`).
+  - Gọi batch method từ Public Service hoặc Repository (ví dụ: `companyService.getCompanySummaries(companyIds)`) để nạp toàn bộ vào `Map<UUID, SummaryDTO>` trong 1 truy vấn duy nhất `IN (...)`, sau đó gán vào response DTO.
+
+#### 2. API Chi tiết (`GET /api/v1/.../{id}`): BẮT BUỘC TÁCH RIÊNG `*DetailResponse`
+- **Không dùng chung DTO:** API danh sách và API xem chi tiết có mục đích và tải trọng dữ liệu khác nhau. API chi tiết bắt buộc phải có DTO riêng mang hậu tố `DetailResponse` (ví dụ: `RoleDetailResponse`, `CompanyDetailResponse`, `BranchDetailResponse`, `PositionDetailResponse`, `OrgUnitDetailResponse`, `EmployeeDetailResponse`).
+- **Nội dung DTO chi tiết:** Cung cấp thông tin phong phú, thống kê chuyên sâu, các danh sách quan hệ con (như danh sách quyền chi tiết, số lượng chi nhánh trực thuộc, danh sách người phụ thuộc, liên hệ khẩn cấp...).
+
+#### 3. Bảo mật DTO
 - Tuyệt đối không để lộ các trường nhạy cảm (`passwordHash`, `salt`, `secretKey`, `token`...).
 - Định danh ID luôn là `UUID`.
 

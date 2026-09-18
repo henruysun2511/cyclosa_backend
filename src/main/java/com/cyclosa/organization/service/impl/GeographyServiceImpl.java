@@ -1,9 +1,11 @@
 package com.cyclosa.organization.service.impl;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.organization.dto.request.CreateBranchRequest;
 import com.cyclosa.organization.dto.request.CreateRegionRequest;
 import com.cyclosa.organization.dto.request.UpdateBranchRequest;
+import com.cyclosa.organization.dto.response.BranchDetailResponse;
 import com.cyclosa.organization.dto.response.BranchResponse;
 import com.cyclosa.organization.dto.response.RegionResponse;
 import com.cyclosa.organization.entity.Branch;
@@ -12,6 +14,7 @@ import com.cyclosa.organization.exception.OrganizationErrorCode;
 import com.cyclosa.organization.mapper.GeographyMapper;
 import com.cyclosa.organization.repository.BranchRepository;
 import com.cyclosa.organization.repository.RegionRepository;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.organization.service.GeographyService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,6 +32,7 @@ public class GeographyServiceImpl implements GeographyService {
     private final RegionRepository regionRepository;
     private final BranchRepository branchRepository;
     private final GeographyMapper geographyMapper;
+    private final CompanyService companyService;
 
     @Override
     @Transactional
@@ -56,7 +60,15 @@ public class GeographyServiceImpl implements GeographyService {
             throw AppException.badRequest("Yêu cầu cung cấp ID công ty");
         }
         List<Region> regions = regionRepository.findAllByCompanyIdWithBranches(companyId);
-        return geographyMapper.toRegionResponseList(regions);
+        CompanySummary companySummary = companyService.getCompanySummary(companyId);
+
+        List<RegionResponse> responses = geographyMapper.toRegionResponseList(regions);
+        for (RegionResponse r : responses) {
+            if (r.getBranches() != null) {
+                r.getBranches().forEach(b -> b.setCompany(companySummary));
+            }
+        }
+        return responses;
     }
 
     @Override
@@ -79,7 +91,10 @@ public class GeographyServiceImpl implements GeographyService {
         branch.setRegion(region);
         branch = branchRepository.save(branch);
         log.info("Created Branch id={}, code={}", branch.getId(), branch.getCode());
-        return geographyMapper.toResponse(branch);
+
+        BranchResponse response = geographyMapper.toResponse(branch);
+        response.setCompany(companyService.getCompanySummary(effectiveCompanyId));
+        return response;
     }
 
     @Override
@@ -107,19 +122,25 @@ public class GeographyServiceImpl implements GeographyService {
 
         branch = branchRepository.save(branch);
         log.info("Updated Branch id={}", branch.getId());
-        return geographyMapper.toResponse(branch);
+
+        BranchResponse response = geographyMapper.toResponse(branch);
+        response.setCompany(companyService.getCompanySummary(branch.getCompanyId()));
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public BranchResponse getBranchById(UUID companyId, UUID id) {
+    public BranchDetailResponse getBranchById(UUID companyId, UUID id) {
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new AppException(OrganizationErrorCode.BRANCH_NOT_FOUND));
 
         if (companyId != null && !branch.getCompanyId().equals(companyId)) {
             throw new AppException(OrganizationErrorCode.BRANCH_NOT_FOUND);
         }
-        return geographyMapper.toResponse(branch);
+
+        BranchDetailResponse response = geographyMapper.toDetailResponse(branch);
+        response.setCompany(companyService.getCompanySummary(branch.getCompanyId()));
+        return response;
     }
 
     @Override
@@ -129,6 +150,12 @@ public class GeographyServiceImpl implements GeographyService {
             throw AppException.badRequest("Yêu cầu cung cấp ID công ty");
         }
         List<Branch> branches = branchRepository.findByCompanyIdWithRegion(companyId);
-        return geographyMapper.toBranchResponseList(branches);
+        CompanySummary companySummary = companyService.getCompanySummary(companyId);
+
+        return branches.stream().map(b -> {
+            BranchResponse res = geographyMapper.toResponse(b);
+            res.setCompany(companySummary);
+            return res;
+        }).toList();
     }
 }

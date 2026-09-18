@@ -5,6 +5,7 @@ import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.organization.dto.request.CreateBranchRequest;
 import com.cyclosa.organization.dto.request.CreateRegionRequest;
 import com.cyclosa.organization.dto.request.UpdateBranchRequest;
+import com.cyclosa.organization.dto.response.BranchDetailResponse;
 import com.cyclosa.organization.dto.response.BranchResponse;
 import com.cyclosa.organization.dto.response.RegionResponse;
 import com.cyclosa.organization.service.GeographyService;
@@ -74,7 +75,7 @@ public class GeographyController {
     @PreAuthorize("@perm.has('organization.view')")
     @RequirePermission("organization.view")
     @Operation(summary = "Lấy chi tiết thông tin chi nhánh")
-    public ResponseEntity<ApiResponse<BranchResponse>> getBranchById(
+    public ResponseEntity<ApiResponse<BranchDetailResponse>> getBranchById(
             @PathVariable UUID id,
             @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId
     ) {

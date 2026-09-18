@@ -3,6 +3,7 @@ package com.cyclosa.organization.service;
 import com.cyclosa.organization.dto.request.CreateBranchRequest;
 import com.cyclosa.organization.dto.request.CreateRegionRequest;
 import com.cyclosa.organization.dto.request.UpdateBranchRequest;
+import com.cyclosa.organization.dto.response.BranchDetailResponse;
 import com.cyclosa.organization.dto.response.BranchResponse;
 import com.cyclosa.organization.dto.response.RegionResponse;
 
@@ -19,7 +20,7 @@ public interface GeographyService {
 
     BranchResponse updateBranch(UUID companyId, UUID id, UpdateBranchRequest request);
 
-    BranchResponse getBranchById(UUID companyId, UUID id);
+    BranchDetailResponse getBranchById(UUID companyId, UUID id);
 
     List<BranchResponse> getBranches(UUID companyId);
 }

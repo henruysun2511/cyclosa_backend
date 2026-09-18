@@ -1,5 +1,6 @@
 package com.cyclosa.organization.dto.response;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
 import com.cyclosa.common.enums.ActiveStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -20,7 +21,7 @@ import java.util.UUID;
 @Schema(description = "Thông tin vùng miền kèm danh sách chi nhánh trực thuộc")
 public class RegionResponse {
     private UUID id;
-    private UUID companyId;
+    private CompanySummary company;
     private String code;
     private String name;
     private ActiveStatus status;

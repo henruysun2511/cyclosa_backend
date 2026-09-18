@@ -1,5 +1,6 @@
 package com.cyclosa.organization.service.impl;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.common.util.PageableUtils;
@@ -8,6 +9,7 @@ import com.cyclosa.organization.dto.request.CreatePositionRequest;
 import com.cyclosa.organization.dto.request.PositionFilter;
 import com.cyclosa.organization.dto.request.UpdatePositionRequest;
 import com.cyclosa.organization.dto.response.JobLevelResponse;
+import com.cyclosa.organization.dto.response.PositionDetailResponse;
 import com.cyclosa.organization.dto.response.PositionResponse;
 import com.cyclosa.organization.entity.JobLevel;
 import com.cyclosa.organization.entity.Position;
@@ -15,6 +17,7 @@ import com.cyclosa.organization.exception.OrganizationErrorCode;
 import com.cyclosa.organization.mapper.PositionMapper;
 import com.cyclosa.organization.repository.JobLevelRepository;
 import com.cyclosa.organization.repository.PositionRepository;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.organization.service.PositionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,6 +38,7 @@ public class PositionServiceImpl implements PositionService {
     private final JobLevelRepository jobLevelRepository;
     private final PositionRepository positionRepository;
     private final PositionMapper positionMapper;
+    private final CompanyService companyService;
 
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("name", "code", "createdAt");
 
@@ -90,7 +94,10 @@ public class PositionServiceImpl implements PositionService {
 
         position = positionRepository.save(position);
         log.info("Created Position id={}, code={}", position.getId(), position.getCode());
-        return positionMapper.toResponse(position);
+
+        PositionResponse response = positionMapper.toResponse(position);
+        response.setCompany(companyService.getCompanySummary(effectiveCompanyId));
+        return response;
     }
 
     @Override
@@ -117,19 +124,25 @@ public class PositionServiceImpl implements PositionService {
 
         position = positionRepository.save(position);
         log.info("Updated Position id={}", position.getId());
-        return positionMapper.toResponse(position);
+
+        PositionResponse response = positionMapper.toResponse(position);
+        response.setCompany(companyService.getCompanySummary(position.getCompanyId()));
+        return response;
     }
 
     @Override
     @Transactional(readOnly = true)
-    public PositionResponse getPositionById(UUID companyId, UUID id) {
+    public PositionDetailResponse getPositionById(UUID companyId, UUID id) {
         Position position = positionRepository.findById(id)
                 .orElseThrow(() -> new AppException(OrganizationErrorCode.POSITION_NOT_FOUND));
 
         if (companyId != null && !position.getCompanyId().equals(companyId)) {
             throw new AppException(OrganizationErrorCode.POSITION_NOT_FOUND);
         }
-        return positionMapper.toResponse(position);
+
+        PositionDetailResponse response = positionMapper.toDetailResponse(position);
+        response.setCompany(companyService.getCompanySummary(position.getCompanyId()));
+        return response;
     }
 
     @Override
@@ -143,6 +156,14 @@ public class PositionServiceImpl implements PositionService {
         Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
 
         Page<Position> page = positionRepository.search(keyword, companyId, filter.getJobLevelId(), pageable);
-        return PageData.of(page, positionMapper::toResponse);
+        CompanySummary companySummary = companyService.getCompanySummary(companyId);
+
+        List<PositionResponse> items = page.getContent().stream().map(p -> {
+            PositionResponse res = positionMapper.toResponse(p);
+            res.setCompany(companySummary);
+            return res;
+        }).toList();
+
+        return PageData.of(page, items);
     }
 }

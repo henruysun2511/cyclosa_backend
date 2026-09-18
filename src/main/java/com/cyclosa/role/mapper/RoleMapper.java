@@ -19,12 +19,14 @@ public interface RoleMapper {
     Role toEntity(RoleRequest request);
 
     @Mapping(target = "isSystemRole", source = "systemRole")
+    @Mapping(target = "company", ignore = true)
     RoleResponse toResponse(Role role);
 
     List<RoleResponse> toResponseList(List<Role> roles);
 
     @Mapping(target = "permissions", source = "rolePermissions")
     @Mapping(target = "isSystemRole", source = "systemRole")
+    @Mapping(target = "company", ignore = true)
     RoleDetailResponse toDetailResponse(Role role);
 
     @Mapping(target = "permissionId", source = "permission.id")

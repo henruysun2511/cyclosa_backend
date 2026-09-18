@@ -16,6 +16,7 @@ import com.cyclosa.organization.mapper.OrganizationalUnitMapperImpl;
 import com.cyclosa.organization.repository.CostCenterRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitHistoryRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitRepository;
+import com.cyclosa.organization.service.CompanyService;
 import com.cyclosa.organization.service.impl.OrganizationalUnitServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -45,6 +46,7 @@ class OrganizationalUnitServiceTest {
     @Mock OrganizationalUnitRepository orgUnitRepository;
     @Mock OrganizationalUnitHistoryRepository historyRepository;
     @Mock CostCenterRepository costCenterRepository;
+    @Mock CompanyService companyService;
     @Spy OrganizationalUnitMapper orgUnitMapper = new OrganizationalUnitMapperImpl();
 
     @InjectMocks OrganizationalUnitServiceImpl orgUnitService;

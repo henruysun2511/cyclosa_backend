@@ -19,6 +19,8 @@ public interface OrganizationalUnitRepository extends JpaRepository<Organization
 
     Optional<OrganizationalUnit> findByIdAndCompanyId(UUID id, UUID companyId);
 
+    long countByCompanyId(UUID companyId);
+
     @Query("SELECT u FROM OrganizationalUnit u " +
            "LEFT JOIN FETCH u.costCenter " +
            "LEFT JOIN FETCH u.parentUnit " +

@@ -1,5 +1,7 @@
 package com.cyclosa.organization.dto.response;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
+import com.cyclosa.common.dto.summary.JobLevelSummary;
 import com.cyclosa.common.enums.ActiveStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -15,15 +17,12 @@ import java.util.UUID;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Thông tin vị trí chức danh")
+@Schema(description = "Thông tin tóm tắt vị trí chức danh trong danh sách")
 public class PositionResponse {
     private UUID id;
-    private UUID companyId;
+    private CompanySummary company;
     private String code;
     private String name;
-    private UUID jobLevelId;
-    private String jobLevelName;
-    private Integer rankOrder;
-    private String description;
+    private JobLevelSummary jobLevel;
     private ActiveStatus status;
 }

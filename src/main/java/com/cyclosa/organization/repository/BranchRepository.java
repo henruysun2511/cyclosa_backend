@@ -19,6 +19,8 @@ public interface BranchRepository extends JpaRepository<Branch, UUID> {
 
     Optional<Branch> findByIdAndCompanyId(UUID id, UUID companyId);
 
+    long countByCompanyId(UUID companyId);
+
     @Query("SELECT b FROM Branch b " +
            "LEFT JOIN FETCH b.region " +
            "WHERE b.companyId = :companyId " +

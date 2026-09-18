@@ -1,6 +1,8 @@
 package com.cyclosa.organization.mapper;
 
+import com.cyclosa.common.dto.summary.CompanySummary;
 import com.cyclosa.organization.dto.request.CreateCompanyRequest;
+import com.cyclosa.organization.dto.response.CompanyDetailResponse;
 import com.cyclosa.organization.dto.response.CompanyResponse;
 import com.cyclosa.organization.entity.Company;
 import org.mapstruct.Mapper;
@@ -18,4 +20,10 @@ public interface CompanyMapper {
     CompanyResponse toResponse(Company company);
 
     List<CompanyResponse> toResponseList(List<Company> companies);
+
+    @Mapping(target = "totalBranches", ignore = true)
+    @Mapping(target = "totalUnits", ignore = true)
+    CompanyDetailResponse toDetailResponse(Company company);
+
+    CompanySummary toSummary(Company company);
 }

@@ -6,6 +6,7 @@ import com.cyclosa.common.response.PageData;
 import com.cyclosa.organization.dto.request.CompanyFilter;
 import com.cyclosa.organization.dto.request.CreateCompanyRequest;
 import com.cyclosa.organization.dto.request.UpdateCompanyRequest;
+import com.cyclosa.organization.dto.response.CompanyDetailResponse;
 import com.cyclosa.organization.dto.response.CompanyResponse;
 import com.cyclosa.organization.service.CompanyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -43,7 +44,7 @@ public class CompanyController {
     @PreAuthorize("@perm.has('organization.view')")
     @RequirePermission("organization.view")
     @Operation(summary = "Lấy chi tiết thông tin công ty theo ID")
-    public ResponseEntity<ApiResponse<CompanyResponse>> getCompanyById(@PathVariable UUID id) {
+    public ResponseEntity<ApiResponse<CompanyDetailResponse>> getCompanyById(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(
                 companyService.getCompanyById(id),
                 "Lấy thông tin công ty thành công"));
