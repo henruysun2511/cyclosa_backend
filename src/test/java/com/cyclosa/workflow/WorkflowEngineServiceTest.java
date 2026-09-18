@@ -11,7 +11,7 @@ import com.cyclosa.workflow.mapper.WorkflowMapper;
 import com.cyclosa.workflow.repository.*;
 import com.cyclosa.workflow.service.ApproverResolverService;
 import com.cyclosa.workflow.service.ConditionEvaluatorService;
-import com.cyclosa.workflow.service.impl.WorkflowEngineServiceImpl;
+import com.cyclosa.workflow.service.WorkflowEngineService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -47,7 +47,7 @@ class WorkflowEngineServiceTest {
     @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
-    private WorkflowEngineServiceImpl workflowEngine;
+    private WorkflowEngineService workflowEngine;
 
     private UUID companyId;
     private UUID requesterId;

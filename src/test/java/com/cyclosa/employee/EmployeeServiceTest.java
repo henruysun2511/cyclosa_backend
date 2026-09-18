@@ -1,7 +1,6 @@
 package com.cyclosa.employee;
 
-import com.cyclosa.auth.entity.User;
-import com.cyclosa.auth.repository.UserRepository;
+import com.cyclosa.auth.service.UserService;
 import com.cyclosa.common.enums.DataScope;
 import com.cyclosa.common.enums.UserStatus;
 import com.cyclosa.common.exception.AppException;
@@ -15,17 +14,11 @@ import com.cyclosa.employee.exception.EmployeeErrorCode;
 import com.cyclosa.employee.mapper.EmployeeMapper;
 import com.cyclosa.employee.mapper.EmployeeMapperImpl;
 import com.cyclosa.employee.repository.*;
-import com.cyclosa.employee.service.impl.EmployeeServiceImpl;
-import com.cyclosa.organization.entity.Branch;
-import com.cyclosa.organization.entity.JobLevel;
-import com.cyclosa.organization.entity.OrganizationalUnit;
-import com.cyclosa.organization.entity.Position;
-import com.cyclosa.organization.repository.BranchRepository;
-import com.cyclosa.organization.repository.JobLevelRepository;
-import com.cyclosa.organization.repository.OrganizationalUnitRepository;
-import com.cyclosa.organization.repository.PositionRepository;
+import com.cyclosa.employee.service.EmployeeService;
 import com.cyclosa.organization.service.CompanyService;
+import com.cyclosa.organization.service.GeographyService;
 import com.cyclosa.organization.service.OrganizationalUnitService;
+import com.cyclosa.organization.service.PositionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -34,7 +27,6 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -56,20 +48,17 @@ class EmployeeServiceTest {
     @Mock EmployeeEmergencyContactRepository emergencyContactRepository;
     @Mock EmployeeHistoryRepository historyRepository;
 
-    @Mock OrganizationalUnitRepository orgUnitRepository;
-    @Mock BranchRepository branchRepository;
-    @Mock PositionRepository positionRepository;
-    @Mock JobLevelRepository jobLevelRepository;
     @Mock OrganizationalUnitService orgUnitService;
+    @Mock GeographyService geographyService;
+    @Mock PositionService positionService;
     @Mock CompanyService companyService;
 
-    @Mock UserRepository userRepository;
-    @Mock PasswordEncoder passwordEncoder;
+    @Mock UserService userService;
     @Mock SecurityPermissionEvaluator permEvaluator;
 
     @Spy EmployeeMapper employeeMapper = new EmployeeMapperImpl();
 
-    @InjectMocks EmployeeServiceImpl employeeService;
+    @InjectMocks EmployeeService employeeService;
 
     private UUID companyId;
     private UUID employeeId;
@@ -141,10 +130,10 @@ class EmployeeServiceTest {
         request.setJobLevelId(jobLevelId);
 
         given(personalInfoRepository.existsByNationalIdNumber("001200000002")).willReturn(false);
-        given(orgUnitRepository.existsById(unitId)).willReturn(true);
-        given(branchRepository.existsById(branchId)).willReturn(true);
-        given(positionRepository.existsById(positionId)).willReturn(true);
-        given(jobLevelRepository.existsById(jobLevelId)).willReturn(true);
+        given(orgUnitService.existsById(unitId)).willReturn(true);
+        given(geographyService.existsBranchById(branchId)).willReturn(true);
+        given(positionService.existsPositionById(positionId)).willReturn(true);
+        given(positionService.existsJobLevelById(jobLevelId)).willReturn(true);
         given(employeeRepository.countByCompanyId(companyId)).willReturn(5L);
 
         given(employeeRepository.save(any(Employee.class))).willAnswer(inv -> {
@@ -196,10 +185,10 @@ class EmployeeServiceTest {
 
         given(employeeRepository.findByIdAndCompanyId(employeeId, companyId)).willReturn(Optional.of(employee));
         given(permEvaluator.getDataScope("employee.view")).willReturn(Optional.of(DataScope.COMPANY));
-        given(orgUnitRepository.existsById(newUnitId)).willReturn(true);
-        given(branchRepository.existsById(branchId)).willReturn(true);
-        given(positionRepository.existsById(newPosId)).willReturn(true);
-        given(jobLevelRepository.existsById(jobLevelId)).willReturn(true);
+        given(orgUnitService.existsById(newUnitId)).willReturn(true);
+        given(geographyService.existsBranchById(branchId)).willReturn(true);
+        given(positionService.existsPositionById(newPosId)).willReturn(true);
+        given(positionService.existsJobLevelById(jobLevelId)).willReturn(true);
 
         EmployeeDetailResponse response = employeeService.updateEmploymentInfo(companyId, employeeId, request);
 
@@ -213,12 +202,6 @@ class EmployeeServiceTest {
     @Test
     @DisplayName("Chuyển trạng thái sang TERMINATED tự động khóa tài khoản User liên kết")
     void changeStatus_TerminatesEmployee_AndLocksUser() {
-        User linkedUser = User.builder()
-                .email("vana@cyclosa.com")
-                .status(UserStatus.ACTIVE)
-                .build();
-        linkedUser.setId(userId);
-
         ChangeEmployeeStatusRequest request = new ChangeEmployeeStatusRequest();
         request.setStatus(EmploymentStatus.TERMINATED);
         request.setReason("Hết hạn HĐLĐ và không tái ký");
@@ -226,14 +209,12 @@ class EmployeeServiceTest {
         given(employeeRepository.findByIdAndCompanyId(employeeId, companyId)).willReturn(Optional.of(employee));
         given(permEvaluator.getDataScope("employee.view")).willReturn(Optional.of(DataScope.COMPANY));
         given(employeeRepository.save(any(Employee.class))).willAnswer(inv -> inv.getArgument(0));
-        given(userRepository.findById(userId)).willReturn(Optional.of(linkedUser));
 
         EmployeeDetailResponse response = employeeService.changeStatus(companyId, employeeId, request);
 
         assertThat(response).isNotNull();
         assertThat(employee.getEmploymentStatus()).isEqualTo(EmploymentStatus.TERMINATED);
-        assertThat(linkedUser.getStatus()).isEqualTo(UserStatus.LOCKED);
-        verify(userRepository).save(linkedUser);
+        verify(userService).updateUserStatus(userId, UserStatus.LOCKED);
         verify(historyRepository).save(any(EmployeeHistory.class));
     }
 

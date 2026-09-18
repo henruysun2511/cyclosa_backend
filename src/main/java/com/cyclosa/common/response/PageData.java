@@ -14,6 +14,13 @@ public class PageData<T> {
     private List<T>    items;
     private Pagination pagination;
 
+    public static <T> PageData<T> from(Page<T> page) {
+        return PageData.<T>builder()
+                .items(page.getContent())
+                .pagination(Pagination.from(page))
+                .build();
+    }
+
     public static <S, T> PageData<T> of(Page<S> page, Function<S, T> mapper) {
         return PageData.<T>builder()
                 .items(page.getContent().stream().map(mapper).toList())

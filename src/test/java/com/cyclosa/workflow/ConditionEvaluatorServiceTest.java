@@ -2,7 +2,6 @@ package com.cyclosa.workflow;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.workflow.service.ConditionEvaluatorService;
-import com.cyclosa.workflow.service.impl.ConditionEvaluatorServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +17,7 @@ class ConditionEvaluatorServiceTest {
 
     @BeforeEach
     void setUp() {
-        conditionEvaluator = new ConditionEvaluatorServiceImpl();
+        conditionEvaluator = new ConditionEvaluatorService();
     }
 
     @Test

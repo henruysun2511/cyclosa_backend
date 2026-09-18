@@ -8,7 +8,7 @@ import com.cyclosa.workflow.entity.WorkflowDelegate;
 import com.cyclosa.workflow.exception.WorkflowErrorCode;
 import com.cyclosa.workflow.mapper.WorkflowMapper;
 import com.cyclosa.workflow.repository.WorkflowDelegateRepository;
-import com.cyclosa.workflow.service.impl.WorkflowDelegateServiceImpl;
+import com.cyclosa.workflow.service.WorkflowDelegateService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,7 +40,7 @@ class WorkflowDelegateServiceTest {
     private WorkflowMapper workflowMapper;
 
     @InjectMocks
-    private WorkflowDelegateServiceImpl delegateService;
+    private WorkflowDelegateService delegateService;
 
     private UUID delegatorId;
     private UUID delegateId;

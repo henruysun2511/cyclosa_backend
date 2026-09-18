@@ -8,6 +8,7 @@ import com.cyclosa.auth.entity.User;
 import com.cyclosa.auth.event.UserCreatedEvent;
 import com.cyclosa.auth.mapper.AuthMapper;
 import com.cyclosa.auth.repository.UserRepository;
+import com.cyclosa.auth.exception.AuthErrorCode;
 import com.cyclosa.common.enums.UserStatus;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
@@ -18,6 +19,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class UserService {
     private final ApplicationEventPublisher eventPublisher;
     private final RedisTemplate<String, String> redisTemplate;
     private final EmailService emailService;
+    private final PasswordEncoder passwordEncoder;
 
     private static final Set<String> SORT_FIELDS = Set.of("fullName", "email", "createdAt", "lastLoginAt");
 
@@ -103,6 +106,15 @@ public class UserService {
         userRepository.findById(id).ifPresent(user -> {
             user.setLastLoginAt(LocalDateTime.now());
             userRepository.save(user);
+        });
+    }
+
+    @Transactional
+    public void updateUserStatus(UUID userId, UserStatus status) {
+        userRepository.findById(userId).ifPresent(user -> {
+            user.setStatus(status);
+            userRepository.save(user);
+            log.info("Updated User id={} status to {}", userId, status);
         });
     }
 
@@ -214,5 +226,37 @@ public class UserService {
     public UserResponse getUserDetail(UUID userId) {
         User user = findByIdWithRoles(userId);
         return authMapper.toUserResponse(user);
+    }
+
+    @Transactional
+    public void linkEmployeeToUser(UUID userId, UUID employeeId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> AppException.userNotFound(userId));
+        if (user.getEmployeeId() != null && !user.getEmployeeId().equals(employeeId)) {
+            throw new AppException(AuthErrorCode.USER_ALREADY_LINKED);
+        }
+        user.setEmployeeId(employeeId);
+        userRepository.save(user);
+        log.info("Linked Employee id={} to User id={}", employeeId, userId);
+    }
+
+    @Transactional
+    public UUID createEmployeeUser(UUID employeeId, String email, String fullName, String employeeCode, UUID companyId) {
+        String cleanEmail = email.trim().toLowerCase();
+        if (userRepository.findByEmail(cleanEmail).isPresent()) {
+            return null;
+        }
+        User newUser = User.builder()
+                .email(cleanEmail)
+                .username(cleanEmail.split("@")[0] + "_" + employeeCode.toLowerCase().replace("-", "_"))
+                .fullName(fullName)
+                .passwordHash(passwordEncoder.encode("Cyclosa@123"))
+                .employeeId(employeeId)
+                .status(UserStatus.ACTIVE)
+                .version(0)
+                .build();
+        newUser = userRepository.save(newUser);
+        log.info("Auto-created User id={} for Employee code={}", newUser.getId(), employeeCode);
+        return newUser.getId();
     }
 }

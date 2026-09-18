@@ -17,7 +17,7 @@ import com.cyclosa.organization.repository.CostCenterRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitHistoryRepository;
 import com.cyclosa.organization.repository.OrganizationalUnitRepository;
 import com.cyclosa.organization.service.CompanyService;
-import com.cyclosa.organization.service.impl.OrganizationalUnitServiceImpl;
+import com.cyclosa.organization.service.OrganizationalUnitService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class OrganizationalUnitServiceTest {
     @Mock CompanyService companyService;
     @Spy OrganizationalUnitMapper orgUnitMapper = new OrganizationalUnitMapperImpl();
 
-    @InjectMocks OrganizationalUnitServiceImpl orgUnitService;
+    @InjectMocks OrganizationalUnitService orgUnitService;
 
     private UUID companyId;
     private UUID rootId;

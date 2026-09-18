@@ -72,12 +72,22 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 04. Employee
                 p("employee.view", "employee", "view", "Xem hồ sơ nhân viên"),
+                p("employee.create", "employee", "create", "Tiếp nhận hồ sơ nhân viên mới"),
+                p("employee.update", "employee", "update", "Cập nhật thông tin hồ sơ nhân sự"),
                 p("employee.manage", "employee", "manage", "Thêm mới, cập nhật hồ sơ nhân sự"),
+                p("employee.manage_job", "employee", "manage_job", "Điều chuyển công tác, bổ nhiệm chức danh"),
+                p("employee.update_status", "employee", "update_status", "Cập nhật trạng thái làm việc nhân sự"),
                 p("employee.view_salary", "employee", "view_salary", "Xem thông tin lương trong hồ sơ"),
 
                 // 05. Contract
                 p("contract.view", "contract", "view", "Xem hợp đồng lao động"),
+                p("contract.create", "contract", "create", "Soạn thảo hợp đồng mới"),
+                p("contract.update", "contract", "update", "Cập nhật dự thảo hợp đồng"),
+                p("contract.delete", "contract", "delete", "Xóa dự thảo hợp đồng"),
+                p("contract.approve", "contract", "approve", "Phê duyệt hợp đồng lao động"),
+                p("contract.terminate", "contract", "terminate", "Thanh lý và chấm dứt hợp đồng lao động"),
                 p("contract.manage", "contract", "manage", "Soạn thảo, ký kết và gia hạn hợp đồng"),
+                p("contract.config", "contract", "config", "Cấu hình mẫu hợp đồng và mail-merge"),
 
                 // 06. Attendance
                 p("attendance.view", "attendance", "view", "Xem dữ liệu chấm công và ca làm việc"),
@@ -106,8 +116,10 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 p("asset.manage", "asset", "manage", "Cấp phát, thu hồi và kiểm kê tài sản"),
 
                 // 18. Workflow
+                p("workflow.view", "workflow", "view", "Xem danh sách và tiến trình phê duyệt"),
                 p("workflow.approve", "workflow", "approve", "Phê duyệt các yêu cầu quy trình động"),
                 p("workflow.manage", "workflow", "manage", "Cấu hình ma trận duyệt và luồng workflow"),
+                p("workflow.delegate", "workflow", "delegate", "Thiết lập và quản lý ủy quyền phê duyệt"),
 
                 // 20. Reports
                 p("report.view", "report", "view", "Xem báo cáo phân tích và dashboard"),
@@ -175,6 +187,8 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
             List<String> empPermCodes = List.of(
                     "attendance.checkin", "attendance.view",
                     "leave.view", "leave.apply",
+                    "contract.view",
+                    "workflow.view", "workflow.delegate",
                     "payroll.view", "performance.view"
             );
             for (String code : empPermCodes) {
@@ -191,8 +205,9 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
             List<RolePermission> rps = new ArrayList<>();
             List<String> dmPermCodes = List.of(
                     "employee.view", "attendance.view", "attendance.approve",
-                    "leave.view", "leave.approve", "performance.view", "performance.evaluate",
-                    "recruitment.request", "workflow.approve"
+                    "leave.view", "leave.approve", "contract.view",
+                    "performance.view", "performance.evaluate",
+                    "recruitment.request", "workflow.view", "workflow.approve", "workflow.delegate"
             );
             for (String code : dmPermCodes) {
                 Permission p = permMap.get(code);

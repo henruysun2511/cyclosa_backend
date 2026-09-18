@@ -4,8 +4,7 @@ import com.cyclosa.common.annotation.RequirePermission;
 import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.common.util.SecurityUtils;
-import com.cyclosa.employee.entity.Employee;
-import com.cyclosa.employee.repository.EmployeeRepository;
+import com.cyclosa.employee.service.EmployeeService;
 import com.cyclosa.workflow.dto.request.*;
 import com.cyclosa.workflow.dto.response.WorkflowConditionResponse;
 import com.cyclosa.workflow.dto.response.WorkflowDefinitionResponse;
@@ -32,7 +31,7 @@ import java.util.UUID;
 public class WorkflowDefinitionController {
 
     private final WorkflowDefinitionService definitionService;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeService employeeService;
 
     @PostMapping
     @PreAuthorize("@perm.has('workflow.manage')")
@@ -106,7 +105,7 @@ public class WorkflowDefinitionController {
             @PathVariable UUID stepId
     ) {
         definitionService.deleteStep(id, stepId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Xóa bước phê duyệt thành công"));
+        return ResponseEntity.ok(ApiResponse.noContent("Xóa bước phê duyệt thành công"));
     }
 
     @PostMapping("/{id}/conditions")
@@ -131,7 +130,7 @@ public class WorkflowDefinitionController {
             @PathVariable UUID conditionId
     ) {
         definitionService.deleteCondition(id, conditionId);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Xóa điều kiện rẽ nhánh thành công"));
+        return ResponseEntity.ok(ApiResponse.noContent("Xóa điều kiện rẽ nhánh thành công"));
     }
 
     @PostMapping("/{id}/publish")
@@ -150,13 +149,12 @@ public class WorkflowDefinitionController {
     @Operation(summary = "Xóa bản nháp quy trình phê duyệt")
     public ResponseEntity<ApiResponse<Void>> deleteWorkflowDefinition(@PathVariable UUID id) {
         definitionService.deleteWorkflowDefinition(id);
-        return ResponseEntity.ok(ApiResponse.ok(null, "Xóa quy trình thành công"));
+        return ResponseEntity.ok(ApiResponse.noContent("Xóa quy trình thành công"));
     }
 
     private UUID getCurrentEmployeeId() {
         return SecurityUtils.getCurrentUserIdOptional()
-                .flatMap(employeeRepository::findByUserId)
-                .map(Employee::getId)
+                .flatMap(employeeService::findEmployeeIdByUserId)
                 .orElse(null);
     }
 }

@@ -23,7 +23,8 @@ public enum AuthErrorCode implements ErrorCode {
     ACTIVATION_TOKEN_INVALID    (4020, "Mã kích hoạt không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
 
     USER_NOT_FOUND              (4040, "Không tìm thấy người dùng",                  HttpStatus.NOT_FOUND),
-    USER_EMAIL_EXISTS           (4041, "Email người dùng đã tồn tại",                HttpStatus.CONFLICT);
+    USER_EMAIL_EXISTS           (4041, "Email người dùng đã tồn tại",                HttpStatus.CONFLICT),
+    USER_ALREADY_LINKED         (4042, "Tài khoản người dùng này đã được gắn cho nhân viên khác", HttpStatus.CONFLICT);
 
     private final int code;
     private final String message;

@@ -1,6 +1,8 @@
 package com.cyclosa.employee.dto.request;
 
+import com.cyclosa.common.dto.request.BaseFilterRequest;
 import com.cyclosa.employee.enums.EmploymentStatus;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -10,9 +12,9 @@ import java.util.UUID;
 
 @Getter
 @Setter
-public class EmployeeFilter {
+@Schema(description = "Tham số tìm kiếm và phân trang hồ sơ nhân sự")
+public class EmployeeFilter extends BaseFilterRequest {
 
-    private String keyword;
     private UUID companyId;
     private UUID organizationalUnitId;
     private UUID branchId;

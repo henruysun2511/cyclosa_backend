@@ -33,4 +33,9 @@ public final class SecurityUtils {
             return Optional.empty();
         }
     }
+
+    public static UUID getCurrentUserId() {
+        return getCurrentUserIdOptional()
+                .orElseThrow(AppException::unauthorized);
+    }
 }

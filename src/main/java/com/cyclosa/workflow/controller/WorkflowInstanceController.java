@@ -1,12 +1,12 @@
 package com.cyclosa.workflow.controller;
 
+import com.cyclosa.common.annotation.RequirePermission;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.common.util.SecurityUtils;
-import com.cyclosa.employee.entity.Employee;
 import com.cyclosa.employee.exception.EmployeeErrorCode;
-import com.cyclosa.employee.repository.EmployeeRepository;
+import com.cyclosa.employee.service.EmployeeService;
 import com.cyclosa.workflow.dto.request.ApprovalActionRequest;
 import com.cyclosa.workflow.dto.request.StartWorkflowRequest;
 import com.cyclosa.workflow.dto.response.PendingApprovalResponse;
@@ -22,6 +22,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
@@ -29,13 +30,15 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/workflows")
 @RequiredArgsConstructor
-@Tag(name = "Workflow Instances & Approvals", description = "Vận hành phê duyệt đa cấp và hộp thư phê duyệt")
+@Tag(name = "Workflows", description = "Vận hành phê duyệt đa cấp và hộp thư phê duyệt")
 public class WorkflowInstanceController {
 
     private final WorkflowEngineService workflowEngineService;
-    private final EmployeeRepository employeeRepository;
+    private final EmployeeService employeeService;
 
     @PostMapping("/instances")
+    @PreAuthorize("@perm.has('workflow.manage')")
+    @RequirePermission("workflow.manage")
     @Operation(summary = "Khởi tạo một phiên phê duyệt mới cho bản ghi nghiệp vụ")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> startWorkflow(
             @Valid @RequestBody StartWorkflowRequest request
@@ -46,6 +49,8 @@ public class WorkflowInstanceController {
     }
 
     @PutMapping("/instances/{id}/approve")
+    @PreAuthorize("@perm.has('workflow.approve')")
+    @RequirePermission("workflow.approve")
     @Operation(summary = "Phê duyệt bước hiện tại của yêu cầu")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> approve(
             @PathVariable UUID id,
@@ -58,6 +63,8 @@ public class WorkflowInstanceController {
     }
 
     @PutMapping("/instances/{id}/reject")
+    @PreAuthorize("@perm.has('workflow.approve')")
+    @RequirePermission("workflow.approve")
     @Operation(summary = "Từ chối bước hiện tại của yêu cầu")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> reject(
             @PathVariable UUID id,
@@ -70,6 +77,8 @@ public class WorkflowInstanceController {
     }
 
     @PutMapping("/instances/{id}/cancel")
+    @PreAuthorize("@perm.has('workflow.view')")
+    @RequirePermission("workflow.view")
     @Operation(summary = "Hủy yêu cầu phê duyệt (bởi người tạo đơn)")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> cancel(
             @PathVariable UUID id,
@@ -82,6 +91,8 @@ public class WorkflowInstanceController {
     }
 
     @GetMapping("/pending")
+    @PreAuthorize("@perm.has('workflow.view')")
+    @RequirePermission("workflow.view")
     @Operation(summary = "Lấy danh sách yêu cầu đang chờ tôi phê duyệt (bao gồm cả ủy quyền)")
     public ResponseEntity<ApiResponse<PageData<PendingApprovalResponse>>> getPendingApprovals(
             @PageableDefault(size = 20) Pageable pageable
@@ -93,6 +104,8 @@ public class WorkflowInstanceController {
     }
 
     @GetMapping("/instances/{id}/history")
+    @PreAuthorize("@perm.has('workflow.view')")
+    @RequirePermission("workflow.view")
     @Operation(summary = "Xem lịch sử và tiến trình timeline chi tiết của quy trình phê duyệt")
     public ResponseEntity<ApiResponse<WorkflowHistoryResponse>> getInstanceHistory(@PathVariable UUID id) {
         return ResponseEntity.ok(ApiResponse.ok(
@@ -101,6 +114,8 @@ public class WorkflowInstanceController {
     }
 
     @GetMapping("/instances/by-request")
+    @PreAuthorize("@perm.has('workflow.view')")
+    @RequirePermission("workflow.view")
     @Operation(summary = "Tra cứu phiên phê duyệt theo loại yêu cầu và ID nghiệp vụ gốc")
     public ResponseEntity<ApiResponse<WorkflowInstanceResponse>> getInstanceByRequest(
             @RequestParam ApprovalRequestType requestType,
@@ -114,8 +129,7 @@ public class WorkflowInstanceController {
 
     private UUID getCurrentEmployeeIdOrThrow() {
         return SecurityUtils.getCurrentUserIdOptional()
-                .flatMap(employeeRepository::findByUserId)
-                .map(Employee::getId)
+                .flatMap(employeeService::findEmployeeIdByUserId)
                 .orElseThrow(() -> new AppException(EmployeeErrorCode.EMPLOYEE_NOT_FOUND,
                         "Không tìm thấy hồ sơ nhân viên ứng với tài khoản đăng nhập hiện tại"));
     }
