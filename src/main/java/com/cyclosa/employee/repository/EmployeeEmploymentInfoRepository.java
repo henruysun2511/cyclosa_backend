@@ -15,6 +15,8 @@ public interface EmployeeEmploymentInfoRepository extends JpaRepository<Employee
 
     List<EmployeeEmploymentInfo> findByOrganizationalUnitId(UUID organizationalUnitId);
 
+    List<EmployeeEmploymentInfo> findByOrganizationalUnitIdIn(java.util.Collection<UUID> organizationalUnitIds);
+
     List<EmployeeEmploymentInfo> findByManagerEmployeeId(UUID managerEmployeeId);
 
     List<EmployeeEmploymentInfo> findByBranchId(UUID branchId);

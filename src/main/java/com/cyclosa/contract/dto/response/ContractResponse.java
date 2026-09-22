@@ -34,6 +34,10 @@ public class ContractResponse {
     private LocalDate signDate;
     private BigDecimal basicSalary;
     private BigDecimal insuranceSalary;
+    private BigDecimal allowanceLunch;
+    private BigDecimal allowancePhone;
+    private BigDecimal allowanceTransport;
+    private BigDecimal allowanceOther;
     private WorkingHoursType workingHoursType;
     private Integer definiteContractSequence;
     private String signedContractUrl;

@@ -91,6 +91,20 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 06. Attendance
                 p("attendance.view", "attendance", "view", "Xem dữ liệu chấm công và ca làm việc"),
+                p("attendance.view_own", "attendance", "view_own", "Xem dữ liệu chấm công cá nhân"),
+                p("attendance.shift.view", "attendance", "view", "Xem danh mục ca làm việc"),
+                p("attendance.shift.create", "attendance", "create", "Tạo ca làm việc mới"),
+                p("attendance.shift.update", "attendance", "update", "Cập nhật ca làm việc"),
+                p("attendance.shift.delete", "attendance", "delete", "Xóa ca làm việc"),
+                p("attendance.schedule.view", "attendance", "view", "Xem bảng phân ca làm việc"),
+                p("attendance.schedule.manage", "attendance", "manage", "Phân ca làm việc cho nhân viên"),
+                p("attendance.record", "attendance", "record", "Thực hiện chấm công Check-in / Check-out hàng ngày"),
+                p("attendance.record.view", "attendance", "view", "Quản lý xem nhật ký chấm công toàn đơn vị"),
+                p("attendance.explain.apply", "attendance", "apply", "Gửi đơn giải trình chấm công"),
+                p("attendance.explain.view", "attendance", "view", "Xem danh sách đơn giải trình chấm công"),
+                p("attendance.timesheet.view", "attendance", "view", "Xem bảng công tổng hợp toàn đơn vị"),
+                p("attendance.timesheet.manage", "attendance", "manage", "Tổng hợp, tính toán lại bảng công"),
+                p("attendance.timesheet.lock", "attendance", "lock", "Khóa chốt bảng công tháng"),
                 p("attendance.checkin", "attendance", "checkin", "Thực hiện chấm công hàng ngày"),
                 p("attendance.approve", "attendance", "approve", "Duyệt đơn giải trình chấm công, làm thêm giờ"),
                 p("attendance.manage", "attendance", "manage", "Quản lý cấu hình ca, lịch làm việc"),
@@ -104,7 +118,10 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 // 08. Payroll
                 p("payroll.view", "payroll", "view", "Xem bảng lương và phiếu lương"),
                 p("payroll.process", "payroll", "process", "Tính toán, chốt bảng lương và chi trả"),
+                p("payroll.manage", "payroll", "manage", "Quản lý kỳ tính lương tháng"),
+                p("payroll.approve", "payroll", "approve", "Phê duyệt bảng lương tháng"),
                 p("payroll.config", "payroll", "config", "Cấu hình thành phần lương và biểu thuế"),
+                p("payroll.advance", "payroll", "advance", "Đơn xin tạm ứng tiền lương"),
 
                 // 09. Performance
                 p("performance.view", "performance", "view", "Xem KPI, mục tiêu và kết quả đánh giá"),
@@ -185,11 +202,12 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
         if (employee != null && rolePermissionRepository.findByRoleId(employee.getId()).isEmpty()) {
             List<RolePermission> rps = new ArrayList<>();
             List<String> empPermCodes = List.of(
-                    "attendance.checkin", "attendance.view",
+                    "attendance.checkin", "attendance.view", "attendance.view_own",
+                    "attendance.record", "attendance.explain.apply",
                     "leave.view", "leave.apply",
                     "contract.view",
                     "workflow.view", "workflow.delegate",
-                    "payroll.view", "performance.view"
+                    "payroll.view", "payroll.advance", "performance.view"
             );
             for (String code : empPermCodes) {
                 Permission p = permMap.get(code);
@@ -204,8 +222,11 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
         if (deptManager != null && rolePermissionRepository.findByRoleId(deptManager.getId()).isEmpty()) {
             List<RolePermission> rps = new ArrayList<>();
             List<String> dmPermCodes = List.of(
-                    "employee.view", "attendance.view", "attendance.approve",
+                    "employee.view", "attendance.view", "attendance.view_own", "attendance.approve",
+                    "attendance.shift.view", "attendance.schedule.view", "attendance.record.view",
+                    "attendance.explain.view", "attendance.timesheet.view",
                     "leave.view", "leave.approve", "contract.view",
+                    "payroll.view", "payroll.advance",
                     "performance.view", "performance.evaluate",
                     "recruitment.request", "workflow.view", "workflow.approve", "workflow.delegate"
             );

@@ -355,6 +355,10 @@ public class EmployeeService {
         log.info("Deleted dependent id={} for employee id={}", dependentId, employeeId);
     }
     @Transactional(readOnly = true)
+    public int countDependents(UUID employeeId) {
+        return (int) dependentRepository.countByEmployeeId(employeeId);
+    }
+    @Transactional(readOnly = true)
     public List<EmployeeEmergencyContactResponse> getEmergencyContacts(UUID companyId, UUID employeeId) {
         Employee employee = findEmployee(companyId, employeeId);
         validateAccess(employee);
@@ -739,5 +743,31 @@ public class EmployeeService {
         Employee emp = employeeRepository.findById(employeeId)
                 .orElseThrow(() -> new AppException(EmployeeErrorCode.EMPLOYEE_NOT_FOUND));
         return toDetailResponse(emp);
+    }
+
+    @Transactional(readOnly = true)
+    public Set<UUID> getEmployeeIdsByDepartment(UUID companyId, UUID unitId) {
+        if (companyId == null || unitId == null) {
+            return Collections.emptySet();
+        }
+        Set<UUID> unitIds = orgUnitService.getSelfAndDescendantUnitIds(companyId, unitId);
+        if (unitIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+        return employmentInfoRepository.findByOrganizationalUnitIdIn(unitIds).stream()
+                .map(info -> info.getEmployee().getId())
+                .collect(Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
+    public Set<UUID> getSubordinateEmployeeIds(UUID managerEmployeeId) {
+        if (managerEmployeeId == null) {
+            return Collections.emptySet();
+        }
+        Set<UUID> result = employmentInfoRepository.findByManagerEmployeeId(managerEmployeeId).stream()
+                .map(info -> info.getEmployee().getId())
+                .collect(Collectors.toSet());
+        result.add(managerEmployeeId);
+        return result;
     }
 }

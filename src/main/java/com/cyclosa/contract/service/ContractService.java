@@ -523,4 +523,20 @@ public class ContractService {
         long count = contractRepository.count() + 1;
         return String.format("CYC/%d/HDLD-%s/%05d", year, typeCode, count);
     }
+
+    @Transactional(readOnly = true)
+    public Optional<ContractResponse> getActiveContractByEmployee(UUID employeeId) {
+        return contractRepository.findByEmployeeIdAndContractStatus(employeeId, ContractStatus.ACTIVE)
+                .map(contractMapper::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<UUID, ContractResponse> getActiveContractsByCompany(UUID companyId) {
+        if (companyId == null) {
+            return Collections.emptyMap();
+        }
+        return contractRepository.findByCompanyIdAndContractStatus(companyId, ContractStatus.ACTIVE).stream()
+                .map(contractMapper::toResponse)
+                .collect(Collectors.toMap(ContractResponse::getEmployeeId, c -> c, (a, b) -> a));
+    }
 }

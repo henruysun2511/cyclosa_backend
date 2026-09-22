@@ -14,4 +14,6 @@ public interface EmployeeDependentRepository extends JpaRepository<EmployeeDepen
     List<EmployeeDependent> findByEmployeeId(UUID employeeId);
 
     Optional<EmployeeDependent> findByIdAndEmployeeId(UUID id, UUID employeeId);
+
+    long countByEmployeeId(UUID employeeId);
 }

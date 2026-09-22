@@ -60,6 +60,8 @@ public interface ContractRepository extends JpaRepository<Contract, UUID>, JpaSp
 
     List<Contract> findByEmployeeIdOrderByStartDateDesc(UUID employeeId);
 
+    List<Contract> findByCompanyIdAndContractStatus(UUID companyId, ContractStatus status);
+
     @Query("""
         SELECT c FROM Contract c
         WHERE (:companyId IS NULL OR c.companyId = :companyId)

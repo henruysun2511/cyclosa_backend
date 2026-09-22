@@ -24,9 +24,9 @@
 | **03** | **Organization Structure** (`organization`) | Quản lý Công ty/Chi nhánh, Cây sơ đồ Phòng ban, Tổ/Nhóm, Chức danh & Vị trí công việc | `01. Auth`, `02. Role` | 25/25 API | ✅ Đã hoàn thành |
 | **04** | **Employee Profile** (`employee`) | Hồ sơ nhân sự, mã nhân viên, trạng thái làm việc, thông tin liên hệ, ngân hàng, người phụ thuộc | `01. Auth`, `02. Role`, `03. Org` | 0/9 API | ⏳ Chưa làm |
 | **05** | **Contract Management** (`contract`) | Hợp đồng lao động (thử việc/chính thức), phụ lục hợp đồng, lương cơ bản, cảnh báo hết hạn | `04. Employee` | 0/6 API | ⏳ Chưa làm |
-| **06** | **Time & Attendance** (`attendance`) | Ca làm việc, phân ca, Check-in/Check-out, bảng công tổng hợp ngày/tháng, giải trình chấm công | `04. Employee`, `03. Org` | 0/9 API | ⏳ Chưa làm |
+| **06** | **Time & Attendance** (`attendance`) | Ca làm việc, phân ca, Check-in/Check-out, bảng công tổng hợp ngày/tháng, giải trình chấm công | `04. Employee`, `03. Org` | 22/22 API | ✅ Hoàn thành |
 | **07** | **Leave & Overtime** (`leave`, `overtime`) | Quỹ phép năm, đơn xin nghỉ phép, duyệt nghỉ phép đa cấp theo DataScope, đăng ký & duyệt làm thêm giờ (OT) | `04. Employee`, `02. Role` | 0/9 API | ⏳ Chưa làm |
-| **08** | **Payroll Management** (`payroll`) | Cấu hình công thức lương, phụ cấp, tính lương tự động từ công + HĐ, duyệt bảng lương, xuất phiếu lương | `05. Contract`, `06. Attendance`, `07. Leave/OT` | 0/9 API | ⏳ Chưa làm |
+| **08** | **Payroll Management** (`payroll`) | Cấu hình thành phần lương, phụ cấp, tính lương tự động (công + HĐ), tạm ứng lương, duyệt bảng lương qua Workflow, phiếu lương ESS | `05. Contract`, `06. Attendance` | 23/23 API | ✅ Đã hoàn thành |
 | **09** | **Recruitment & Onboarding** (`recruitment`) | Tin tuyển dụng, hồ sơ ứng viên (CV), lịch phỏng vấn, đánh giá & tiếp nhận nhân viên (Onboarding) | `03. Org`, `04. Employee` | 0/6 API | ⏳ Chưa làm |
 | **10** | **Asset Management** (`asset`) | Danh mục tài sản công ty, cấp phát thiết bị cho nhân viên, thu hồi khi thôi việc, bảo hành báo hỏng | `04. Employee` | 0/5 API | ⏳ Chưa làm |
 | **11** | **Performance Evaluation** (`performance`) | Thiết lập kỳ đánh giá KPI/OKR, chỉ số đánh giá, nhân viên tự đánh giá, quản lý duyệt xếp loại | `04. Employee`, `03. Org` | 0/5 API | ⏳ Chưa làm |
@@ -154,20 +154,33 @@
 ---
 
 ### 6. Module Time & Attendance (`attendance`)
-- **Mô tả:** Ca làm việc, phân ca, Check-in/Check-out qua GPS/Wifi, tổng hợp bảng chấm công hàng ngày/tháng, giải trình quên chấm công.
-- **Ràng buộc:** `04. Employee`, `03. Organization` *(Cần thông tin nhân viên và ca làm việc theo phòng ban).*
+- **Mô tả:** Ca làm việc, phân ca, Check-in/Check-out qua GPS/Wifi, tự động chốt công hàng ngày (Sweep 01:00 AM), tổng hợp bảng công tháng, giải trình bù công qua Workflow.
+- **Ràng buộc:** `04. Employee`, `03. Organization`, `Workflow Engine` *(Cần thông tin nhân viên, chi nhánh và luồng duyệt đa cấp).*
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 6.1 | `GET` | `/api/v1/shifts` | Danh mục ca làm việc (giờ bắt đầu, kết thúc, nghỉ trưa) | `attendance.view` | [ ] ⏳ Chưa làm |
-| 6.2 | `POST` | `/api/v1/shifts` | Tạo mới ca làm việc | `attendance.config` | [ ] ⏳ Chưa làm |
-| 6.3 | `POST` | `/api/v1/shift-assignments` | Phân ca làm việc cho nhân viên theo tuần/tháng | `attendance.assign` | [ ] ⏳ Chưa làm |
-| 6.4 | `POST` | `/api/v1/attendance/check-in` | Điểm danh vào ca (Check-in kèm tọa độ GPS / IP Wifi) | `attendance.record` | [ ] ⏳ Chưa làm |
-| 6.5 | `POST` | `/api/v1/attendance/check-out` | Điểm danh ra ca (Check-out) | `attendance.record` | [ ] ⏳ Chưa làm |
-| 6.6 | `GET` | `/api/v1/attendance/my-timesheet`| Xem bảng chấm công cá nhân của tháng hiện tại | `attendance.view_own` | [ ] ⏳ Chưa làm |
-| 6.7 | `GET` | `/api/v1/attendance/timesheets` | Tổng hợp bảng công theo phòng ban/công ty (DataScope) | `attendance.view` | [ ] ⏳ Chưa làm |
-| 6.8 | `POST` | `/api/v1/attendance/explanations`| Gửi đơn giải trình quên chấm công / đi muộn | `attendance.record` | [ ] ⏳ Chưa làm |
-| 6.9 | `PUT` | `/api/v1/attendance/explanations/{id}/approve` | Phê duyệt đơn giải trình công (DataScope tối thiểu TEAM) | `attendance.approve` | [ ] ⏳ Chưa làm |
+| 6.1 | `GET` | `/api/v1/shifts` | Danh sách ca làm việc của công ty | `attendance.shift.view` | [x] ✅ Hoàn thành |
+| 6.2 | `GET` | `/api/v1/shifts/{id}` | Chi tiết ca làm việc (kèm số nhân viên phân ca) | `attendance.shift.view` | [x] ✅ Hoàn thành |
+| 6.3 | `POST` | `/api/v1/shifts` | Tạo mới ca làm việc | `attendance.shift.create` | [x] ✅ Hoàn thành |
+| 6.4 | `PUT` | `/api/v1/shifts/{id}` | Cập nhật ca làm việc | `attendance.shift.update` | [x] ✅ Hoàn thành |
+| 6.5 | `DELETE`| `/api/v1/shifts/{id}` | Xóa ca làm việc | `attendance.shift.delete` | [x] ✅ Hoàn thành |
+| 6.6 | `POST` | `/api/v1/shift-assignments/batch` | Phân ca hàng loạt cho nhân sự | `attendance.schedule.manage` | [x] ✅ Hoàn thành |
+| 6.7 | `GET` | `/api/v1/shift-assignments/my-schedule`| Xem lịch làm việc cá nhân | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.8 | `GET` | `/api/v1/shift-assignments` | Tra cứu lịch phân ca theo DataScope | `attendance.schedule.view` | [x] ✅ Hoàn thành |
+| 6.9 | `DELETE`| `/api/v1/shift-assignments/{id}` | Hủy phân ca làm việc | `attendance.schedule.manage` | [x] ✅ Hoàn thành |
+| 6.10 | `POST` | `/api/v1/attendance/check-in` | Điểm danh vào ca (Check-in GPS Geofencing) | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.11 | `POST` | `/api/v1/attendance/check-out` | Điểm danh ra ca (Check-out GPS, fallback ca đêm) | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.12 | `GET` | `/api/v1/attendance/today` | Xem trạng thái điểm danh hôm nay của cá nhân | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.13 | `GET` | `/api/v1/attendance/history` | Lịch sử chấm công cá nhân theo tháng | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.14 | `GET` | `/api/v1/attendance/records` | Quản lý nhật ký chấm công toàn đơn vị (DataScope) | `attendance.record.view` | [x] ✅ Hoàn thành |
+| 6.15 | `POST` | `/api/v1/attendance/explanations` | Gửi đơn giải trình chấm công (chống gửi trùng PENDING) | `attendance.explain.apply` | [x] ✅ Hoàn thành |
+| 6.16 | `GET` | `/api/v1/attendance/explanations/my` | Danh sách đơn giải trình của cá nhân | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.17 | `GET` | `/api/v1/attendance/explanations` | Danh sách đơn giải trình cần xử lý (DataScope) | `attendance.explain.view` | [x] ✅ Hoàn thành |
+| 6.18 | `GET` | `/api/v1/attendance/explanations/{id}` | Chi tiết đơn giải trình và lịch sử luồng duyệt | `attendance.explain.view` | [x] ✅ Hoàn thành |
+| 6.19 | `GET` | `/api/v1/timesheets/my-timesheet` | Xem bảng công cá nhân tháng này | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 6.20 | `GET` | `/api/v1/timesheets/summary` | Bảng tổng hợp công toàn đơn vị (DataScope) | `attendance.timesheet.view` | [x] ✅ Hoàn thành |
+| 6.21 | `POST` | `/api/v1/timesheets/recalculate` | Tính toán lại bảng công tháng | `attendance.timesheet.manage` | [x] ✅ Hoàn thành |
+| 6.22 | `POST` | `/api/v1/timesheets/lock` | Khóa chốt bảng công tháng (bảo vệ snapshot cho Payroll) | `attendance.timesheet.lock` | [x] ✅ Hoàn thành |
 
 ---
 
@@ -190,20 +203,34 @@
 ---
 
 ### 8. Module Payroll Management (`payroll`)
-- **Mô tả:** Cấu hình thành phần lương, công thức tính toán tự động dựa trên hợp đồng + dữ liệu chấm công + nghỉ phép + OT, duyệt bảng lương và xuất phiếu lương (Payslip).
-- **Ràng buộc:** `05. Contract`, `06. Attendance`, `07. Leave & OT` *(Lương cần dữ liệu hợp đồng, số công thực tế, ngày phép và giờ OT).*
+- **Mô tả:** Cấu hình thành phần lương, phụ cấp, trích nộp bảo hiểm theo NĐ 73/2024 & NĐ 74/2024, thuế TNCN 7 bậc lũy tiến, tính lương tự động từ hợp đồng & chấm công, tạm ứng lương, phê duyệt kỳ lương qua Workflow Engine và tra cứu phiếu lương cá nhân (Payslip ESS).
+- **Ràng buộc:** `05. Contract`, `06. Attendance` *(Lương cần dữ liệu hợp đồng lao động và snapshot tổng hợp chấm công tháng).*
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 8.1 | `GET` | `/api/v1/salary-components` | Cấu hình các khoản phụ cấp, mức đóng BHXH, thuế TNCN | `payroll.config` | [ ] ⏳ Chưa làm |
-| 8.2 | `GET` | `/api/v1/payroll-periods` | Danh sách các kỳ tính lương tháng | `payroll.view` | [ ] ⏳ Chưa làm |
-| 8.3 | `POST` | `/api/v1/payroll-periods` | Mở kỳ tính lương mới | `payroll.manage` | [ ] ⏳ Chưa làm |
-| 8.4 | `POST` | `/api/v1/payroll-periods/{id}/calculate` | Chạy thuật toán tính toán bảng lương tự động | `payroll.calculate` | [ ] ⏳ Chưa làm |
-| 8.5 | `GET` | `/api/v1/payroll-periods/{id}/table` | Xem chi tiết bảng lương theo DataScope (`PayrollFilter`) | `payroll.view` | [ ] ⏳ Chưa làm |
-| 8.6 | `PUT` | `/api/v1/payroll-periods/{id}/approve` | Ban Giám đốc phê duyệt bảng lương tháng | `payroll.approve` | [ ] ⏳ Chưa làm |
-| 8.7 | `GET` | `/api/v1/payslips/my` | Nhân viên xem phiếu lương cá nhân (Payslip) | `payroll.view_own` | [ ] ⏳ Chưa làm |
-| 8.8 | `POST` | `/api/v1/payroll-periods/{id}/send-payslips` | Gửi phiếu lương tự động qua Email cho toàn thể nhân sự | `payroll.send` | [ ] ⏳ Chưa làm |
-| 8.9 | `GET` | `/api/v1/payroll-periods/{id}/export-bank` | Xuất file mẫu danh sách chuyển khoản chi lương ngân hàng | `payroll.export` | [ ] ⏳ Chưa làm |
+| 8.1 | `GET` | `/api/v1/salary-components` | Phân trang và tìm kiếm thành phần lương (`SalaryComponentFilter`) | `payroll.config` | [x] ✅ Đã hoàn thành |
+| 8.2 | `POST` | `/api/v1/salary-components` | Tạo mới thành phần lương / phụ cấp / thưởng | `payroll.config` | [x] ✅ Đã hoàn thành |
+| 8.3 | `GET` | `/api/v1/salary-components/{id}` | Lấy chi tiết cấu hình một thành phần lương | `payroll.config` | [x] ✅ Đã hoàn thành |
+| 8.4 | `PUT` | `/api/v1/salary-components/{id}` | Cập nhật thông tin thành phần lương | `payroll.config` | [x] ✅ Đã hoàn thành |
+| 8.5 | `DELETE` | `/api/v1/salary-components/{id}` | Xóa mềm thành phần lương | `payroll.config` | [x] ✅ Đã hoàn thành |
+| 8.6 | `GET` | `/api/v1/payroll-periods` | Danh sách các kỳ tính lương tháng phân trang (`PayrollPeriodFilter`) | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.7 | `POST` | `/api/v1/payroll-periods` | Mở kỳ tính lương mới (`OPEN`) | `payroll.manage` | [x] ✅ Đã hoàn thành |
+| 8.8 | `GET` | `/api/v1/payroll-periods/{id}` | Xem chi tiết kỳ lương kèm tổng quỹ và lịch sử workflow | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.9 | `POST` | `/api/v1/payroll-periods/{id}/process` | Chạy thuật toán tính toán bảng lương tự động cho toàn bộ nhân sự | `payroll.process` | [x] ✅ Đã hoàn thành |
+| 8.10 | `POST` | `/api/v1/payroll-periods/{id}/submit-approval` | Trình duyệt kỳ lương qua Module 21 Workflow Engine | `payroll.approve` | [x] ✅ Đã hoàn thành |
+| 8.11 | `POST` | `/api/v1/payroll-periods/{id}/approve` | Phê duyệt kỳ tính lương (đồng bộ duyệt các bản ghi lương) | `payroll.approve` | [x] ✅ Đã hoàn thành |
+| 8.12 | `POST` | `/api/v1/payroll-periods/{id}/close` | Khóa và đóng kỳ lương, chuyển trạng thái chi trả thành công | `payroll.manage` | [x] ✅ Đã hoàn thành |
+| 8.13 | `GET` | `/api/v1/payroll-records` | Tra cứu bảng lương chi tiết theo DataScope (`PayrollRecordFilter`) | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.14 | `GET` | `/api/v1/payroll-records/{id}` | Chi tiết bảng lương nhân viên kèm danh sách mục cấu thành (items) | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.15 | `POST` | `/api/v1/payroll-records/{id}/adjust` | Bổ sung / điều chỉnh khoản mục lương thủ công có giải trình | `payroll.manage` | [x] ✅ Đã hoàn thành |
+| 8.16 | `GET` | `/api/v1/payroll-records/my-payslips` | Nhân viên tra cứu danh sách phiếu lương cá nhân (ESS) | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.17 | `POST` | `/api/v1/salary-advances` | Nhân viên nộp đơn đề xuất xin tạm ứng lương (kèm khởi chạy workflow) | `payroll.advance` | [x] ✅ Đã hoàn thành |
+| 8.18 | `GET` | `/api/v1/salary-advances/my-advances` | Tra cứu lịch sử đơn tạm ứng lương cá nhân (ESS) | `payroll.advance` | [x] ✅ Đã hoàn thành |
+| 8.19 | `GET` | `/api/v1/salary-advances` | Danh sách đơn tạm ứng lương toàn công ty phân quyền DataScope | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.20 | `GET` | `/api/v1/salary-advances/{id}` | Xem chi tiết đơn xin tạm ứng lương | `payroll.view` | [x] ✅ Đã hoàn thành |
+| 8.21 | `POST` | `/api/v1/salary-advances/{id}/disburse` | Kế toán xác nhận giải ngân tạm ứng tiền mặt / chuyển khoản | `payroll.manage` | [x] ✅ Đã hoàn thành |
+| 8.22 | `POST` | `/api/v1/salary-advances/{id}/reject` | Từ chối yêu cầu tạm ứng lương | `payroll.manage` | [x] ✅ Đã hoàn thành |
+| 8.23 | `POST` | `/api/v1/salary-advances/{id}/cancel` | Nhân viên hủy đơn tạm ứng đang chờ duyệt | `payroll.advance` | [x] ✅ Đã hoàn thành |
 
 ---
 
