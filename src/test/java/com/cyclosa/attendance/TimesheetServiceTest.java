@@ -49,6 +49,9 @@ class TimesheetServiceTest {
     @Mock
     private SecurityPermissionEvaluator permEvaluator;
 
+    @Mock
+    private com.cyclosa.leave.service.LeaveRequestService leaveRequestService;
+
     @Spy
     private TimesheetMapper timesheetMapper = Mappers.getMapper(TimesheetMapper.class);
 

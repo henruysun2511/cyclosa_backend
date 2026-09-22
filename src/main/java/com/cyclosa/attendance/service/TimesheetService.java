@@ -45,6 +45,7 @@ public class TimesheetService {
     private final MonthlyTimesheetRepository timesheetRepository;
     private final AttendanceRecordRepository recordRepository;
     private final EmployeeService employeeService;
+    private final com.cyclosa.leave.service.LeaveRequestService leaveRequestService;
     private final SecurityPermissionEvaluator permEvaluator;
     private final TimesheetMapper timesheetMapper;
 
@@ -281,7 +282,14 @@ public class TimesheetService {
 
         int standardDaysCount = countStandardWorkDays(year, month);
         BigDecimal standardWorkDays = BigDecimal.valueOf(standardDaysCount).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal paidLeaveDays = BigDecimal.ZERO; // Sau này sẽ lấy thêm từ Module Leave
+        BigDecimal paidLeaveDays = BigDecimal.ZERO;
+        BigDecimal unpaidLeaveDays = BigDecimal.ZERO;
+        if (leaveRequestService != null) {
+            BigDecimal p = leaveRequestService.getPaidLeaveDays(employeeId, start, end);
+            if (p != null) paidLeaveDays = p;
+            BigDecimal u = leaveRequestService.getUnpaidLeaveDays(employeeId, start, end);
+            if (u != null) unpaidLeaveDays = u;
+        }
         BigDecimal totalPaidDays = actualWorkDays.add(paidLeaveDays);
 
         UUID effectiveCompanyId = companyId;
@@ -296,8 +304,8 @@ public class TimesheetService {
                 .year(year)
                 .standardWorkDays(standardWorkDays)
                 .actualWorkDays(actualWorkDays.setScale(2, RoundingMode.HALF_UP))
-                .paidLeaveDays(paidLeaveDays)
-                .unpaidLeaveDays(BigDecimal.ZERO)
+                .paidLeaveDays(paidLeaveDays.setScale(2, RoundingMode.HALF_UP))
+                .unpaidLeaveDays(unpaidLeaveDays.setScale(2, RoundingMode.HALF_UP))
                 .totalPaidDays(totalPaidDays.setScale(2, RoundingMode.HALF_UP))
                 .totalLateMinutes(totalLate)
                 .totalEarlyMinutes(totalEarly)

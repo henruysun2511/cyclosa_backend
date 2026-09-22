@@ -25,7 +25,7 @@
 | **04** | **Employee Profile** (`employee`) | Hồ sơ nhân sự, mã nhân viên, trạng thái làm việc, thông tin liên hệ, ngân hàng, người phụ thuộc | `01. Auth`, `02. Role`, `03. Org` | 0/9 API | ⏳ Chưa làm |
 | **05** | **Contract Management** (`contract`) | Hợp đồng lao động (thử việc/chính thức), phụ lục hợp đồng, lương cơ bản, cảnh báo hết hạn | `04. Employee` | 0/6 API | ⏳ Chưa làm |
 | **06** | **Time & Attendance** (`attendance`) | Ca làm việc, phân ca, Check-in/Check-out, bảng công tổng hợp ngày/tháng, giải trình chấm công | `04. Employee`, `03. Org` | 22/22 API | ✅ Hoàn thành |
-| **07** | **Leave & Overtime** (`leave`, `overtime`) | Quỹ phép năm, đơn xin nghỉ phép, duyệt nghỉ phép đa cấp theo DataScope, đăng ký & duyệt làm thêm giờ (OT) | `04. Employee`, `02. Role` | 0/9 API | ⏳ Chưa làm |
+| **07** | **Leave Management** (`leave`) | Quỹ phép năm, chính sách thâm niên Điều 114, đơn xin nghỉ phép, duyệt đa cấp qua Workflow, thanh toán phép tồn Điều 113.3, tích hợp Timesheet & Payroll | `04. Employee`, `18. Workflow` | 21/21 API | ✅ Đã hoàn thành |
 | **08** | **Payroll Management** (`payroll`) | Cấu hình thành phần lương, phụ cấp, tính lương tự động (công + HĐ), tạm ứng lương, duyệt bảng lương qua Workflow, phiếu lương ESS | `05. Contract`, `06. Attendance` | 23/23 API | ✅ Đã hoàn thành |
 | **09** | **Recruitment & Onboarding** (`recruitment`) | Tin tuyển dụng, hồ sơ ứng viên (CV), lịch phỏng vấn, đánh giá & tiếp nhận nhân viên (Onboarding) | `03. Org`, `04. Employee` | 0/6 API | ⏳ Chưa làm |
 | **10** | **Asset Management** (`asset`) | Danh mục tài sản công ty, cấp phát thiết bị cho nhân viên, thu hồi khi thôi việc, bảo hành báo hỏng | `04. Employee` | 0/5 API | ⏳ Chưa làm |
@@ -184,21 +184,33 @@
 
 ---
 
-### 7. Module Leave & Overtime (`leave`, `overtime`)
-- **Mô tả:** Danh mục loại nghỉ phép, quản lý quỹ phép năm (Leave Balance), gửi đơn nghỉ phép, phê duyệt đa cấp theo thẩm quyền quản lý, đăng ký và duyệt làm thêm giờ.
-- **Ràng buộc:** `04. Employee`, `02. Role` *(Cần nhân viên và phân cấp DataScope để duyệt đơn).*
+### 7. Module Leave Management (`leave`)
+- **Mô tả:** Danh mục 4 nhóm loại ngày nghỉ theo luật, cấu hình chính sách phép năm & thâm niên (Điều 113, 114 BLLĐ 2019), quản lý quỹ phép năm (Leave Balance), đơn xin nghỉ phép, duyệt đa cấp qua Workflow Engine, thanh toán phép tồn (Điều 113.3) và tích hợp Timesheet & Payroll.
+- **Ràng buộc:** `04. Employee`, `18. Workflow` *(Cần nhân viên để cấp quỹ và Workflow Engine để duyệt đơn).*
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 7.1 | `GET` | `/api/v1/leave-types` | Danh mục loại ngày nghỉ (Phép năm, Ốm đau, Thai sản...) | `leave.view` | [ ] ⏳ Chưa làm |
-| 7.2 | `GET` | `/api/v1/leave-balances/my` | Xem số ngày phép còn lại trong năm của bản thân | `leave.view_own` | [ ] ⏳ Chưa làm |
-| 7.3 | `GET` | `/api/v1/leave-requests` | Danh sách đơn xin nghỉ phép lọc theo DataScope | `leave.view` | [ ] ⏳ Chưa làm |
-| 7.4 | `POST` | `/api/v1/leave-requests` | Tạo đơn xin nghỉ phép | `leave.apply` | [ ] ⏳ Chưa làm |
-| 7.5 | `PUT` | `/api/v1/leave-requests/{id}/approve` | Phê duyệt đơn xin nghỉ phép (DataScope tối thiểu TEAM) | `leave.approve` | [ ] ⏳ Chưa làm |
-| 7.6 | `PUT` | `/api/v1/leave-requests/{id}/reject` | Từ chối đơn xin nghỉ phép kèm lý do | `leave.approve` | [ ] ⏳ Chưa làm |
-| 7.7 | `GET` | `/api/v1/overtime-requests` | Danh sách đơn đăng ký làm thêm giờ theo DataScope | `overtime.view` | [ ] ⏳ Chưa làm |
-| 7.8 | `POST` | `/api/v1/overtime-requests` | Gửi đơn đăng ký làm thêm giờ (OT) | `overtime.apply` | [ ] ⏳ Chưa làm |
-| 7.9 | `PUT` | `/api/v1/overtime-requests/{id}/approve` | Phê duyệt đơn làm thêm giờ | `overtime.approve` | [ ] ⏳ Chưa làm |
+| 7.1 | `GET` | `/api/v1/leave-types` | Danh mục loại ngày nghỉ phân trang & bộ lọc | `leave.view` | [x] ✅ Hoàn thành |
+| 7.2 | `GET` | `/api/v1/leave-types/{id}` | Lấy chi tiết thông tin một loại ngày nghỉ | `leave.view` | [x] ✅ Hoàn thành |
+| 7.3 | `POST` | `/api/v1/leave-types` | Tạo mới loại ngày nghỉ phép theo quy định | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.4 | `PUT` | `/api/v1/leave-types/{id}` | Cập nhật cấu hình loại ngày nghỉ phép | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.5 | `DELETE` | `/api/v1/leave-types/{id}` | Xóa mềm loại ngày nghỉ (ràng buộc không còn sử dụng) | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.6 | `GET` | `/api/v1/leave-policies` | Danh sách chính sách ngày phép công ty | `leave.view` | [x] ✅ Hoàn thành |
+| 7.7 | `GET` | `/api/v1/leave-policies/{id}` | Chi tiết cấu hình chính sách ngày phép | `leave.view` | [x] ✅ Hoàn thành |
+| 7.8 | `POST` | `/api/v1/leave-policies` | Khai báo chính sách phép theo điều kiện công việc | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.9 | `PUT` | `/api/v1/leave-policies/{id}` | Cập nhật chính sách phép năm và thâm niên | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.10 | `DELETE` | `/api/v1/leave-policies/{id}` | Xóa cấu hình chính sách nghỉ phép | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.11 | `GET` | `/api/v1/leave-balances/my` | Nhân viên tự xem số dư quỹ phép năm (ESS) | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 7.12 | `GET` | `/api/v1/leave-balances` | Quản lý tra cứu quỹ phép toàn đơn vị (DataScope) | `leave.view` | [x] ✅ Hoàn thành |
+| 7.13 | `POST` | `/api/v1/leave-balances/recalculate` | Khởi chạy tính toán lại quỹ phép năm theo BLLĐ | `leave.manage` | [x] ✅ Hoàn thành |
+| 7.14 | `GET` | `/api/v1/leave-balances/{id}/unused-annual-leave-payout` | Tính thanh toán tiền phép năm chưa nghỉ khi thôi việc | `leave.view` | [x] ✅ Hoàn thành |
+| 7.15 | `POST` | `/api/v1/leave-requests` | Tạo đơn xin nghỉ phép (tự động kiểm tra dư & gọi Workflow) | `leave.apply` | [x] ✅ Hoàn thành |
+| 7.16 | `GET` | `/api/v1/leave-requests/my` | Xem lịch sử đơn xin nghỉ phép của bản thân (ESS) | Xác thực cá nhân | [x] ✅ Hoàn thành |
+| 7.17 | `GET` | `/api/v1/leave-requests` | Danh sách đơn xin nghỉ phép phân quyền DataScope | `leave.view` | [x] ✅ Hoàn thành |
+| 7.18 | `GET` | `/api/v1/leave-requests/{id}` | Chi tiết đơn nghỉ phép kèm lịch sử duyệt Workflow | `leave.view` | [x] ✅ Hoàn thành |
+| 7.19 | `PUT` | `/api/v1/leave-requests/{id}/approve` | Phê duyệt đơn xin nghỉ phép | `leave.approve` | [x] ✅ Hoàn thành |
+| 7.20 | `PUT` | `/api/v1/leave-requests/{id}/reject` | Từ chối đơn xin nghỉ phép kèm lý do giải trình | `leave.approve` | [x] ✅ Hoàn thành |
+| 7.21 | `PUT` | `/api/v1/leave-requests/{id}/cancel` | Hủy đơn xin nghỉ phép (chỉ khi ngày nghỉ chưa bắt đầu) | `leave.apply` | [x] ✅ Hoàn thành |
 
 ---
 
