@@ -19,10 +19,10 @@
 
 | STT | Tên Module | Mô tả Chức năng | Module Ràng buộc (Cần làm trước) | Tiến độ API | Trạng thái Module |
 | :---: | :--- | :--- | :--- | :---: | :---: |
-| **01** | **Authentication & User** (`auth`, `user`) | Xác thực JWT, Refresh Token, OAuth2 Google, kích hoạt tài khoản, quản lý tài khoản User | *Không (Core)* | 9/13 API | 🔄 Đang hoàn thiện |
+| **01** | **Authentication & User** (`auth`, `user`) | Xác thực JWT, Refresh Token, OAuth2 Google, kích hoạt tài khoản, quản lý tài khoản User | *Không (Core)* | 13/13 API | ✅ Đã hoàn thành |
 | **02** | **Role & Permission** (`role`, `permission`) | Quản trị vai trò (hệ thống/công ty), ma trận quyền RBAC, phân quyền theo 5 cấp DataScope | `01. Auth` | 12/12 API | ✅ Đã hoàn thành |
 | **03** | **Organization Structure** (`organization`) | Quản lý Công ty/Chi nhánh, Cây sơ đồ Phòng ban, Tổ/Nhóm, Chức danh & Vị trí công việc | `01. Auth`, `02. Role` | 25/25 API | ✅ Đã hoàn thành |
-| **04** | **Employee Profile** (`employee`) | Hồ sơ nhân sự, mã nhân viên, trạng thái làm việc, thông tin liên hệ, ngân hàng, người phụ thuộc | `01. Auth`, `02. Role`, `03. Org` | 0/9 API | ⏳ Chưa làm |
+| **04** | **Employee Profile** (`employee`) | Hồ sơ nhân sự, mã nhân viên, trạng thái làm việc, thông tin liên hệ, ngân hàng, người phụ thuộc, import Excel | `01. Auth`, `02. Role`, `03. Org` | 14/14 API | ✅ Đã hoàn thành |
 | **05** | **Contract Management** (`contract`) | Hợp đồng lao động (thử việc/chính thức), phụ lục hợp đồng, lương cơ bản, cảnh báo hết hạn | `04. Employee` | 0/6 API | ⏳ Chưa làm |
 | **06** | **Time & Attendance** (`attendance`) | Ca làm việc, phân ca, Check-in/Check-out, bảng công tổng hợp ngày/tháng, giải trình chấm công | `04. Employee`, `03. Org` | 22/22 API | ✅ Hoàn thành |
 | **07** | **Leave Management** (`leave`) | Quỹ phép năm, chính sách thâm niên Điều 114, đơn xin nghỉ phép, duyệt đa cấp qua Workflow, thanh toán phép tồn Điều 113.3, tích hợp Timesheet & Payroll | `04. Employee`, `18. Workflow` | 21/21 API | ✅ Đã hoàn thành |
@@ -47,10 +47,10 @@
 | 1.3 | `POST` | `/api/v1/auth/refresh` | Cấp mới Access Token bằng Refresh Token | `Public` | [x] ✅ Đã hoàn thành |
 | 1.4 | `POST` | `/api/v1/auth/logout` | Đăng xuất, hủy phiên và vô hiệu hóa Token | `Authenticated` | [x] ✅ Đã hoàn thành |
 | 1.5 | `GET` | `/api/v1/auth/me` | Lấy thông tin tài khoản hiện tại kèm quyền sở hữu | `Authenticated` | [x] ✅ Đã hoàn thành |
-| 1.6 | `POST` | `/api/v1/auth/forgot-password` | Gửi yêu cầu và email khôi phục mật khẩu | `Public` | [ ] ⏳ Chưa làm |
-| 1.7 | `POST` | `/api/v1/auth/reset-password` | Đặt lại mật khẩu mới qua mã xác thực từ email | `Public` | [ ] ⏳ Chưa làm |
-| 1.8 | `PUT` | `/api/v1/auth/change-password` | Đổi mật khẩu cá nhân cho người dùng đang đăng nhập | `Authenticated` | [ ] ⏳ Chưa làm |
-| 1.9 | `POST` | `/api/v1/auth/oauth2/google` | Đăng nhập tài khoản bằng Google ID Token | `Public` | [-] 🔄 Sửa |
+| 1.6 | `POST` | `/api/v1/auth/forgot-password` | Gửi yêu cầu và email khôi phục mật khẩu | `Public` | [x] ✅ Đã hoàn thành |
+| 1.7 | `POST` | `/api/v1/auth/reset-password` | Đặt lại mật khẩu mới qua mã xác thực từ email | `Public` | [x] ✅ Đã hoàn thành |
+| 1.8 | `PUT` | `/api/v1/auth/change-password` | Đổi mật khẩu cá nhân cho người dùng đang đăng nhập | `Authenticated` | [x] ✅ Đã hoàn thành |
+| 1.9 | `POST` | `/api/v1/auth/oauth2/google` | Đăng nhập tài khoản bằng Google ID Token | `Public` | [x] ✅ Đã hoàn thành |
 | 1.10 | `GET` | `/api/v1/users` | Tìm kiếm và phân trang danh sách người dùng (`UserFilter`) | `user.view` | [x] ✅ Đã hoàn thành |
 | 1.11 | `GET` | `/api/v1/users/{id}` | Xem chi tiết thông tin tài khoản theo ID | `user.view` | [x] ✅ Đã hoàn thành |
 | 1.12 | `POST` | `/api/v1/users` | Tạo tài khoản người dùng mới & gửi email kích hoạt | `user.create` | [x] ✅ Đã hoàn thành |
@@ -134,7 +134,8 @@
 | 4.11 | `POST` | `/api/v1/employees/{id}/emergency-contacts` | Thêm người liên hệ khẩn cấp | `employee.update` | [x] ✅ Đã hoàn thành |
 | 4.12 | `DELETE`| `/api/v1/employees/{id}/emergency-contacts/{contactId}` | Xóa người liên hệ khẩn cấp | `employee.update` | [x] ✅ Đã hoàn thành |
 | 4.13 | `GET` | `/api/v1/employees/{id}/history` | Xem toàn bộ lịch sử biến động công tác (Audit Trail) | `employee.view` | [x] ✅ Đã hoàn thành |
-| 4.14 | `POST` | `/api/v1/employees/import` | Nhập danh sách nhân viên hàng loạt bằng Excel | `employee.import` | [ ] ⏳ Chưa làm |
+| 4.14 | `POST` | `/api/v1/employees/import` | Nhập danh sách nhân viên hàng loạt bằng Excel | `employee.import` | [x] ✅ Đã hoàn thành |
+| 4.15 | `GET` | `/api/v1/employees/import-template` | Tải file Excel mẫu chuẩn (.xlsx) để nhập danh sách nhân viên | `employee.view` | [x] ✅ Đã hoàn thành |
 
 ---
 
@@ -247,17 +248,57 @@
 ---
 
 ### 9. Module Recruitment & Onboarding (`recruitment`)
-- **Mô tả:** Kế hoạch tuyển dụng, đăng tin, tiếp nhận hồ sơ ứng viên (CV), lịch phỏng vấn, đánh giá và tự động kích hoạt chuyển đổi thành hồ sơ nhân viên chính thức.
-- **Ràng buộc:** `03. Organization`, `04. Employee` *(Tin tuyển dụng gắn với phòng ban, trúng tuyển chuyển sang Employee).*
+- **Mô tả:** Đầy đủ nghiệp vụ tuyển dụng (Module 02 & 2.1 Interview Management): Đề xuất tuyển dụng (Manpower Request duyệt qua Workflow), Vị trí & Tin tuyển dụng đa kênh, Quản lý ứng viên & Hồ sơ ứng tuyển (ATS Pipeline), Quản lý bộ phỏng vấn (Interview Kit, tiêu chí câu hỏi, thang điểm Rubric), Lịch phỏng vấn hội đồng (Panel Interview), Chấm điểm độc lập (Blind Grading) & Cảnh báo phân kỳ nhận xét (Divergence Alert), Phân tích mẫu chấm điểm người phỏng vấn (Scoring Pattern & Bias Awareness), Quản lý Offer thư mời việc (duyệt Workflow), Tiếp nhận ứng viên trúng tuyển tự động chuyển đổi thành nhân viên chính thức (`convert-to-employee`), và Ngân hàng hồ sơ ứng viên (Talent Pool).
+- **Ràng buộc:** `03. Organization`, `04. Employee`, `18. Workflow` *(Đề xuất tuyển dụng & Offer gắn với Workflow, trúng tuyển chuyển sang Employee).*
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 9.1 | `GET` | `/api/v1/job-postings` | Danh sách các vị trí đang mở tuyển dụng | `recruitment.view` | [ ] ⏳ Chưa làm |
-| 9.2 | `POST` | `/api/v1/job-postings` | Tạo mới tin tuyển dụng vị trí công việc | `recruitment.manage` | [ ] ⏳ Chưa làm |
-| 9.3 | `GET` | `/api/v1/candidates` | Danh sách hồ sơ ứng viên theo vị trí tuyển dụng | `recruitment.view` | [ ] ⏳ Chưa làm |
-| 9.4 | `POST` | `/api/v1/candidates` | Tiếp nhận và tải lên CV ứng viên | `recruitment.manage` | [ ] ⏳ Chưa làm |
-| 9.5 | `POST` | `/api/v1/interviews` | Lên lịch phỏng vấn và gán người phỏng vấn | `recruitment.manage` | [ ] ⏳ Chưa làm |
-| 9.6 | `PUT` | `/api/v1/candidates/{id}/onboard` | Chuyển đổi ứng viên đạt yêu cầu thành nhân viên mới | `recruitment.onboard` | [ ] ⏳ Chưa làm |
+| 9.1 | `GET` | `/api/v1/manpower-requests` | Danh sách đề xuất tuyển dụng (DataScope/Filter) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.2 | `POST` | `/api/v1/manpower-requests` | Tạo đề xuất tuyển dụng nhân sự mới (gửi duyệt Workflow) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.3 | `GET` | `/api/v1/manpower-requests/{id}` | Chi tiết đề xuất tuyển dụng kèm trạng thái workflow | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.4 | `PUT` | `/api/v1/manpower-requests/{id}/cancel` | Hủy đề xuất tuyển dụng đang chờ duyệt | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.5 | `GET` | `/api/v1/job-positions` | Danh sách vị trí tuyển dụng đang quản lý | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.6 | `POST` | `/api/v1/job-positions` | Tạo vị trí tuyển dụng mới từ đề xuất đã duyệt | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.7 | `PUT` | `/api/v1/job-positions/{id}/status` | Đóng / mở / tạm dừng vị trí tuyển dụng | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.8 | `GET` | `/api/v1/job-postings` | Danh sách các tin tuyển dụng đa kênh | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.9 | `POST` | `/api/v1/job-postings` | Tạo và xuất bản tin tuyển dụng vị trí công việc | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.10 | `PUT` | `/api/v1/job-postings/{id}/status` | Thay đổi trạng thái đăng tuyển (DRAFT, PUBLISHED, EXPIRED) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.11 | `GET` | `/api/v1/candidates` | Danh sách hồ sơ ứng viên (Filter keyword, skills, status) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.12 | `POST` | `/api/v1/candidates` | Tiếp nhận và tạo mới hồ sơ ứng viên (CV, kỹ năng) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.13 | `GET` | `/api/v1/candidates/{id}` | Chi tiết hồ sơ ứng viên | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.14 | `PUT` | `/api/v1/candidates/{id}` | Cập nhật thông tin hồ sơ ứng viên | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.15 | `GET` | `/api/v1/applications` | Quản lý quy trình ứng tuyển ATS Pipeline | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.16 | `POST` | `/api/v1/applications` | Nộp hồ sơ ứng tuyển vào vị trí công việc | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.17 | `PUT` | `/api/v1/applications/{id}/stage` | Chuyển đổi giai đoạn ứng tuyển (Screening -> Offer -> Hired) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.18 | `GET` | `/api/v1/interview-kits` | Danh sách bộ câu hỏi phỏng vấn chuẩn hóa (Interview Kits) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.19 | `POST` | `/api/v1/interview-kits` | Tạo mới bộ phỏng vấn và tiêu chí chấm điểm Rubric | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.20 | `GET` | `/api/v1/interview-kits/{id}` | Chi tiết bộ phỏng vấn kèm danh sách câu hỏi tiêu chí | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.21 | `POST` | `/api/v1/interview-kits/{id}/questions` | Thêm câu hỏi & tiêu chuẩn thang điểm vào Kit | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.22 | `GET` | `/api/v1/interviews` | Lịch phỏng vấn và trạng thái các vòng phỏng vấn | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.23 | `POST` | `/api/v1/interviews` | Lên lịch phỏng vấn, gắn hội đồng và gửi lời mời | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.24 | `POST` | `/api/v1/interviews/{id}/evaluations` | Thành viên hội đồng nộp phiếu chấm điểm (Blind Grading) | `recruitment.evaluate` | [x] ✅ Hoàn thành |
+| 9.25 | `GET` | `/api/v1/interviews/{id}/consolidated-feedback` | Xem tổng hợp nhận xét & cảnh báo độ lệch điểm (Divergence Alert) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.26 | `GET` | `/api/v1/interviewers/{id}/scoring-pattern` | Phân tích xu hướng chấm điểm của giám khảo (Bias Awareness) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.27 | `GET` | `/api/v1/offers` | Danh sách Offer mời nhận việc | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.28 | `POST` | `/api/v1/offers` | Lập Offer thư mời việc và trình duyệt Workflow | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.29 | `PUT` | `/api/v1/offers/{id}/status` | Cập nhật phản hồi Offer của ứng viên (ACCEPTED, DECLINED) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.30 | `POST` | `/api/v1/hiring/{application_id}/convert-to-employee` | Tiếp nhận nhân sự: chuyển đổi ứng viên trúng tuyển thành nhân viên | `recruitment.onboard` | [x] ✅ Hoàn thành |
+| 9.31 | `GET` | `/api/v1/talent-pool` | Tra cứu ngân hàng dữ liệu ứng viên tiềm năng (Talent Pool) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.32 | `POST` | `/api/v1/talent-pool` | Lưu trữ ứng viên tiềm năng vào Talent Pool | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.33 | `GET` | `/api/v1/internal-opportunities` | Danh sách cơ hội nội bộ (Dự án ngắn hạn / Vị trí mở) | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.34 | `GET` | `/api/v1/internal-opportunities/{id}` | Chi tiết cơ hội nội bộ | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.35 | `POST` | `/api/v1/internal-opportunities` | Đăng cơ hội dự án ngắn hạn & vị trí mở nội bộ | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.36 | `PUT` | `/api/v1/internal-opportunities/{id}` | Cập nhật thông tin cơ hội nội bộ | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.37 | `PUT` | `/api/v1/internal-opportunities/{id}/status` | Đổi trạng thái cơ hội (OPEN, IN_PROGRESS, FILLED, CANCELLED) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.38 | `POST` | `/api/v1/internal-opportunities/{id}/express-interest` | Nhân viên tự ứng tuyển / bày tỏ quan tâm cơ hội (Express Interest) | `Authenticated` | [x] ✅ Hoàn thành |
+| 9.39 | `GET` | `/api/v1/internal-opportunities/{id}/applications` | Xem danh sách ứng viên nội bộ ứng tuyển cơ hội | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.40 | `GET` | `/api/v1/internal-opportunities/my-applications` | Danh sách cơ hội cá nhân nhân viên đã ứng tuyển | `Authenticated` | [x] ✅ Hoàn thành |
+| 9.41 | `PUT` | `/api/v1/internal-applications/{id}/review` | Duyệt / đánh giá đơn ứng tuyển nội bộ (SHORTLISTED, ACCEPTED...) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.42 | `GET` | `/api/v1/internal-opportunities/recommended` | Gợi ý cơ hội nội bộ phù hợp cho nhân sự | `Authenticated` | [x] ✅ Hoàn thành |
+| 9.43 | `POST` | `/api/v1/internal-assignments` | Tạo phân công nhiệm vụ nội bộ khi trúng tuyển (Assignment) | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.44 | `GET` | `/api/v1/internal-assignments` | Tra cứu danh sách phân công nhiệm vụ nội bộ | `recruitment.view` | [x] ✅ Hoàn thành |
+| 9.45 | `PUT` | `/api/v1/internal-assignments/{id}/complete` | Hoàn thành & chấm điểm đánh giá nhiệm vụ nội bộ | `recruitment.manage` | [x] ✅ Hoàn thành |
+| 9.46 | `GET` | `/api/v1/internal-marketplace/stats` | Báo cáo thống kê thị trường nhân tài nội bộ (Marketplace Stats) | `recruitment.view` | [x] ✅ Hoàn thành |
 
 ---
 
@@ -295,10 +336,10 @@
 
 | STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) | Trạng thái |
 | :---: | :---: | :--- | :--- | :--- | :---: |
-| 12.1 | `GET` | `/api/v1/notifications/my` | Lấy danh sách thông báo của người dùng hiện tại | `Authenticated` | [ ] ⏳ Chưa làm |
-| 12.2 | `PUT` | `/api/v1/notifications/{id}/read` | Đánh dấu một thông báo đã đọc | `Authenticated` | [ ] ⏳ Chưa làm |
-| 12.3 | `PUT` | `/api/v1/notifications/read-all` | Đánh dấu tất cả thông báo là đã đọc | `Authenticated` | [ ] ⏳ Chưa làm |
-| 12.4 | `GET` | `/api/v1/audit-logs` | Truy vấn nhật ký hành động hệ thống (Audit Trail) | `audit.view` | [ ] ⏳ Chưa làm |
+| 12.1 | `GET` | `/api/v1/notifications/my` | Lấy danh sách thông báo của người dùng hiện tại | `Authenticated` | [x] ✅ Hoàn thành |
+| 12.2 | `PUT` | `/api/v1/notifications/{id}/read` | Đánh dấu một thông báo đã đọc | `Authenticated` | [x] ✅ Hoàn thành |
+| 12.3 | `PUT` | `/api/v1/notifications/read-all` | Đánh dấu tất cả thông báo là đã đọc | `Authenticated` | [x] ✅ Hoàn thành |
+| 12.4 | `GET` | `/api/v1/audit-logs` | Truy vấn nhật ký hành động hệ thống (Audit Trail) | `audit.view` | [x] ✅ Hoàn thành |
 
 ---
 

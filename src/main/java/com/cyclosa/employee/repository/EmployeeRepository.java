@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -17,6 +18,8 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
     Optional<Employee> findByIdAndCompanyId(UUID id, UUID companyId);
 
     Optional<Employee> findByEmployeeCodeAndCompanyId(String employeeCode, UUID companyId);
+
+    List<Employee> findByCompanyId(UUID companyId);
 
     boolean existsByEmployeeCodeAndCompanyId(String employeeCode, UUID companyId);
 

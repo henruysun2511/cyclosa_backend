@@ -91,6 +91,29 @@ public class UserService {
     }
 
     @Transactional(readOnly = true)
+    public Optional<User> findByEmployeeId(UUID employeeId) {
+        return userRepository.findByEmployeeId(employeeId);
+    }
+
+    @Transactional(readOnly = true)
+    public java.util.Map<UUID, com.cyclosa.common.dto.summary.UserSummary> getUserSummaries(java.util.Set<UUID> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return java.util.Map.of();
+        }
+        return userRepository.findAllById(userIds).stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        User::getId,
+                        u -> com.cyclosa.common.dto.summary.UserSummary.builder()
+                                .id(u.getId())
+                                .username(u.getUsername())
+                                .fullName(u.getFullName())
+                                .email(u.getEmail())
+                                .avatarUrl(u.getAvatarUrl())
+                                .build()
+                ));
+    }
+
+    @Transactional(readOnly = true)
     public UserInfo getUserInfo(UUID id) {
         User user = findByIdWithRoles(id);
         return authMapper.toUserInfo(user);

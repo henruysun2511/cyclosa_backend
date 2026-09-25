@@ -239,11 +239,20 @@ public class AssetServiceImpl implements AssetService {
     @Override
     @Transactional
     public AssetAllocationResponse returnAsset(UUID id, ReturnAssetRequest request) {
-        Asset asset = assetRepository.findById(id)
-                .orElseThrow(() -> new AppException(AssetErrorCode.ASSET_NOT_FOUND));
+        Asset asset = assetRepository.findById(id).orElse(null);
+        AssetAllocation allocation;
 
-        AssetAllocation allocation = assetAllocationRepository.findByAssetIdAndReturnedDateIsNull(id)
-                .orElseThrow(() -> new AppException(AssetErrorCode.NO_OPEN_ALLOCATION_FOUND));
+        if (asset != null) {
+            allocation = assetAllocationRepository.findByAssetIdAndReturnedDateIsNull(id)
+                    .orElseThrow(() -> new AppException(AssetErrorCode.NO_OPEN_ALLOCATION_FOUND));
+        } else {
+            allocation = assetAllocationRepository.findById(id)
+                    .orElseThrow(() -> new AppException(AssetErrorCode.ASSET_NOT_FOUND));
+            asset = allocation.getAsset();
+            if (allocation.getReturnedDate() != null) {
+                throw new AppException(AssetErrorCode.NO_OPEN_ALLOCATION_FOUND, "Tài sản này đã được thu hồi trước đó.");
+            }
+        }
 
         if (request.getConditionOnReturn() == null) {
             throw new AppException(AssetErrorCode.CONDITION_ON_RETURN_REQUIRED);
@@ -326,6 +335,19 @@ public class AssetServiceImpl implements AssetService {
         });
 
         return PageData.from(responsePage);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PageData<AssetAllocationResponse> getMyAssets(UUID currentUserId, Pageable pageable) {
+        if (currentUserId == null) {
+            return PageData.empty(pageable);
+        }
+        Optional<Employee> empOpt = employeeRepository.findByUserId(currentUserId);
+        if (empOpt.isEmpty()) {
+            return PageData.empty(pageable);
+        }
+        return getEmployeeAssets(empOpt.get().getId(), pageable);
     }
 
     @Override

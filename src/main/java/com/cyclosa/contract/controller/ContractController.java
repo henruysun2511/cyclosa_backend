@@ -146,7 +146,7 @@ public class ContractController {
         return ResponseEntity.ok(ApiResponse.ok(contractService.renewContract(id, request), "Gia hạn / Tái ký hợp đồng thành công"));
     }
 
-    @PostMapping("/{id}/terminate")
+    @RequestMapping(value = "/{id}/terminate", method = {RequestMethod.POST, RequestMethod.PUT})
     @PreAuthorize("@perm.has('contract.terminate')")
     @RequirePermission("contract.terminate")
     @Operation(summary = "Chấm dứt hợp đồng lao động theo 1 trong 13 căn cứ pháp lý & tính trợ cấp Điều 46, 47")
@@ -174,10 +174,12 @@ public class ContractController {
     @RequirePermission("contract.view")
     @Operation(summary = "Danh sách hợp đồng sắp hết hạn trong 30-45 ngày")
     public ResponseEntity<ApiResponse<List<ContractResponse>>> getExpiringContracts(
-            @RequestParam UUID companyId,
+            @RequestParam(required = false) UUID companyId,
+            @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId,
             @RequestParam(defaultValue = "45") int withinDays
     ) {
-        return ResponseEntity.ok(ApiResponse.ok(contractService.getExpiringContracts(companyId, withinDays), "Lấy danh sách hợp đồng sắp hết hạn thành công"));
+        UUID effectiveCompanyId = companyId != null ? companyId : headerCompanyId;
+        return ResponseEntity.ok(ApiResponse.ok(contractService.getExpiringContracts(effectiveCompanyId, withinDays), "Lấy danh sách hợp đồng sắp hết hạn thành công"));
     }
 
     @GetMapping("/employees/{employeeId}")

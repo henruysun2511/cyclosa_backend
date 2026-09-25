@@ -29,5 +29,7 @@ public interface AssetService {
 
     PageData<AssetAllocationResponse> getEmployeeAssets(UUID employeeId, Pageable pageable);
 
+    PageData<AssetAllocationResponse> getMyAssets(UUID currentUserId, Pageable pageable);
+
     long countUnreturnedAssets(UUID employeeId);
 }

@@ -35,6 +35,20 @@ public class PageData<T> {
                 .build();
     }
 
+    public static <T> PageData<T> empty(org.springframework.data.domain.Pageable pageable) {
+        return PageData.<T>builder()
+                .items(java.util.Collections.emptyList())
+                .pagination(Pagination.builder()
+                        .page(pageable != null ? pageable.getPageNumber() : 0)
+                        .size(pageable != null ? pageable.getPageSize() : 0)
+                        .total(0)
+                        .pages(0)
+                        .hasNext(false)
+                        .hasPrev(false)
+                        .build())
+                .build();
+    }
+
     @Getter
     @Builder
     public static class Pagination {

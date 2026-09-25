@@ -20,7 +20,10 @@ public enum EmployeeErrorCode implements ErrorCode {
     SELF_MANAGER_NOT_ALLOWED    (4206, "Quản lý trực tiếp không thể là chính nhân viên đó", HttpStatus.BAD_REQUEST),
     EMPLOYEE_ACCESS_DENIED      (4207, "Bạn không có quyền truy cập hồ sơ nhân viên này", HttpStatus.FORBIDDEN),
     EMERGENCY_CONTACT_NOT_FOUND (4208, "Không tìm thấy thông tin người liên hệ khẩn cấp", HttpStatus.NOT_FOUND),
-    USER_ALREADY_LINKED         (4209, "Tài khoản người dùng này đã được gắn cho nhân viên khác", HttpStatus.CONFLICT);
+    USER_ALREADY_LINKED         (4209, "Tài khoản người dùng này đã được gắn cho nhân viên khác", HttpStatus.CONFLICT),
+    INVALID_IMPORT_FILE         (4210, "File tải lên không hợp lệ hoặc không đúng định dạng Excel (.xlsx, .xls)", HttpStatus.BAD_REQUEST),
+    EMPTY_IMPORT_FILE           (4211, "File import không chứa dữ liệu hợp lệ", HttpStatus.BAD_REQUEST),
+    IMPORT_FAILED               (4212, "Nhập danh sách nhân viên hàng loạt thất bại", HttpStatus.BAD_REQUEST);
 
     private final int code;
     private final String message;

@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -19,6 +20,8 @@ public interface PositionRepository extends JpaRepository<Position, UUID> {
     boolean existsByCodeAndCompanyIdAndIdNot(String code, UUID companyId, UUID id);
 
     Optional<Position> findByIdAndCompanyId(UUID id, UUID companyId);
+
+    List<Position> findByCompanyId(UUID companyId);
 
     @Query("SELECT p FROM Position p " +
            "LEFT JOIN FETCH p.jobLevel " +

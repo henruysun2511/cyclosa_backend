@@ -27,6 +27,7 @@ import java.util.UUID;
 public class EmployeeController {
 
     private final EmployeeService employeeService;
+    private final com.cyclosa.employee.service.EmployeeImportService employeeImportService;
 
     @GetMapping
     @PreAuthorize("@perm.has('employee.view')")
@@ -204,5 +205,32 @@ public class EmployeeController {
         return ResponseEntity.ok(ApiResponse.ok(
                 employeeService.getEmployeeHistory(headerCompanyId, id),
                 "Lấy lịch sử biến động công tác thành công"));
+    }
+
+    @PostMapping(value = "/import", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("@perm.has('employee.import')")
+    @RequirePermission("employee.import")
+    @Operation(summary = "Nhập danh sách nhân viên hàng loạt bằng file Excel (.xlsx, .xls)")
+    public ResponseEntity<ApiResponse<EmployeeImportResponse>> importEmployees(
+            @RequestHeader(value = "X-Company-Id", required = false) UUID headerCompanyId,
+            @RequestParam("file") org.springframework.web.multipart.MultipartFile file,
+            @RequestParam(value = "autoCreateUser", defaultValue = "false") boolean autoCreateUser
+    ) {
+        EmployeeImportResponse response = employeeImportService.importEmployees(headerCompanyId, file, autoCreateUser);
+        String message = String.format("Xử lý nhập danh sách hoàn tất: %d thành công, %d thất bại trên tổng số %d dòng",
+                response.getSuccessCount(), response.getFailureCount(), response.getTotalRows());
+        return ResponseEntity.ok(ApiResponse.ok(response, message));
+    }
+
+    @GetMapping("/import-template")
+    @PreAuthorize("@perm.has('employee.view')")
+    @RequirePermission("employee.view")
+    @Operation(summary = "Tải file Excel mẫu (.xlsx) để nhập danh sách nhân viên")
+    public ResponseEntity<byte[]> downloadImportTemplate() {
+        byte[] excelBytes = employeeImportService.generateImportTemplate();
+        return ResponseEntity.ok()
+                .header(org.springframework.http.HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"employee_import_template.xlsx\"")
+                .contentType(org.springframework.http.MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(excelBytes);
     }
 }

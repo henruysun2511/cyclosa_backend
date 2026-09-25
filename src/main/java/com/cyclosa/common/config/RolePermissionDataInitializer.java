@@ -22,6 +22,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -78,6 +79,7 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 p("employee.manage_job", "employee", "manage_job", "Điều chuyển công tác, bổ nhiệm chức danh"),
                 p("employee.update_status", "employee", "update_status", "Cập nhật trạng thái làm việc nhân sự"),
                 p("employee.view_salary", "employee", "view_salary", "Xem thông tin lương trong hồ sơ"),
+                p("employee.import", "employee", "import", "Nhập danh sách nhân viên hàng loạt bằng Excel"),
 
                 // 05. Contract
                 p("contract.view", "contract", "view", "Xem hợp đồng lao động"),
@@ -130,7 +132,15 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 13. Asset
                 p("asset.view", "asset", "view", "Xem danh mục tài sản thiết bị"),
+                p("asset.create", "asset", "create", "Khai báo tài sản, máy móc mới"),
+                p("asset.update", "asset", "update", "Cập nhật thông tin tài sản"),
+                p("asset.delete", "asset", "delete", "Xóa tài sản khỏi hệ thống"),
                 p("asset.manage", "asset", "manage", "Cấp phát, thu hồi và kiểm kê tài sản"),
+                p("asset.assign", "asset", "assign", "Cấp phát và thu hồi tài sản"),
+                p("asset.allocate", "asset", "allocate", "Cấp phát tài sản cho nhân viên"),
+                p("asset.return", "asset", "return", "Thu hồi tài sản hoàn trả"),
+                p("asset.view_own", "asset", "view_own", "Xem tài sản cá nhân được cấp phát"),
+                p("asset.inventory", "asset", "inventory", "Thực hiện và báo cáo kiểm kê tài sản"),
 
                 // 18. Workflow
                 p("workflow.view", "workflow", "view", "Xem danh sách và tiến trình phê duyệt"),
@@ -153,7 +163,12 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 p("user.assign_role", "user", "assign_role", "Gán vai trò cho người dùng"),
                 p("admin.role.manage", "system_admin", "manage", "Quản lý vai trò và phân quyền (RBAC)"),
                 p("admin.user.manage", "system_admin", "manage", "Quản trị tài khoản người dùng"),
-                p("admin.audit.view", "system_admin", "view", "Xem nhật ký hệ thống (Audit Log)")
+                p("admin.audit.view", "system_admin", "view", "Xem nhật ký hệ thống (Audit Log)"),
+                p("audit.view", "audit", "view", "Xem nhật ký kiểm toán hệ thống"),
+
+                // 19. Notification
+                p("notification.view", "notification", "view", "Xem danh sách và đánh dấu đọc thông báo cá nhân"),
+                p("notification.manage", "notification", "manage", "Quản trị và gửi thông báo hệ thống")
         );
 
         Map<String, Permission> map = new HashMap<>();
@@ -207,7 +222,8 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                     "leave.view", "leave.apply",
                     "contract.view",
                     "workflow.view", "workflow.delegate",
-                    "payroll.view", "payroll.advance", "performance.view"
+                    "payroll.view", "payroll.advance", "performance.view",
+                    "asset.view_own", "notification.view"
             );
             for (String code : empPermCodes) {
                 Permission p = permMap.get(code);
@@ -228,7 +244,8 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                     "leave.view", "leave.approve", "contract.view",
                     "payroll.view", "payroll.advance",
                     "performance.view", "performance.evaluate",
-                    "recruitment.request", "workflow.view", "workflow.approve", "workflow.delegate"
+                    "recruitment.request", "workflow.view", "workflow.approve", "workflow.delegate",
+                    "notification.view"
             );
             for (String code : dmPermCodes) {
                 Permission p = permMap.get(code);
@@ -240,14 +257,21 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
         }
 
         Role hrAdmin = roleMap.get("HR_ADMIN");
-        if (hrAdmin != null && rolePermissionRepository.findByRoleId(hrAdmin.getId()).isEmpty()) {
-            List<RolePermission> rps = new ArrayList<>();
+        if (hrAdmin != null) {
+            List<RolePermission> existingRps = rolePermissionRepository.findByRoleId(hrAdmin.getId());
+            Set<UUID> existingPermIds = existingRps.stream()
+                    .map(rp -> rp.getPermission().getId())
+                    .collect(Collectors.toSet());
+
+            List<RolePermission> rpsToAdd = new ArrayList<>();
             for (Permission p : permMap.values()) {
-                if (!p.getModule().equals("system_admin")) {
-                    rps.add(RolePermission.builder().role(hrAdmin).permission(p).dataScope(DataScope.COMPANY).build());
+                if (!p.getModule().equals("system_admin") && !existingPermIds.contains(p.getId())) {
+                    rpsToAdd.add(RolePermission.builder().role(hrAdmin).permission(p).dataScope(DataScope.COMPANY).build());
                 }
             }
-            rolePermissionRepository.saveAll(rps);
+            if (!rpsToAdd.isEmpty()) {
+                rolePermissionRepository.saveAll(rpsToAdd);
+            }
         }
     }
 

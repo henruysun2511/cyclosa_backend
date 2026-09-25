@@ -99,6 +99,18 @@ public class AppException extends RuntimeException {
         return new AppException(AuthErrorCode.USER_EMAIL_EXISTS, "Email \"" + email + "\" đã tồn tại");
     }
 
+    public static AppException passwordResetTokenInvalid() {
+        return new AppException(AuthErrorCode.PASSWORD_RESET_TOKEN_INVALID);
+    }
+
+    public static AppException passwordMismatch() {
+        return new AppException(AuthErrorCode.PASSWORD_MISMATCH);
+    }
+
+    public static AppException googleTokenInvalid() {
+        return new AppException(AuthErrorCode.GOOGLE_TOKEN_INVALID);
+    }
+
     // ==========================================
     // Role & Permission Exceptions
     // ==========================================

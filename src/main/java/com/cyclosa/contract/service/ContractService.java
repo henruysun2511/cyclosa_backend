@@ -460,7 +460,7 @@ public class ContractService {
         LocalDate endDate = startDate.plusDays(withinDays > 0 ? withinDays : 45);
         List<Contract> contracts = contractRepository.findExpiringContracts(startDate, endDate);
         List<Contract> filtered = contracts.stream()
-                .filter(c -> c.getCompanyId().equals(companyId))
+                .filter(c -> companyId == null || Objects.equals(c.getCompanyId(), companyId))
                 .toList();
 
         Set<UUID> employeeIds = filtered.stream().map(Contract::getEmployeeId).collect(Collectors.toSet());

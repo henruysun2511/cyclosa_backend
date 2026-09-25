@@ -3,8 +3,12 @@ package com.cyclosa.auth.controller;
 import com.cyclosa.role.dto.response.EffectivePermissionResponse;
 import com.cyclosa.role.service.UserRoleService;
 import com.cyclosa.auth.dto.request.ActivateAccountRequest;
+import com.cyclosa.auth.dto.request.ChangePasswordRequest;
+import com.cyclosa.auth.dto.request.ForgotPasswordRequest;
+import com.cyclosa.auth.dto.request.GoogleIdTokenRequest;
 import com.cyclosa.auth.dto.request.LoginRequest;
 import com.cyclosa.auth.dto.request.RefreshTokenRequest;
+import com.cyclosa.auth.dto.request.ResetPasswordRequest;
 import com.cyclosa.auth.dto.response.TokenResponse;
 import com.cyclosa.auth.dto.response.UserInfo;
 import com.cyclosa.auth.service.AuthService;
@@ -28,7 +32,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Auth", description = "Xác thực: kích hoạt, đăng nhập, refresh token, logout, lấy thông tin cá nhân & quyền hạn")
+@Tag(name = "Auth", description = "Xác thực: kích hoạt, đăng nhập, refresh token, logout, quên/đổi mật khẩu, OAuth2 Google, lấy thông tin cá nhân & quyền hạn")
 public class AuthController {
 
     private final AuthService authService;
@@ -84,6 +88,58 @@ public class AuthController {
     public ResponseEntity<ApiResponse<List<EffectivePermissionResponse>>> getMyPermissions(Authentication authentication) {
         UUID userId = SecurityUtils.currentUserId(authentication);
         return ResponseEntity.ok(ApiResponse.ok(userRoleService.getEffectivePermissions(userId), "Lấy danh sách quyền hạn thành công"));
+    }
+
+    // ==========================================
+    // Forgot Password — Gửi email khôi phục
+    // ==========================================
+    @PostMapping("/forgot-password")
+    @Operation(summary = "Quên mật khẩu", description = "Gửi email chứa liên kết đặt lại mật khẩu. API luôn trả về thành công bất kể email có tồn tại hay không (bảo mật chống dò email).")
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(
+            @Valid @RequestBody ForgotPasswordRequest request) {
+
+        authService.forgotPassword(request);
+        return ResponseEntity.ok(ApiResponse.noContent("Nếu email tồn tại trong hệ thống, chúng tôi đã gửi hướng dẫn đặt lại mật khẩu"));
+    }
+
+    // ==========================================
+    // Reset Password — Đặt lại mật khẩu mới
+    // ==========================================
+    @PostMapping("/reset-password")
+    @Operation(summary = "Đặt lại mật khẩu", description = "Sử dụng mã xác thực từ email để đặt mật khẩu mới. Sau khi đặt lại, phiên đăng nhập cũ sẽ bị hủy.")
+    public ResponseEntity<ApiResponse<Void>> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request) {
+
+        authService.resetPassword(request);
+        return ResponseEntity.ok(ApiResponse.noContent("Đặt lại mật khẩu thành công, vui lòng đăng nhập lại"));
+    }
+
+    // ==========================================
+    // Change Password — Đổi mật khẩu cá nhân
+    // ==========================================
+    @PutMapping("/change-password")
+    @Operation(summary = "Đổi mật khẩu", description = "Người dùng đang đăng nhập đổi mật khẩu cá nhân. Yêu cầu nhập đúng mật khẩu hiện tại. Sau khi đổi, phiên đăng nhập cũ sẽ bị hủy.")
+    @SecurityRequirement(name = "bearerAuth")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            Authentication authentication,
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        UUID userId = SecurityUtils.currentUserId(authentication);
+        authService.changePassword(userId, request);
+        return ResponseEntity.ok(ApiResponse.noContent("Đổi mật khẩu thành công, vui lòng đăng nhập lại"));
+    }
+
+    // ==========================================
+    // Google OAuth2 — Đăng nhập bằng Google ID Token
+    // ==========================================
+    @PostMapping("/oauth2/google")
+    @Operation(summary = "Đăng nhập bằng Google", description = "Xác thực bằng Google ID Token nhận từ Google Sign-In SDK phía frontend, trả về cặp token hệ thống")
+    public ResponseEntity<ApiResponse<TokenResponse>> googleLogin(
+            @Valid @RequestBody GoogleIdTokenRequest request) {
+
+        return ResponseEntity.ok(ApiResponse.ok(
+                authService.googleIdTokenLogin(request),
+                "Đăng nhập bằng Google thành công"));
     }
 
     private String extractToken(HttpServletRequest request) {

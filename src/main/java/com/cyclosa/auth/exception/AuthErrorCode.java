@@ -24,7 +24,11 @@ public enum AuthErrorCode implements ErrorCode {
 
     USER_NOT_FOUND              (4040, "Không tìm thấy người dùng",                  HttpStatus.NOT_FOUND),
     USER_EMAIL_EXISTS           (4041, "Email người dùng đã tồn tại",                HttpStatus.CONFLICT),
-    USER_ALREADY_LINKED         (4042, "Tài khoản người dùng này đã được gắn cho nhân viên khác", HttpStatus.CONFLICT);
+    USER_ALREADY_LINKED         (4042, "Tài khoản người dùng này đã được gắn cho nhân viên khác", HttpStatus.CONFLICT),
+
+    PASSWORD_RESET_TOKEN_INVALID(4021, "Mã khôi phục mật khẩu không hợp lệ hoặc đã hết hạn", HttpStatus.BAD_REQUEST),
+    PASSWORD_MISMATCH           (4022, "Mật khẩu hiện tại không đúng",                         HttpStatus.BAD_REQUEST),
+    GOOGLE_TOKEN_INVALID        (4023, "Google ID Token không hợp lệ",                         HttpStatus.UNAUTHORIZED);
 
     private final int code;
     private final String message;

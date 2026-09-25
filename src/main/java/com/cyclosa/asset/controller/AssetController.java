@@ -54,6 +54,18 @@ public class AssetController {
         return ResponseEntity.ok(ApiResponse.ok(response, "Lấy danh sách tài sản thành công"));
     }
 
+    @GetMapping("/my")
+    @PreAuthorize("@perm.has('asset.view_own') or hasAuthority('ROLE_EMPLOYEE') or isAuthenticated()")
+    @RequirePermission("asset.view_own")
+    @Operation(summary = "Lấy danh sách tài sản trang thiết bị đang được cấp phát cho tôi")
+    public ResponseEntity<ApiResponse<PageData<AssetAllocationResponse>>> getMyAssets(
+            @PageableDefault(sort = "allocatedDate", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        UUID currentUserId = com.cyclosa.common.util.SecurityUtils.getCurrentUserIdOptional().orElse(null);
+        PageData<AssetAllocationResponse> response = assetService.getMyAssets(currentUserId, pageable);
+        return ResponseEntity.ok(ApiResponse.ok(response, "Lấy danh sách tài sản của tôi thành công"));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("@perm.has('asset.view')")
     @RequirePermission("asset.view")

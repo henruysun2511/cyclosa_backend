@@ -21,6 +21,9 @@ public class EmailService {
     @Value("${app.frontend.activation-url:http://localhost:5173/activate}")
     private String activationUrlBase;
 
+    @Value("${app.frontend.reset-password-url:http://localhost:5173/reset-password}")
+    private String resetPasswordUrlBase;
+
     public void sendActivationEmail(String toEmail, String fullName, String activationToken) {
         String activationUrl = activationUrlBase + "?token=" + activationToken;
 
@@ -53,6 +56,42 @@ public class EmailService {
             }
         } else {
             log.info("[EMAIL ACTIVATION] SMTP chưa được cấu hình tài khoản gửi (spring.mail.username trống). Bỏ qua gửi email thực tế.");
+        }
+    }
+
+    public void sendPasswordResetEmail(String toEmail, String fullName, String resetToken) {
+        String resetUrl = resetPasswordUrlBase + "?token=" + resetToken;
+
+        log.info("================================================================================");
+        log.info("[EMAIL RESET PASSWORD] Người nhận: {} ({})", fullName, toEmail);
+        log.info("[EMAIL RESET PASSWORD] Token: {}", resetToken);
+        log.info("[EMAIL RESET PASSWORD] Đường dẫn đặt lại mật khẩu: {}", resetUrl);
+        log.info("================================================================================");
+
+        if (mailSender != null && StringUtils.hasText(mailFrom)) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(toEmail);
+                message.setSubject("[CYCLOSA] Yêu cầu khôi phục mật khẩu");
+                message.setText(String.format(
+                        "Xin chào %s,\n\n" +
+                        "Chúng tôi nhận được yêu cầu đặt lại mật khẩu cho tài khoản của bạn trên hệ thống CYCLOSA HRM.\n" +
+                        "Vui lòng nhấn vào liên kết dưới đây để đặt mật khẩu mới:\n" +
+                        "%s\n\n" +
+                        "Liên kết có hiệu lực trong vòng 1 giờ.\n" +
+                        "Nếu bạn không yêu cầu khôi phục mật khẩu, vui lòng bỏ qua email này.\n\n" +
+                        "Trân trọng,\nĐội ngũ CYCLOSA HRM.",
+                        fullName, resetUrl
+                ));
+
+                mailSender.send(message);
+                log.info("[EMAIL RESET PASSWORD] Đã gửi thư thành công tới {}", toEmail);
+            } catch (Exception e) {
+                log.warn("[EMAIL RESET PASSWORD] Gửi email thật qua SMTP thất bại ({}), dev có thể dùng đường dẫn trong log.", e.getMessage());
+            }
+        } else {
+            log.info("[EMAIL RESET PASSWORD] SMTP chưa được cấu hình. Bỏ qua gửi email thực tế.");
         }
     }
 }

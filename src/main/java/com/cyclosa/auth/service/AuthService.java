@@ -1,8 +1,12 @@
 package com.cyclosa.auth.service;
 
 import com.cyclosa.role.service.UserRoleService;
+import com.cyclosa.auth.dto.request.ChangePasswordRequest;
+import com.cyclosa.auth.dto.request.ForgotPasswordRequest;
+import com.cyclosa.auth.dto.request.GoogleIdTokenRequest;
 import com.cyclosa.auth.dto.request.LoginRequest;
 import com.cyclosa.auth.dto.request.RefreshTokenRequest;
+import com.cyclosa.auth.dto.request.ResetPasswordRequest;
 import com.cyclosa.auth.dto.request.RegisterRequest;
 import com.cyclosa.auth.dto.response.TokenResponse;
 import com.cyclosa.auth.dto.response.UserInfo;
@@ -14,7 +18,12 @@ import com.cyclosa.auth.repository.UserRepository;
 import com.cyclosa.auth.security.JwtUtil;
 import com.cyclosa.common.enums.UserStatus;
 import com.cyclosa.common.exception.AppException;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
@@ -29,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 
 import com.cyclosa.auth.dto.request.ActivateAccountRequest;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -40,14 +51,19 @@ public class AuthService {
     private final JwtUtil                     jwtUtil;
     private final RedisTemplate<String, String> redisTemplate;
     private final AuthMapper                  authMapper;
+    private final EmailService                emailService;
 
     @Value("${app.jwt.access-token-expiry:86400000}")
     private long accessTokenExpiry;
+
+    @Value("${spring.security.oauth2.client.registration.google.client-id:}")
+    private String googleClientId;
 
     public static final String BLACKLIST_PREFIX          = "blacklist:";
     public static final String REFRESH_TOKEN_PREFIX      = "refresh:";
     public static final String ACTIVATION_TOKEN_PREFIX   = "activation:";
     public static final String USER_ACTIVATION_PREFIX    = "user_activation:";
+    public static final String PASSWORD_RESET_PREFIX     = "password_reset:";
 
     @Transactional
     public TokenResponse activateAccount(ActivateAccountRequest req) {
@@ -248,6 +264,156 @@ public class AuthService {
         User user = userRepository.findByIdWithRoles(userId)
                 .orElseThrow(() -> AppException.userNotFound(userId));
         return authMapper.toUserInfo(user);
+    }
+
+    // ==========================================
+    // Forgot Password — Gửi email khôi phục
+    // ==========================================
+    @Transactional(readOnly = true)
+    public void forgotPassword(ForgotPasswordRequest req) {
+        String cleanEmail = req.getEmail().toLowerCase().trim();
+        userRepository.findByEmail(cleanEmail).ifPresent(user -> {
+            if (user.getStatus() != UserStatus.ACTIVE) {
+                log.warn("[FORGOT PASSWORD] Tài khoản {} không ở trạng thái ACTIVE, bỏ qua.", cleanEmail);
+                return;
+            }
+
+            // Xóa token cũ nếu có (chỉ cho phép 1 token valid tại mọi thời điểm)
+            String existingTokenKey = PASSWORD_RESET_PREFIX + "user:" + user.getId();
+            String oldToken = redisTemplate.opsForValue().get(existingTokenKey);
+            if (oldToken != null) {
+                redisTemplate.delete(PASSWORD_RESET_PREFIX + oldToken);
+            }
+
+            // Tạo token mới
+            String resetToken = UUID.randomUUID().toString();
+            redisTemplate.opsForValue().set(
+                    PASSWORD_RESET_PREFIX + resetToken,
+                    user.getId().toString(),
+                    1, TimeUnit.HOURS
+            );
+            redisTemplate.opsForValue().set(
+                    PASSWORD_RESET_PREFIX + "user:" + user.getId(),
+                    resetToken,
+                    1, TimeUnit.HOURS
+            );
+
+            emailService.sendPasswordResetEmail(user.getEmail(), user.getFullName(), resetToken);
+        });
+
+        // Luôn trả OK dù email có tồn tại hay không — chống email enumeration attack
+        log.info("[FORGOT PASSWORD] Xử lý yêu cầu quên mật khẩu cho email: {}", cleanEmail);
+    }
+
+    // ==========================================
+    // Reset Password — Đặt lại mật khẩu bằng token
+    // ==========================================
+    @Transactional
+    public void resetPassword(ResetPasswordRequest req) {
+        if (!req.getPassword().equals(req.getConfirmPassword())) {
+            throw AppException.validationFailed("Mật khẩu xác nhận không khớp");
+        }
+
+        String redisKey = PASSWORD_RESET_PREFIX + req.getToken().trim();
+        String userIdStr = redisTemplate.opsForValue().get(redisKey);
+        if (userIdStr == null) {
+            throw AppException.passwordResetTokenInvalid();
+        }
+
+        UUID userId;
+        try {
+            userId = UUID.fromString(userIdStr);
+        } catch (IllegalArgumentException e) {
+            throw AppException.passwordResetTokenInvalid();
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> AppException.userNotFound(userId));
+
+        user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+        userRepository.save(user);
+
+        // Xóa token đã sử dụng
+        redisTemplate.delete(redisKey);
+        redisTemplate.delete(PASSWORD_RESET_PREFIX + "user:" + userId);
+
+        // Force re-login: xóa refresh token hiện tại
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + userId);
+
+        log.info("[RESET PASSWORD] Đặt lại mật khẩu thành công cho User id={}", userId);
+    }
+
+    // ==========================================
+    // Change Password — Đổi mật khẩu cá nhân
+    // ==========================================
+    @Transactional
+    public void changePassword(UUID userId, ChangePasswordRequest req) {
+        if (!req.getNewPassword().equals(req.getConfirmNewPassword())) {
+            throw AppException.validationFailed("Mật khẩu mới xác nhận không khớp");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> AppException.userNotFound(userId));
+
+        if (user.getPasswordHash() == null) {
+            throw AppException.validationFailed("Tài khoản chưa thiết lập mật khẩu, vui lòng sử dụng chức năng kích hoạt tài khoản");
+        }
+
+        if (!passwordEncoder.matches(req.getCurrentPassword(), user.getPasswordHash())) {
+            throw AppException.passwordMismatch();
+        }
+
+        if (passwordEncoder.matches(req.getNewPassword(), user.getPasswordHash())) {
+            throw AppException.validationFailed("Mật khẩu mới không được trùng với mật khẩu hiện tại");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(req.getNewPassword()));
+        userRepository.save(user);
+
+        // Force re-login: xóa refresh token hiện tại
+        redisTemplate.delete(REFRESH_TOKEN_PREFIX + userId);
+
+        log.info("[CHANGE PASSWORD] Đổi mật khẩu thành công cho User id={}", userId);
+    }
+
+    // ==========================================
+    // Google ID Token Login — REST API cho frontend
+    // ==========================================
+    @Transactional
+    public TokenResponse googleIdTokenLogin(GoogleIdTokenRequest req) {
+        try {
+            GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(
+                    new NetHttpTransport(), GsonFactory.getDefaultInstance())
+                    .setAudience(Collections.singletonList(googleClientId))
+                    .build();
+
+            GoogleIdToken idToken = verifier.verify(req.getIdToken());
+            if (idToken == null) {
+                throw AppException.googleTokenInvalid();
+            }
+
+            GoogleIdToken.Payload payload = idToken.getPayload();
+            String sub     = payload.getSubject();
+            String email   = payload.getEmail();
+            String name    = (String) payload.get("name");
+            String picture = (String) payload.get("picture");
+
+            if (email == null) {
+                throw AppException.googleTokenInvalid();
+            }
+
+            if (name == null) {
+                name = email;
+            }
+
+            return oauth2Login(sub, email, name, picture);
+
+        } catch (AppException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("[GOOGLE LOGIN] Xác thực Google ID Token thất bại: {}", e.getMessage());
+            throw AppException.googleTokenInvalid();
+        }
     }
 
     private TokenResponse generateTokenResponse(User user) {
