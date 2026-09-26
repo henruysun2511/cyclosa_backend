@@ -32,26 +32,26 @@
 | 03. Onboarding | 02 (Hiring), 04 (employee vừa tạo), 13 (Asset) | onboarding_processes.employee_id, cấp thiết bị gọi Module 13 |
 | 13. Asset Management | 04 | asset_allocations.employee_id — cần có trước Module 03 gọi tới |
 | 09. Performance | 04, 01 (kpis.department_id) | goals.employee_id |
-| 10. Training | 04 | training_registrations.employee_id |
-| 11. Benefits | 04 | benefit_enrollments.employee_id |
+| ~~10. Training~~ | *[ĐÃ LƯỢC BỎ]* | Bằng cấp/chứng chỉ lưu tại `employee_documents` |
+| ~~11. Benefits~~ | *[ĐÃ LƯỢC BỎ]* | Phụ cấp & bảo hiểm xử lý trực tiếp tại Module 05 Contract & 08 Payroll |
 | 12. Reward & Discipline | 04, 08 (reward tiền đẩy sang payroll) | rewards/disciplines.employee_id |
 | 14. Career & Talent | 04, 01 (positions), 09 (dữ liệu hiệu suất) | succession_candidates cần performance history |
-| 15. Engagement | 04, 19 (gửi lời mời khảo sát) | survey_responses.employee_id |
+| ~~15. Engagement~~ | *[ĐÃ LƯỢC BỎ]* | Biểu mẫu khảo sát rời rạc, dùng công cụ chuyên dụng bên ngoài |
 | 16. Offboarding | 04, 05, 06, 08, 13, 18 | Cần Contract Termination, Final Payroll, thu hồi Asset, Workflow duyệt |
 | 17. ESS | *(tất cả module đã code tới đâu)* | Lớp API mỏng, code song song từng phần |
 | 20. Reports | *(tất cả module đã code tới đâu)* | Query tổng hợp, code song song từng phần |
 | **02.1 Interview Management** | 02 | Mở rộng bảng `interviews`/`interview_evaluations` đã có, không phải module độc lập |
-| **31. Talent Marketplace** | 02, 04, 33 (skill matching) | `internal_opportunities` cần Skill Profile để gợi ý match |
-| **32. Career Pathing Simulator** | 04 (employee_history), 14 (career_paths) | Chỉ tính toán/truy vấn, không cần bảng nguồn mới lớn |
-| **33. Skill Graph & Gap Analysis** | 04, 10 (training để suy ra skill), 23 (CV parser nếu dùng) | `employee_skills` là nền cho cả Module 31, 32 |
-| **34. Alumni Network** | 16 (Offboarding), 02 (referral) | Alumni Eligibility đánh giá khi Offboarding hoàn tất |
-| **35. Compliance Radar** | 05 (Contract), 29→Module 21 policy config | Rà soát chéo hợp đồng/chính sách hiện hành |
+| **31. Talent Marketplace** | 02, 04 | Đã tích hợp sẵn vào Module 02 Recruitment |
+| **~~32. Career Pathing Simulator~~** | *[ĐÃ GỘP VÀO MODULE 14]* | Tích hợp thành tính năng mở rộng của Module 14 Career & Talent |
+| ~~**33. Skill Graph & Gap Analysis**~~ | *[ĐÃ LƯỢC BỎ]* | Đánh giá năng lực tích hợp qua KPI/Goal & 360 Feedback ở Module 09 |
+| ~~**34. Alumni Network**~~ | *[ĐÃ LƯỢC BỎ]* | Mạng xã hội cựu nhân viên độc lập |
+| **35. Compliance Radar** | 05 (Contract), 08 (Payroll), 06 (Attendance) | Rà soát chéo hợp đồng mẫu, ca kíp và quy chế lương |
 | **36. Earned Wage Access** | 06 (Attendance — công thực tế), 08 (Payroll) | Tính số dư khả dụng cần dữ liệu công + lương |
-| **37. Payroll Anomaly Detection** | 08 (Payroll) | Chạy sau khi Payroll tính xong 1 kỳ |
-| **38. Time-off Donation** | 07 (Leave — leave_balances) | Trừ/cộng trực tiếp vào Leave Balance |
+| **~~37. Payroll Anomaly Detection~~** | *[ĐÃ GỘP VÀO MODULE 08]* | Hợp nhất thành bước Audit & Anomaly Scan của Module 08 Payroll |
+| ~~**38. Time-off Donation**~~ | *[ĐÃ LƯỢC BỎ]* | Không phù hợp Điều 113-114 BLLĐ 2019 |
 | **39. AI 1-1 Assistant** | 04, 19 (Notification nhắc lịch) | Độc lập tương đối, có thể code sớm ở Phase 7 |
-| **40. Manager Effectiveness Score** | 16, 07, 39, 09, 15 | Cần dữ liệu từ nhiều module — code sau cùng trong nhóm 31-41 |
-| **41. What-if Org Simulation** | 01 (Organization — dùng lại Impact Preview) | Mô phỏng dựa trên cấu trúc tổ chức đã có |
+| **~~40. Manager Effectiveness Score~~** | *[ĐÃ GỘP VÀO MODULE 20]* | Hợp nhất thành phân hệ phân tích hiệu quả quản lý của Module 20 Reports |
+| **~~41. What-if Org Simulation~~** | *[ĐÃ GỘP VÀO MODULE 01]* | Hợp nhất thành phân hệ mô phỏng mở rộng của Module 01 Organization |
 | **42. Seating Chart / Workplace** | 01 (branch_id), 04 (employee), 13 (Asset), 27→Module 05/16 (transfer/offboarding) | Độc lập tương đối, có thể code song song sớm nếu ưu tiên |
 
 ---
@@ -113,11 +113,11 @@ Có thể chia song song cho nhiều dev vì ít phụ thuộc chéo lẫn nhau 
 
 ### Phase 5 — Payroll
 
-**Module 08:** `salary_components`, `employee_salary_history`, `salary_advances` (qua Workflow), `payroll_periods`, `payroll_records`, `payroll_record_items`.
+**Module 08:** `salary_components`, `employee_salary_history`, `salary_advances` (qua Workflow), `payroll_periods`, `payroll_records`, `payroll_record_items`, `payroll_anomalies` (tích hợp tính năng Anomaly Detection của Module 37).
 
 > Phụ thuộc trực tiếp dữ liệu từ Module 05 (basic_salary), 06 (công/OT thực tế), 07 (phép có lương) — bắt buộc code sau Phase 4, không thể làm song song.
 
-**Output:** Chạy được 1 kỳ lương đầy đủ từ đầu đến cuối (tính công → tính lương → xuất phiếu lương).
+**Output:** Chạy được 1 kỳ lương đầy đủ từ đầu đến cuối (tính công → tính lương → quét bất thường/fraud check → duyệt qua Workflow → xuất phiếu lương).
 
 ---
 
@@ -133,23 +133,23 @@ Có thể chia song song cho nhiều dev vì ít phụ thuộc chéo lẫn nhau 
 
 ### Phase 7 — Nhóm mở rộng
 
-Độc lập tương đối với nhau, ưu tiên theo giá trị nghiệp vụ, có thể làm song song:
+Độc lập tương đối với nhau, ưu tiên theo giá trị nghiệp vụ:
 
-- **Module 09 (Performance)**
-- **Module 10 (Training & Development)**
-- **Module 11 (Benefits)**
-- **Module 12 (Reward & Discipline)** — cần Module 08 nếu muốn đẩy tiền thưởng vào lương
-- **Module 14 (Career & Talent)** — cần dữ liệu Module 09 để đánh giá succession
-- **Module 15 (Engagement)**
+- **Module 09 (Performance)** — [x] ✅ Hoàn thành (`com.cyclosa.performance`)
+- ~~**Module 10 (Training & Development)**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Thuần CRUD, lưu chứng chỉ thay thế bằng `employee_documents` ở Profile/Onboarding.
+- ~~**Module 11 (Benefits)**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Thuần CRUD, các khoản phụ cấp và bảo hiểm đã xử lý trực tiếp trong Module 05 (Contract) & 08 (Payroll).
+- **Module 12 (Reward & Discipline)** — [x] ✅ Hoàn thành (`com.cyclosa.discipline`) (Khen thưởng, Kỷ luật Điều 123/125/126 BLLĐ, Khiếu nại)
+- **Module 14 (Career & Talent)** — [x] ✅ Hoàn thành (`com.cyclosa.talent`) (Lộ trình thăng tiến, Kế hoạch kế nhiệm, Kho nhân tài HiPo, Career Pathing Simulator gộp từ Module 32, ESS MyCareer)
+- ~~**Module 15 (Engagement)**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Biểu mẫu khảo sát rời rạc, độc lập với chuỗi cung ứng dữ liệu Core HRM.
 - **Module 21 (phần còn lại):** `audit_logs`, `system_settings`, `integrations`, `data_import_jobs`
 
 **Output:** Bộ tính năng đầy đủ ngoài MVP.
 
 ---
 
-### Phase 8 — Offboarding
+### Phase 8 — Offboarding — [x] ✅ Hoàn thành
 
-**Module 16:** `resignations`, `terminations`, `exit_interviews`, `offboarding_clearances`.
+**Module 16:** `resignations`, `terminations`, `exit_interviews`, `offboarding_clearances` (`com.cyclosa.offboarding`).
 
 > Code sau cùng vì gọi tới hầu hết module trước đó: Contract Termination (05), Final Payroll (08), thu hồi Asset (13), khóa tài khoản (03), duyệt qua Workflow (18).
 
@@ -166,25 +166,23 @@ Có thể chia song song cho nhiều dev vì ít phụ thuộc chéo lẫn nhau 
 - **42. Seating Chart / Workplace** — phụ thuộc 01/04/13 đã có sẵn từ Phase 1-6, có thể code song song sớm nhất trong nhóm
 - **39. AI 1-1 Assistant** — chỉ cần 04 + 19, độc lập với các module 31-41 khác
 
-**Bước 2 — Nền tảng dữ liệu dùng chung cho cả nhóm:**
-- **33. Skill Graph & Gap Analysis** — code trước vì Module 31, 32 đều dùng `employee_skills` để gợi ý/match
-
-**Bước 3 — Phụ thuộc Bước 2:**
-- **31. Talent Marketplace** (cần 33)
-- **32. Career Pathing Simulator** (dùng dữ liệu employee_history + career_paths, không bắt buộc chờ 33 nhưng nên làm sau để gợi ý skill gap đồng bộ)
+**Bước 2 — Phụ thuộc dữ liệu vận hành & phát triển nhân sự:**
+- ~~**33. Skill Graph & Gap Analysis**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Đánh giá năng lực đã tích hợp qua KPI/Goal & 360 Feedback ở Module 09.
+- **31. Talent Marketplace** (đã tích hợp vào Module 02 Recruitment)
+- ~~**32. Career Pathing Simulator**~~ — *[ĐÃ GỘP VÀO MODULE 14]* Hợp nhất vào Module 14 quản lý tập trung trong package `com.cyclosa.talent`.
 
 **Bước 4 — Phụ thuộc dữ liệu tài chính/vận hành đã ổn định:**
 - **36. Earned Wage Access** (cần 06 + 08 chạy ổn định ít nhất 1-2 kỳ lương thật để tính số dư đúng)
-- **37. Payroll Anomaly Detection** (chạy song song mỗi kỳ Payroll — nên bật sau khi 36 xong vì cùng đụng vào luồng Payroll)
-- **38. Time-off Donation** (chỉ cần 07, có thể làm sớm hơn nếu ưu tiên tính nhân văn/employer branding)
+- ~~**37. Payroll Anomaly Detection**~~ — *[ĐÃ GỘP VÀO MODULE 08]* Hợp nhất thành bước kiểm soát tự động trước khi chốt lương trong Module 08.
+- ~~**38. Time-off Donation**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Không phù hợp Điều 113-114 BLLĐ 2019.
 
 **Bước 5 — Compliance & Governance:**
 - **35. Compliance Radar** (độc lập, ưu tiên theo yêu cầu pháp lý thực tế của công ty)
 
-**Bước 6 — Cần dữ liệu tổng hợp nhiều module (code sau cùng trong nhóm):**
-- **40. Manager Effectiveness Score** (cần 16, 07, 39, 09, 15 đã có dữ liệu đủ dài để tính xu hướng)
-- **34. Alumni Network** (cần Module 16 đã vận hành đủ lâu để có alumni thật)
-- **41. What-if Org Simulation** (mở rộng Impact Preview của Module 01, không phụ thuộc dữ liệu mới nhưng nên làm sau cùng vì độ phức tạp UI cao — canvas kéo-thả)
+**Bước 6 — Hoàn thiện các phân hệ mở rộng còn lại:**
+- ~~**40. Manager Effectiveness Score**~~ — *[ĐÃ GỘP VÀO MODULE 20]* Hợp nhất thành dashboard phân tích trong Module 20 Reports.
+- ~~**34. Alumni Network**~~ — ❌ *[ĐÃ LƯỢC BỎ]* Mạng xã hội cựu nhân viên độc lập.
+- ~~**41. What-if Org Simulation**~~ — *[ĐÃ GỘP VÀO MODULE 01]* Hợp nhất thành tính năng mở rộng của Module 01 Organization.
 
 **Output:** Bộ tính năng nâng cao hoàn chỉnh, không ảnh hưởng tiến độ MVP nếu ưu tiên đúng thứ tự trên.
 
@@ -192,7 +190,7 @@ Có thể chia song song cho nhiều dev vì ít phụ thuộc chéo lẫn nhau 
 
 ### Xuyên suốt mọi Phase — không tách giai đoạn riêng
 
-- **Module 17 (ESS):** với mỗi module ở Phase 4 trở đi, ngay khi API nghiệp vụ xong thì code kèm API `/ess/*` tương ứng (bọc thêm filter `employee_id = current_user`).
+- **Module 17 (ESS):** Triển khai theo **Kiến trúc phân tán (Cách 2)** — không tạo package backend `com.cyclosa.ess` độc lập. Mỗi module nghiệp vụ sở hữu Controller `/api/v1/my-*` chuyên dụng cho nhân viên tự phục vụ (ví dụ `MyProfileController`, `MyAttendanceController`, `MyLeaveController`, `MyPayrollController`...), tự động filter theo `employee_id` từ token đăng nhập và trả về DTO tinh gọn.
 - **Module 20 (Reports):** viết các query báo cáo ngay khi module nguồn có đủ dữ liệu, không dồn hết tới cuối dự án — tránh tình trạng cuối dự án phải quay lại hiểu logic của 20 module cùng lúc.
 
 ---
@@ -202,16 +200,16 @@ Có thể chia song song cho nhiều dev vì ít phụ thuộc chéo lẫn nhau 
 | Phase | Module | Có thể làm song song? |
 |---|---|---|
 | 0 | Hạ tầng dự án | — |
-| 1 | 21 (lõi) + 01 | Có thể tách 2 dev |
+| 1 | 21 (lõi) + 01 *(gồm 41 What-if)* | Có thể tách 2 dev |
 | 2 | 04 | Không (chờ Phase 1) |
 | 3 | 18 + 19 | Có thể tách 2 dev |
 | 4 | 05 + 06 + 07 | Có thể tách 3 dev |
-| 5 | 08 | Không (chờ Phase 4 xong cả 3) |
+| 5 | 08 *(gồm 37 Anomaly)* | Không (chờ Phase 4 xong cả 3) |
 | 6 | 13 → 02 → 03 | 02 và 13 có thể song song, 03 chờ cả hai |
-| 7 | 09, 10, 11, 12, 14, 15, 21(còn lại) | Song song được hầu hết, 14 chờ 09 |
+| 7 | 09, 12, 14 *(gồm 32 Career)*, 21(còn lại) *(10, 11, 15 đã lược bỏ)* | Song song được hầu hết, 14 chờ 09 |
 | 8 | 16 | Không (chờ 05, 06, 08, 13, 18) |
-| 9 | 02.1, 42, 39 → 33 → 31, 32 → 36, 37, 38 → 35 → 40, 34, 41 | Từng bước con có thể song song trong nội bộ (VD: 36/37/38 làm cùng lúc bởi 3 dev khác nhau) |
-| Song song mọi lúc | 17, 20 | Làm dần theo từng module đã xong |
+| 9 | 02.1, 42, 39 → 31 → 36 → 35 *(32 gộp 14; 37 gộp 08; 40 gộp 20; 41 gộp 01; 33, 34, 38 đã lược bỏ)* | Từng bước con có thể song song trong nội bộ |
+| Song song mọi lúc | 17, 20 *(gồm 40 Manager Score)* | Làm dần theo từng module đã xong |
 
 ---
 

@@ -8,12 +8,66 @@
 
 ## 📋 MỤC LỤC
 - Module 01-05: Tổ chức, Tuyển dụng (gồm 2.1 Interview Management), Onboarding, Nhân viên, Hợp đồng
-- Module 06-12: Chấm công, Nghỉ phép, Lương, Hiệu suất, Đào tạo, Phúc lợi, Kỷ luật
-- Module 13-17: Tài sản, Phát triển, Engagement, Offboarding, ESS
+- Module 06-12: Chấm công, Nghỉ phép, Lương, Hiệu suất, Kỷ luật *(Module 10 Đào tạo & Module 11 Phúc lợi đã lược bỏ)*
+- Module 13-17: Tài sản, Phát triển, Offboarding, ESS *(Module 15 Khảo sát & Gắn kết đã lược bỏ)*
 - Module 18-22: Workflow, Notification, Reports, Admin, Lưu kho
-- Module 23-30: AI Features + Extensions
-- **Module 31-41 (ĐỀ XUẤT BỔ SUNG):** Talent Marketplace, Career Pathing, Skill Graph, Alumni Network, Compliance Radar, Earned Wage Access, Payroll Anomaly Detection, Time-off Donation, AI 1-1 Assistant, Manager Effectiveness Score, What-if Org Simulation
+- Module 23-30: AI Features + Extensions *(Module 28 Du lịch công tác & Module 29 Chính sách & Tuân thủ đã lược bỏ)*
+- **Module 31-42 (ĐỀ XUẤT BỔ SUNG):** Talent Marketplace, Compliance Radar, Earned Wage Access, AI 1-1 Assistant, Seating Chart / Workplace Management *(Module 32 đã gộp vào 14; Module 37 đã gộp vào 08; Module 40 đã gộp vào 20; Module 41 đã gộp vào 01; Module 33, 34, 38 đã lược bỏ)*
 - **Module 42 (ĐỀ XUẤT BỔ SUNG):** Quản lý Sơ đồ Chỗ ngồi (Seating Chart / Workplace Management)
+
+### 📊 BẢNG TỔNG HỢP TIẾN ĐỘ TRIỂN KHAI BACKEND
+
+> Ký hiệu:  
+> - ✅ **ĐÃ HOÀN THÀNH**: Đã có mã nguồn Java đầy đủ (Entity, DTO, Repository, Service, Controller, Unit Tests, RBAC).  
+> - 🔄 **ĐÃ HỢP NHẤT**: Đã gộp vào module chức năng cha.  
+> - ⏳ **CHƯA LÀM**: Nằm trong kế hoạch các phase tiếp theo.  
+> - ❌ **ĐÃ LƯỢC BỎ**: Đã cắt bỏ khỏi phạm vi hệ thống.
+
+| Module | Tên Module | Trạng Thái Backend | Package / Vị trí Code | Ghi chú kỹ thuật |
+|---|---|:---:|---|---|
+| **01** | Cơ cấu Tổ chức (Organization) | ✅ **ĐÃ LÀM (Core)** | `com.cyclosa.organization` (61 files) | Cây tổ chức 3 chiều, Cost Center, Chức danh. *(What-if Simulation quy hoạch gộp)* |
+| **02** | Tuyển dụng (Recruitment) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.recruitment` (125 files) | Vòng đời tuyển dụng + phỏng vấn chấm điểm Scorecard (02.1) + Talent Marketplace (31) |
+| **02.1** | Quản lý Phỏng vấn (Interview) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.recruitment` | Tích hợp sẵn trong phân hệ Recruitment |
+| **03** | Onboarding (Gia nhập) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.onboarding` (49 files) | Quy trình onboarding, task checklist, template, tích hợp asset & account |
+| **04** | Hồ sơ Nhân viên (Employee) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.employee` (38 files) | Hồ sơ toàn diện: lý lịch, hợp đồng info, người phụ thuộc, liên hệ khẩn cấp, tài liệu |
+| **05** | Hợp đồng Lao động (Contract) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.contract` (37 files) | HĐLĐ, phụ lục hợp đồng, chấm dứt HĐ theo chuẩn BLLĐ 2019 |
+| **06** | Chấm công & Ca (Attendance) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.attendance` (57 files) | Ca làm việc, chấm công, làm thêm giờ (OT), giải trình công qua Workflow |
+| **07** | Quản lý Nghỉ phép (Leave) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.leave` (48 files) | Loại phép, chính sách phép, số dư phép, nộp và duyệt đơn nghỉ phép |
+| **08** | Tiền lương (Payroll) | ✅ **ĐÃ LÀM (Core)** | `com.cyclosa.payroll` (51 files) | Thành phần lương, tính lương tự động, tạm ứng lương, chốt kỳ lương |
+| **09** | Quản lý Hiệu suất (Performance) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.performance` (44 files) | Chu kỳ đánh giá, Mục tiêu/KPI, Đánh giá đa chiều 360, Coaching/1-1 |
+| **10** | Đào tạo & Phát triển | ❌ **ĐÃ LƯỢC BỎ** | — | Chứng chỉ lưu trữ tại hồ sơ nhân viên (`employee_documents`) |
+| **11** | Phúc lợi & Đãi ngộ | ❌ **ĐÃ LƯỢC BỎ** | — | Phụ cấp và bảo hiểm xử lý trực tiếp tại Module 05 & 08 |
+| **12** | Khen thưởng & Kỷ luật (Discipline) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.discipline` (36 files) | Khen thưởng, Xử lý kỷ luật theo Điều 123-126 BLLĐ, Quản lý khiếu nại |
+| **13** | Quản lý Tài sản (Asset) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.asset` (37 files) | Danh mục tài sản, cấp phát/thu hồi, kiểm kê định kỳ |
+| **14** | Phát triển Nhân sự (Career & Talent) | ⏳ **CHƯA LÀM** | `com.cyclosa.talent` *(kế hoạch)* | Quy hoạch kế nhiệm (Succession) + Career Path Simulator (gộp từ 32) |
+| **15** | Khảo sát & Gắn kết | ❌ **ĐÃ LƯỢC BỎ** | — | Dùng công cụ khảo sát độc lập bên ngoài |
+| **16** | Nghỉ việc (Offboarding) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.offboarding` (37 files) | Đơn thôi việc, quyết định thôi việc, phỏng vấn nghỉ việc, clearance bàn giao |
+| **17** | Tự phục vụ Nhân viên (ESS) | ✅ **ĐÃ HOÀN THÀNH** | Phân tán: `My*Controller` | Kiến trúc phân tán gắn liền từng module nghiệp vụ |
+| **18** | Workflow Engine & Role Designer | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.workflow` (46 files) | Định nghĩa workflow, approval matrix nhiều cấp, ủy quyền duyệt |
+| **19** | Thông báo (Notification) | ✅ **ĐÃ HOÀN THÀNH** | `com.cyclosa.notification` (13 files) | Notification template, gửi thông báo theo sự kiện, nhắc việc |
+| **20** | Báo cáo & Phân tích (Reports) | ⏳ **CHƯA LÀM** | `com.cyclosa.report` *(kế hoạch)* | Báo cáo dashboard + Manager Effectiveness Analytics (gộp từ 40) |
+| **21** | Quản trị Hệ thống (System Admin) | ✅ **ĐÃ LÀM (Lõi)** | `auth`, `role`, `permission`, `audit` (69 files) | JWT Auth, RBAC động 5 cấp DataScope, Audit Log thao tác |
+| **22** | Lưu kho & Hủy hồ sơ | ⏳ **CHƯA LÀM** | `com.cyclosa.archive` *(kế hoạch)* | Quản lý kho số hóa, lưu trữ và tiêu hủy tài liệu định kỳ |
+| **23** | CV Parser (AI) | ⏳ **CHƯA LÀM** | `com.cyclosa.ai.parser` *(kế hoạch)* | Trích xuất thông tin tự động từ CV ứng viên |
+| **24** | CV Review & Screening (AI) | ⏳ **CHƯA LÀM** | `com.cyclosa.ai.screening` *(kế hoạch)* | Tính điểm tương đồng CV - JD |
+| **25** | OCR Trích xuất Tài liệu (AI) | ⏳ **CHƯA LÀM** | `com.cyclosa.ai.ocr` *(kế hoạch)* | Nhận dạng CCCD/Bằng cấp/Hóa đơn |
+| **26** | Chatbot Nhân sự (AI) | ⏳ **CHƯA LÀM** | `com.cyclosa.ai.chatbot` *(kế hoạch)* | Trợ lý hỏi đáp chính sách (RAG) |
+| **27** | Quản lý Chuyển Bộ Phận (Transfer) | ⏳ **CHƯA LÀM** | `com.cyclosa.transfer` *(kế hoạch)* | Điều chuyển nhân sự nội bộ qua workflow |
+| **28** | Du lịch Công tác | ❌ **ĐÃ LƯỢC BỎ** | — | Quản lý qua quy trình hành chính thông thường |
+| **29** | Chính sách & Tuân thủ | ❌ **ĐÃ LƯỢC BỎ** | — | Lưu trữ trên thư mục chia sẻ đám mây chung |
+| **30** | Behavior Tracking & Attrition | ⏳ **CHƯA LÀM** | `com.cyclosa.analytics` *(kế hoạch)* | Dự báo nguy cơ nhân viên nghỉ việc |
+| **31** | Thị trường Nhân tài Nội bộ | 🔄 **ĐÃ GỘP (Vào 02)** | `com.cyclosa.recruitment` | Đã code xong 100% trong `TalentMarketplaceController` |
+| **32** | Career Pathing Simulator | 🔄 **ĐÃ GỘP (Vào 14)** | Sẽ triển khai cùng Module 14 | Mô phỏng thăng tiến |
+| **33** | Skill Graph & Gap Analysis | ❌ **ĐÃ LƯỢC BỎ** | — | Tích hợp qua đánh giá năng lực Goal & 360 ở Module 09 |
+| **34** | Alumni Network | ❌ **ĐÃ LƯỢC BỎ** | — | Không triển khai mạng xã hội cựu nhân viên độc lập |
+| **35** | Compliance Radar | ⏳ **CHƯA LÀM** | `com.cyclosa.compliance` *(kế hoạch)* | Cảnh báo tuân thủ quy chuẩn pháp lý lao động |
+| **36** | Ứng lương Linh hoạt (EWA) | ⏳ **CHƯA LÀM** | `com.cyclosa.payroll` *(kế hoạch)* | Tích hợp cổng ứng lương linh hoạt |
+| **37** | Phát hiện Bất thường Lương | 🔄 **ĐÃ GỘP (Vào 08)** | Sẽ tích hợp vào engine tính lương | Kiểm tra fraud/anomaly trước khi chốt lương |
+| **38** | Chia sẻ Ngày phép | ❌ **ĐÃ LƯỢC BỎ** | — | Không phù hợp quy định BLLĐ 2019 |
+| **39** | Trợ lý AI cho Buổi 1-1 | ⏳ **CHƯA LÀM** | `com.cyclosa.ai.meeting` *(kế hoạch)* | Trợ lý tóm tắt và theo dõi action items buổi 1-1 |
+| **40** | Manager Effectiveness Score | 🔄 **ĐÃ GỘP (Vào 20)** | Sẽ triển khai cùng Module 20 | Dashboard phân tích hiệu quả quản lý |
+| **41** | What-if Org Simulation | 🔄 **ĐÃ GỘP (Vào 01)** | Sẽ tích hợp vào Module 01 | Mô phỏng tái cơ cấu trước khi áp dụng |
+| **42** | Quản lý Sơ đồ Chỗ ngồi | ⏳ **CHƯA LÀM** | `com.cyclosa.workplace` *(kế hoạch)* | Quản lý layout chỗ ngồi, gán seat, hot-desk |
 
 ---
 
@@ -28,7 +82,7 @@
 
 ---
 
-## 01. Quản lý Tổ chức (Organization Management)
+## 01. Quản lý Tổ chức (Organization Management) [x] [ĐÃ LÀM - BACKEND CORE]
 
 > **Mô hình 3 chiều độc lập:** Đơn vị tổ chức ≠ Địa lý (Chi nhánh) ≠ Vị trí việc làm
 
@@ -63,6 +117,11 @@
 
 7. **Audit trail:** Mọi tái cơ cấu ghi nhận ngày hiệu lực — **không sửa đè lịch sử**
 
+### 1.2 Mô phỏng Tái cơ cấu Tổ chức (What-if Org Simulation - gộp từ Module 41)
+- Cho phép HR / Ban Giám đốc tạo các kịch bản tái cơ cấu giả lập (Simulation Scenarios: gộp phòng, tách phòng, chuyển nhóm nhân sự, thay đổi Cost Center) trên sơ đồ kéo-thả mà không làm biến động dữ liệu thật.
+- Hệ thống tính toán tức thì tác động đa chiều: số nhân sự ảnh hưởng, phân bổ chi phí, các luồng Workflow và quyền hạn liên quan.
+- So sánh các kịch bản song song (Scenario A vs B). Khi phê duyệt phương án tối ưu, hệ thống hỗ trợ lệnh "Áp dụng chính thức" (Apply Scenario) để tự động cập nhật vào cây cơ cấu thật kèm Audit Trail.
+
 **API:**
 - `POST/GET/PUT/DELETE /api/v1/companies`
 - `POST/GET/PUT/DELETE /api/v1/organizational-units`
@@ -72,10 +131,16 @@
 - `POST/GET/PUT/DELETE /api/v1/regions` + `/branches`
 - `GET /api/v1/geography/tree`
 - `POST/GET/PUT/DELETE /api/v1/positions` + `/job-levels` + `/cost-centers`
+- **Mô phỏng tái cơ cấu (What-if Org Simulation):**
+  - `POST/GET/DELETE /api/v1/org-simulations`
+  - `POST /api/v1/org-simulations/{id}/changes`
+  - `GET /api/v1/org-simulations/{id}/impact-summary`
+  - `GET /api/v1/org-simulations/compare?ids=`
+  - `POST /api/v1/org-simulations/{id}/apply`
 
 ---
 
-## 02. Tuyển dụng (Recruitment)
+## 02. Tuyển dụng (Recruitment) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Quản lý từ đề xuất nhân sự → đăng tin → sàng lọc → phỏng vấn → offer → hiring
 
@@ -180,7 +245,7 @@
 
 ---
 
-## 03. Onboarding
+## 03. Onboarding [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Chuẩn bị hồ sơ, thiết bị, tài khoản, đào tạo định hướng cho nhân viên mới
 
@@ -208,7 +273,7 @@
 
 ---
 
-## 04. Quản lý Nhân viên (Employee Management)
+## 04. Quản lý Nhân viên (Employee Management) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Hồ sơ trung tâm (Master Data) lưu toàn bộ thông tin cá nhân, công việc, người phụ thuộc
 
@@ -241,7 +306,7 @@
 
 ---
 
-## 05. Quản lý Hợp đồng (Contract Management)
+## 05. Quản lý Hợp đồng (Contract Management) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 > **Căn cứ:** Bộ luật Lao động 45/2019/QH14 + Nghị định 145/2020/NĐ-CP
 > **Nguyên tắc:** Hệ thống **PHẢI CHẶN CỨng** khi vi phạm pháp luật (không chỉ cảnh báo)
@@ -391,7 +456,7 @@ Khi chấm dứt **ảnh hưởng nhiều người cùng lúc:**
 
 ---
 
-## 06. Chấm công & Ca làm việc (Attendance & Shift)
+## 06. Chấm công & Ca làm việc (Attendance & Shift) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Ghi nhận giờ vào/ra kèm khuôn mặt, quản lý ca, tính giờ làm thêm, xử lý đi trễ/vắng mặt
 
@@ -423,7 +488,7 @@ Khi chấm dứt **ảnh hưởng nhiều người cùng lúc:**
 
 ---
 
-## 07. Quản lý Nghỉ phép (Leave Management)
+## 07. Quản lý Nghỉ phép (Leave Management) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 > **Căn cứ:** Điều 112-115 BLLĐ 2019; Luật BHXH (ốm đau, thai sản)
 > **Quan trọng:** 4 nhóm loại phép **HOÀN TOÀN KHÁC NHAU** — không được gộp chung 1 loại
@@ -497,7 +562,7 @@ Khi tạo `contract_terminations` (Module 05):
 
 ---
 
-## 08. Tiền lương (Payroll) — CHI TIẾT ĐẦY ĐỦ
+## 08. Tiền lương (Payroll) — CHI TIẾT ĐẦY ĐỦ [x] [ĐÃ LÀM - BACKEND CORE]
 
 > **Đây là module phức tạp nhất** — bắt buộc phải chi tiết từng thành phần tính toán
 
@@ -648,6 +713,17 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
    - Admin đóng kỳ lương (`CLOSED`), bản ghi lương chuyển sang `PAID`.
    - Nhân viên có thể tra cứu phiếu lương cá nhân (Payslip) qua ESS `/api/v1/payroll-records/my-payslips`.
 
+### 8.7 Quét & Phát hiện Bất thường Bảng lương (Payroll Anomaly Detection - gộp từ Module 37)
+
+Là cơ chế bảo vệ tài chính (Financial Guardrail) tự động chạy sau khi tính lương và trước khi trình phê duyệt:
+1. **Các loại bất thường được kiểm tra tự động:**
+   - **Lương tăng/giảm đột biến:** Chênh lệch thực nhận > 30% so với kỳ trước mà không có quyết định điều chỉnh hợp đồng (`ContractAmendment`).
+   - **Vượt trần giờ làm thêm (OT):** Tổng giờ OT trong tháng > 40 giờ (vi phạm Điều 107 BLLĐ 2019).
+   - **Nhân viên ma (Ghost Employee):** Nhân viên đã thôi việc (`status = Terminated / Resigned` ở Module 16) nhưng vẫn phát sinh bản ghi tính lương.
+   - **Trùng số tài khoản ngân hàng:** Cảnh báo gian lận khi 2 nhân viên khác nhau có cùng số tài khoản ngân hàng nhận lương.
+   - **Bảo hiểm / Thuế âm:** Các khoản khấu trừ thuế TNCN hoặc BHXH/BHYT/BHTN bị âm hoặc sai lệch so với mức đóng trần luật định.
+2. **Xử lý cảnh báo:** Mỗi bất thường được gắn cờ `HIGH / MEDIUM / LOW` vào bảng `payroll_anomalies`. Kế toán/HR phải bấm xác nhận giải trình (`resolve`) hoặc điều chỉnh khoản mục lương (`adjust`) trước khi hệ thống cho phép trình duyệt kỳ lương (`submit-approval`).
+
 **Danh sách REST API chính thức (Chuẩn ApiResponse & PageData):**
 - **Thành phần lương (Salary Components):**
   - `GET /api/v1/salary-components`: Danh sách thành phần lương phân trang + filter
@@ -676,10 +752,14 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
   - `GET /api/v1/payroll-records/{id}`: Chi tiết bảng lương nhân viên kèm danh sách mục chi tiết
   - `POST /api/v1/payroll-records/{id}/adjust`: Bổ sung/điều chỉnh khoản mục lương
   - `GET /api/v1/payroll-records/my-payslips`: Tra cứu danh sách phiếu lương cá nhân (ESS)
+- **Rà soát bất thường bảng lương (Payroll Anomaly Detection):**
+  - `POST /api/v1/payroll-periods/{id}/anomaly-scan`: Chạy quét kiểm tra bất thường kỳ lương
+  - `GET /api/v1/payroll-periods/{id}/anomalies`: Danh sách cảnh báo bất thường kèm mức độ rủi ro
+  - `PUT /api/v1/payroll-anomalies/{id}/resolve`: Xác nhận hợp lệ/giải trình cảnh báo bất thường
 
 ---
 
-## 09. Quản lý Hiệu suất (Performance Management)
+## 09. Quản lý Hiệu suất (Performance Management) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Chu kỳ đánh giá, mục tiêu KPI, tự đánh giá, manager review, **360-degree feedback**, coaching
 
@@ -735,106 +815,19 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 10. Đào tạo & Phát triển (Training & Development)
+## 10. Đào tạo & Phát triển (Training & Development) [ĐÃ LƯỢC BỎ KHỎI PHẠM VI]
 
-**Mô tả:** Quản lý chương trình đào tạo, khóa học, đăng ký, điểm danh, chứng chỉ
-
-**Luồng hoạt động:**
-
-1. HR/L&D lập **Training Program** (theo nhu cầu, dự trù ngân sách)
-2. Chọn **Training Provider** và mở **Course** (thời gian, địa điểm/online, số học viên tối đa)
-3. Nhân viên tự đăng ký hoặc được chỉ định — tạo **Training Registration**
-4. Trong buổi học, cập nhật **điểm danh**
-5. Nếu đạt → HR cấp **Certification** (có thể có ngày hết hạn để renew)
-6. Cập nhật chi phí thực tế đối chiếu ngân sách
-7. Tra cứu lịch sử học tập liên tục
-
-**API:**
-- `POST/GET/PUT/DELETE /api/v1/training-programs`
-- `POST/GET/PUT/DELETE /api/v1/courses`
-- `POST/GET/PUT/DELETE /api/v1/training-providers`
-- `POST/GET /api/v1/training-registrations`
-- `PUT /api/v1/training-registrations/{id}/attendance-status`
-- `POST/GET /api/v1/certifications`
-- `GET /api/v1/employees/{id}/learning-history`
+> ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án. Bằng cấp, chứng chỉ chuyên môn của nhân sự được quản lý và số hóa trực tiếp tại bảng `employee_documents` (thuộc Employee Profile & Onboarding).
 
 ---
 
-## 11. Phúc lợi (Benefits)
+## 11. Phúc lợi (Benefits) [ĐÃ LƯỢC BỎ KHỎI PHẠM VI]
 
-**Mô tả:** Gói phúc lợi, bảo hiểm sức khỏe, khám sức khỏe định kỳ, wellness program
-
-### 11.1 Benefit Plans cơ bản
-
-1. HR thiết lập **Benefit Plans** (bảo hiểm cao cấp, phụ cấp phúc lợi, khám sức khỏe, v.v.)
-2. Nhân viên **Benefit Enrollment** — đăng ký tham gia
-3. HR duyệt, kích hoạt
-4. Nhân viên nộp **Benefit Claim** (kèm chứng từ)
-5. HR/Bảo hiểm duyệt claim → chi trả
-
-### 11.2 Khám Sức Khỏe Định Kỳ (NEW)
-
-1. **Cấu hình chương trình:**
-   - Tần suất (hàng năm, 2 năm/lần...)
-   - Loại khám (cơ bản, nâng cao tùy tuổi/chức danh)
-   - Các mục khám bắt buộc (tim, phổi, gan, thận, máu...)
-
-2. **Lên lịch khám:**
-   - Chọn đơn vị khám (bệnh viện hợp tác)
-   - Chọn ngày khám (có thể tách theo department)
-
-3. **Lấy kết quả khám:**
-   - Đơn vị khám gửi kết quả (PDF)
-   - Module 25 (OCR) trích xuất thông tin từ PDF (chỉ số máu, huyết áp, v.v.)
-   - Lưu thành **Health Screening Result**
-
-4. **Follow-up bất thường:**
-   - Hệ thống gắn cờ kết quả bất thường
-   - Gửi thông báo cho nhân viên để tái khám, điều trị
-   - Lưu mục follow-up + kết quả tái khám
-
-5. **Tra cứu lịch sử:**
-   - Nhân viên xem ở ESS (Module 17)
-   - Bác sĩ công ty tra cứu lịch sử
-
-### 11.3 Wellness Program (NEW)
-
-1. **Các chương trình:**
-   - Yoga, Pilates (ngày nhất định, có trainer)
-   - Gym allowance
-   - Khám tâm lý
-   - Buổi nói chuyện sức khỏe (nutrition, exercise)
-   - Team building, outdoor activities
-
-2. **Đăng ký tham gia:**
-   - Nhân viên đăng ký chương trình quan tâm
-   - HR quản lý chỗ (nếu giới hạn)
-
-3. **Theo dõi tham dự:**
-   - Ghi nhận tham gia (check-in hoặc xác nhận trainer)
-   - Tính % tham dự
-
-4. **Chi phí:**
-   - Quản lý ngân sách wellness
-   - Thống kê ROI
-
-**API:**
-- `POST/GET/PUT/DELETE /api/v1/benefit-plans`
-- `POST/GET /api/v1/benefit-enrollments`
-- `PUT /api/v1/benefit-enrollments/{id}/approve`
-- `GET /api/v1/employees/{id}/benefits`
-- `POST/GET /api/v1/benefit-claims`
-- `PUT /api/v1/benefit-claims/{id}/approve`
-- `POST/GET /api/v1/health-screening-programs`
-- `POST /api/v1/health-screening/{id}/schedule`
-- `POST /api/v1/health-screening/{id}/results`
-- `GET /api/v1/employees/{id}/health-screening-history`
-- `POST/GET/PUT /api/v1/wellness-programs`
-- `POST/GET /api/v1/wellness-enrollments`
+> ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án. Toàn bộ các khoản phụ cấp, chế độ phúc lợi tiền tệ được cấu hình trực tiếp trong Hợp đồng lao động (Module 05 Contract) và tự động chi trả/khấu trừ vào Bảng lương (Module 08 Payroll qua `salary_components`). Chế độ bảo hiểm bắt buộc (BHXH, BHYT, BHTN) đã được tính toán tự động theo luật trong Payroll.
 
 ---
 
-## 12. Khen thưởng & Kỷ luật (Reward & Discipline)
+## 12. Khen thưởng & Kỷ luật (Reward & Discipline) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 > **Căn cứ:** Điều 117-127 BLLĐ 2019 — thủ tục quyết định kỷ luật **VÔ HIỆU** nếu sai quy trình (dù hành vi là có thật)
 
@@ -907,7 +900,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 13. Quản lý Tài sản (Asset Management)
+## 13. Quản lý Tài sản (Asset Management) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Đăng ký, cấp phát, thu hồi tài sản công ty
 
@@ -929,24 +922,39 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 14. Phát triển Nhân sự (Career & Talent)
+## 14. Phát triển Nhân sự (Career & Talent) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
-**Mô tả:** Lộ trình thăng tiến, kế hoạch kế nhiệm, Talent Pool nội bộ
+**Mô tả:** Lộ trình thăng tiến chuẩn, kế hoạch kế nhiệm, Talent Pool nội bộ và Công cụ mô phỏng lộ trình sự nghiệp (Career Pathing Simulator - gộp từ Module 32).
 
 **Luồng hoạt động:**
 
-1. HR xây dựng **Career Path** mẫu (bước thăng tiến hợp lý giữa các vị trí)
-2. Cho các vị trí trọng yếu → **Succession Plan** (đánh giá rủi ro nếu vị trí trống)
-3. Dựa kết quả hiệu suất → đề xuất **Succession Candidates** (phân loại: sẵn sàng ngay / 1-2 năm / 3-5 năm)
-4. Nhân sự tiềm năng → **Internal Talent Pool**
-5. Định kỳ rà soát, cập nhật mức độ sẵn sàng
+### 14.1 Lộ trình thăng tiến chuẩn (Career Paths) & Kế nhiệm (Succession Planning)
+1. HR xây dựng **Career Path** mẫu (bước thăng tiến hợp lý giữa các vị trí, số năm kinh nghiệm dự kiến, tiêu chí chức danh)
+2. Cho các vị trí trọng yếu → **Succession Plan** (đánh giá mức độ rủi ro nếu vị trí bị trống)
+3. Dựa trên kết quả hiệu suất (Module 09) → đề xuất **Succession Candidates** (phân loại mức độ sẵn sàng: sẵn sàng ngay / 1-2 năm / 3-5 năm)
+4. Nhân sự tiềm năng cao (HiPo) → đưa vào **Internal Talent Pool**
+5. Định kỳ rà soát, cập nhật mức độ sẵn sàng và kế hoạch phát triển nhân tài
+
+### 14.2 Mô phỏng lộ trình sự nghiệp (Career Pathing Simulator - tính năng mở rộng)
+1. Hệ thống phân tích **Employee History** (Module 04) của toàn bộ nhân viên đã từng thăng tiến hoặc luân chuyển vị trí
+2. Với nhân viên tra cứu trên ESS/Portal, hệ thống nhận diện nhóm **"hồ sơ tương tự"** (cùng vị trí xuất phát, thâm niên, phòng ban tương đương)
+3. Tổng hợp thống kê: *"X% nhân viên có hồ sơ tương tự sau Y năm đã thăng tiến lên vị trí Z"*
+4. Hiển thị **lộ trình gợi ý** (1-3 hướng phổ biến nhất) kèm các mốc phát triển theo khung chức danh chuẩn
+5. Nhân viên có thể lưu kịch bản lộ trình quan tâm (`saved_career_simulations`), theo dõi tiến độ theo thời gian
+6. HR và Quản lý xem tổng hợp xu hướng thăng tiến theo phòng ban để phục vụ quy hoạch nhân sự
 
 **API:**
-- `POST/GET/PUT /api/v1/career-paths`
-- `POST/GET/PUT /api/v1/succession-plans`
-- `POST /api/v1/succession-plans/{id}/candidates`
-- `GET/POST /api/v1/internal-talent-pool`
-- `GET /api/v1/employees/{id}/career-path`
+- Quản trị Lộ trình & Kế nhiệm (HR / Admin):
+  - `POST/GET/PUT/DELETE /api/v1/career-paths`
+  - `POST/GET/PUT/DELETE /api/v1/succession-plans`
+  - `POST /api/v1/succession-plans/{id}/candidates`
+  - `GET/POST /api/v1/internal-talent-pool`
+  - `GET /api/v1/employees/{id}/career-path`
+- Mô phỏng & Gợi ý lộ trình (Career Simulator):
+  - `GET /api/v1/career-simulator/employee/{id}/suggested-paths`
+  - `GET /api/v1/career-simulator/employee/{id}/similar-profiles`
+  - `POST /api/v1/career-simulator/employee/{id}/save-path`
+  - `GET /api/v1/career-simulator/department/{id}/trends`
 
 ---
 
@@ -954,28 +962,10 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 > ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án vì đây là tính năng thuần CRUD biểu mẫu khảo sát rời rạc (tương tự Google Forms/Typeform), hoàn toàn độc lập và không liên quan đến chuỗi cung ứng dữ liệu cốt lõi của Core HRM (Hồ sơ, Chấm công, Tính lương, Hợp đồng). Doanh nghiệp sử dụng công cụ chuyên dụng bên ngoài.
 
-**Mô tả:** Đo lường mức độ hài lòng, gắn kết qua khảo sát định kỳ, tính eNPS
-
-**Luồng hoạt động:**
-
-1. HR tạo **Survey** — soạn câu hỏi (thang điểm, chọn 1, chọn nhiều, mở)
-2. Chọn đối tượng (toàn công ty hoặc theo phòng ban), khoảng thời gian
-3. Gửi lời mời (ẩn danh hoặc không)
-4. Nhân viên trả lời
-5. Tổng hợp kết quả → **eNPS** (phân nhóm promoter/passive/detractor)
-6. HR xem báo cáo để cải thiện văn hóa
-
-**API:**
-- `POST/GET/PUT/DELETE /api/v1/surveys`
-- `POST/GET/DELETE /api/v1/surveys/{id}/questions`
-- `POST /api/v1/surveys/{id}/send`
-- `POST /api/v1/surveys/{id}/responses`
-- `GET /api/v1/surveys/{id}/results`
-- `GET /api/v1/surveys/{id}/enps`
 
 ---
 
-## 16. Offboarding (Nghỉ việc)
+## 16. Offboarding (Nghỉ việc) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Quản lý toàn bộ quy trình khi nhân viên nghỉ việc
 
@@ -1003,31 +993,36 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 17. Tự phục vụ Nhân viên (Employee Self-Service - ESS)
+## 17. Tự phục vụ Nhân viên (Employee Self-Service - ESS) [x] [ĐÃ HOÀN THÀNH - KIẾN TRÚC PHÂN TÁN]
 
-**Mô tả:** Cổng nhân viên tự tra cứu + quản lý thông tin, không cần HR
+> 💡 **Quy ước kiến trúc Backend (Cách 2):**
+> - **Không tạo package/module backend độc lập `com.cyclosa.ess`** nhằm tránh biến nó thành "God Module" phụ thuộc chéo vào toàn bộ hệ thống.
+> - **Triển khai phân tán:** Mỗi module nghiệp vụ khi xây dựng sẽ chứa một Controller chuyên dụng cho nhân viên tự phục vụ dạng `/api/v1/my-*` (hoặc `/api/v1/ess/*`).
+> - **Bảo mật & DTO:** Controller này tự động lấy `employee_id` từ Security Context (JWT Token của nhân viên đăng nhập), tuyệt đối không nhận `employee_id` từ client, và trả về DTO tinh gọn tối ưu cho trải nghiệm Web/Mobile ESS.
 
-**Luồng hoạt động:**
+**Bảng phân bổ Endpoint ESS theo từng Module nghiệp vụ:**
 
-1. Nhân viên đăng nhập ESS
-2. Xem/sửa **My Profile** (các trường cho phép)
-3. Xem **My Attendance**, **My Contract**, **My Payslip**, **My Benefits**, **My Leave**, **My Training**
-4. Tạo **My Leave** + **My Requests** (ứng lương, điều chỉnh công, v.v.)
-5. Theo dõi trạng thái xử lý theo thời gian thực
-
-**API:**
-- `GET/PUT /api/v1/ess/profile`
-- `GET /api/v1/ess/attendance`
-- `GET /api/v1/ess/contracts`
-- `GET /api/v1/ess/payslips`
-- `GET /api/v1/ess/benefits`
-- `POST/GET /api/v1/ess/leave-requests`
-- `POST/GET /api/v1/ess/requests`
-- `GET /api/v1/ess/requests/{id}/status`
+| Module nghiệp vụ | Controller chuyên biệt | Endpoint chính | Chức năng nhân viên tự phục vụ |
+|---|---|---|---|
+| **04. Employee Profile** | `MyProfileController` | `GET/PUT /api/v1/my-profile`<br>`GET /api/v1/my-documents` | Xem & cập nhật thông tin cá nhân cho phép, tải tài liệu cá nhân |
+| **05. Contract** | `MyContractController` | `GET /api/v1/my-contracts`<br>`GET /api/v1/my-contracts/{id}/download` | Xem hợp đồng lao động hiện tại, lịch sử hợp đồng, tải file PDF |
+| **06. Attendance** | `MyAttendanceController` | `POST /api/v1/my-attendance/check-in`<br>`POST /api/v1/my-attendance/check-out`<br>`GET /api/v1/my-attendance/timesheet`<br>`POST /api/v1/my-attendance/corrections` | Check-in/out nhận diện khuôn mặt, xem bảng công cá nhân, gửi giải trình chấm công |
+| **07. Leave** | `MyLeaveController` | `GET /api/v1/my-leaves/balances`<br>`POST/GET /api/v1/my-leaves/requests` | Xem số dư các loại ngày phép, nộp đơn xin nghỉ phép, theo dõi tiến độ duyệt |
+| **08. Payroll** | `MyPayrollController` | `GET /api/v1/my-payslips`<br>`GET /api/v1/my-payslips/{id}/download` | Tra cứu phiếu lương các kỳ, tải phiếu lương bảo mật bằng mã PIN/OTP |
+| **09. Performance** | `MyPerformanceController` | `GET /api/v1/my-goals`<br>`POST /api/v1/my-reviews/self-evaluation` | Xem danh sách KPI/Mục tiêu cá nhân, thực hiện tự đánh giá định kỳ |
+| **12. Reward & Discipline**| `MyDisciplineController` | `GET /api/v1/my-rewards`<br>`GET /api/v1/my-disciplines`<br>`POST /api/v1/my-grievances` | Xem khen thưởng, tra cứu kỷ luật (nếu có), gửi khiếu nại (Grievance) |
+| **13. Asset** | `MyAssetController` | `GET /api/v1/my-assets`<br>`POST /api/v1/my-assets/{id}/report-issue` | Xem danh sách thiết bị/tài sản đang giữ, báo hỏng/sự cố tài sản |
+| **14. Career & Talent** | `MyCareerController` | `GET /api/v1/my-career-path`<br>`GET /api/v1/career-simulator/suggested-paths`<br>`POST /api/v1/career-simulator/save-path` | Xem lộ trình thăng tiến chuẩn, mô phỏng lộ trình sự nghiệp (Career Simulator) |
+| **16. Offboarding** | `MyResignationController` | `POST/GET /api/v1/my-resignations`<br>`GET /api/v1/my-offboarding/clearance-status` | Nộp đơn xin thôi việc, theo dõi tiến độ bàn giao và hoàn tất thủ tục |
+| **18. Workflow** | `MyRequestController` | `GET /api/v1/my-requests`<br>`GET /api/v1/my-requests/{id}/timeline` | Hộp thư yêu cầu tập trung: xem tất cả loại đơn từ đã nộp và timeline xử lý |
+| **31. Talent Marketplace** | `MyOpportunityController`| `GET /api/v1/internal-opportunities/recommended`<br>`POST /api/v1/internal-opportunities/{id}/express-interest` | Khám phá cơ hội dự án/vị trí nội bộ, tự ứng tuyển (Express Interest) |
+| **36. Earned Wage Access** | `MyWageAccessController` | `GET /api/v1/my-wage-access/available-balance`<br>`POST /api/v1/my-wage-access/requests` | Xem hạn mức lương có thể ứng, gửi yêu cầu ứng lương tức thì |
+| **39. AI 1-1 Assistant** | `MyOneOnOneController` | `GET /api/v1/my-one-on-ones`<br>`PUT /api/v1/my-one-on-ones/action-items/{id}` | Xem lịch sử họp 1-1 với quản lý, cập nhật trạng thái Action Item |
+| **42. Workplace** | `MyWorkplaceController` | `GET /api/v1/my-workplace/seat`<br>`POST /api/v1/my-workplace/hotdesk-bookings` | Tra cứu chỗ ngồi đồng nghiệp, đặt chỗ làm việc linh hoạt (hot-desk) |
 
 ---
 
-## 18. Workflow Engine & Role Designer
+## 18. Workflow Engine & Role Designer [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 > **Nâng cấp:** Từ Approval Matrix tĩnh → Dynamic Workflow với điều kiện rẽ nhánh, versioning
 
@@ -1079,7 +1074,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 19. Thông báo (Notification)
+## 19. Thông báo (Notification) [x] [ĐÃ HOÀN THÀNH 100% BACKEND]
 
 **Mô tả:** Gửi thông báo tự động cho các sự kiện quan trọng (email/in-app/SMS)
 
@@ -1100,7 +1095,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 20. Báo cáo & Phân tích (Reports & Analytics)
+## 20. Báo cáo & Phân tích (Reports & Analytics) [ ] [CHƯA LÀM]
 
 **Mô tả:** Tổng hợp dữ liệu → báo cáo + dashboard quản trị
 
@@ -1121,6 +1116,15 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 - Turnover (tỷ lệ nghỉ việc, lý do)
 - Performance (phân bổ rating, KPI đạt)
 
+### 20.2 Đánh giá Hiệu quả Quản lý (Manager Effectiveness Analytics - gộp từ Module 40)
+- Báo cáo phân tích tự động chỉ số hiệu quả quản lý của từng Manager dựa trên dữ liệu vận hành sẵn có trong hệ thống (không cần khảo sát bổ sung):
+  - Tỷ lệ biến động/nghỉ việc của team (Module 16 Turnover).
+  - Tốc độ phản hồi/duyệt đơn (SLA duyệt đơn nghỉ phép, tạm ứng lương, tăng ca qua Module 18 Workflow).
+  - Tần suất tổ chức các buổi 1-1 với nhân viên cấp dưới (Module 39).
+  - Kết quả hoàn thành KPI/Goal trung bình của các thành viên trong team (Module 09).
+- Tính điểm **Manager Effectiveness Score** tổng hợp theo trọng số có thể cấu hình.
+- Cung cấp Dashboard so sánh chỉ số giữa các Manager cùng cấp và gợi ý đào tạo/coaching nâng cao năng lực lãnh đạo.
+
 **API:**
 - `GET /api/v1/reports/headcount?filter=`
 - `GET /api/v1/reports/attendance-summary?filter=`
@@ -1131,10 +1135,15 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 - `GET /api/v1/reports/performance-distribution?filter=`
 - `POST /api/v1/reports/{report_id}/export?format=xlsx|pdf`
 - `GET/POST /api/v1/dashboards`
+- **Đánh giá hiệu quả quản lý (Manager Effectiveness Analytics):**
+  - `GET /api/v1/reports/manager-effectiveness/{manager_id}/score`
+  - `GET /api/v1/reports/manager-effectiveness/{manager_id}/breakdown`
+  - `GET /api/v1/reports/manager-effectiveness/company-comparison`
+  - `PUT /api/v1/reports/manager-effectiveness/config-weights`
 
 ---
 
-## 21. Quản trị Hệ thống (System Administration)
+## 21. Quản trị Hệ thống (System Administration) [x] [ĐÃ LÀM - AUTH / RBAC / AUDIT]
 
 **Mô tả:** Người dùng, phân quyền, cấu hình, audit log, tích hợp, multi-company
 
@@ -1167,7 +1176,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 22. Lưu kho & Hủy hồ sơ (Digital Records Repository)
+## 22. Lưu kho & Hủy hồ sơ (Digital Records Repository) [ ] [CHƯA LÀM]
 
 > **Ghi chú:** Khác với "upload file" ở Module 04 — đây là **quản lý thời vòng đời lưu trữ chính thức**
 
@@ -1211,7 +1220,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 23. CV Parser (Trích xuất thông tin từ CV tự động - AI)
+## 23. CV Parser (Trích xuất thông tin từ CV tự động - AI) [ ] [CHƯA LÀM]
 
 **Mô tả:** Sử dụng AI/NLP để tự động trích xuất thông tin từ CV ứng viên (tên, email, số ĐT, kinh nghiệm, kỹ năng, bằng cấp...)
 
@@ -1250,7 +1259,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 24. CV Review (Tự động đánh giá CV so sánh với JD - AI)
+## 24. CV Review (Tự động đánh giá CV so sánh với JD - AI) [ ] [CHƯA LÀM]
 
 **Mô tả:** Tự động so sánh CV ứng viên vs Job Description, tính match score, gợi ý
 
@@ -1295,7 +1304,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 25. OCR (Optical Character Recognition) — Trích xuất từ Ảnh/Scan - AI
+## 25. OCR (Optical Character Recognition) — Trích xuất từ Ảnh/Scan - AI [ ] [CHƯA LÀM]
 
 **Mô tả:** Sử dụng OCR để trích xuất thông tin từ tài liệu quét/ảnh (CMND, bằng cấp, hóa đơn, v.v.)
 
@@ -1303,9 +1312,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 1. HR/nhân viên upload ảnh/scan tài liệu:
    - CMND/CCCD → Module 04
-   - Bằng cấp → Module 10
-   - Chứng chỉ → Module 10
-   - Hóa đơn khám → Module 11
+   - Bằng cấp, Chứng chỉ → Module 04 / Onboarding (`employee_documents`)
    - BHXH → Module 08
    - Hợp đồng → Module 05
 
@@ -1350,7 +1357,7 @@ Thuế TNCN = Thu nhập tính thuế × Thuế suất lũy tiến từng phần
 
 ---
 
-## 26. Chatbot & Knowledge Base (Function Calling - AI)
+## 26. Chatbot & Knowledge Base (Function Calling - AI) [ ] [CHƯA LÀM]
 
 **Mô tả:** Chatbot AI hỗ trợ nhân viên/HR trả lời câu hỏi theo tài liệu doanh nghiệp + có khả năng gọi API (Function Calling)
 
@@ -1485,7 +1492,7 @@ Bot: Đơn xin phép của bạn đã được gửi đi. Quản lý sẽ duyệ
 
 ---
 
-## 27. Quản lý Chuyển Bộ Phận (Transfer Management)
+## 27. Quản lý Chuyển Bộ Phận (Transfer Management) [ ] [CHƯA LÀM]
 
 **Mô tả:** Quản lý quy trình chuyển bộ phận của nhân viên
 
@@ -1517,68 +1524,19 @@ Bot: Đơn xin phép của bạn đã được gửi đi. Quản lý sẽ duyệ
 
 > ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án. Bản chất nghiệp vụ quản lý chi phí đi lại, vé máy bay, khách sạn và hoàn ứng (Reimbursement) thuộc về phân hệ **T&E (Travel & Expense) của Kế toán / ERP**, không thuộc Core HRM. Khi đi công tác, nhân viên sử dụng đơn nghỉ/vắng mặt công tác tại Module 07 Leave; các khoản phụ cấp công tác được chi trả trực tiếp qua Module 08 Payroll.
 
-**Mô tả:** Quản lý du lịch công tác: yêu cầu, phê duyệt, chi phí, reimbursement
-
-**Luồng hoạt động:**
-
-1. Nhân viên tạo **Business Trip Request** (địa điểm, ngày, lý do, dự kiến chi phí)
-2. Request duyệt từ manager, HR
-3. Nếu duyệt:
-   - Ghi vào **Trip Plan**
-   - Có thể tích hợp booking (travel agency)
-   - Quản lý ngân sách/hạn mức chi phí
-4. Sau chuyến đi, nhân viên **submit chi tiêu thực tế**:
-   - Upload receipt/invoice
-   - Module 25 (OCR) trích xuất (số tiền, ngày, nội dung)
-   - Nhân viên xác nhận
-5. HR/Kế toán **duyệt chi phí**:
-   - So sánh với plan
-   - Kiểm tra receipt hợp lệ
-   - Duyệt hoặc yêu cầu bổ sung
-6. **Reimbursement Request** (hoàn tiền)
-7. Tiền hoàn cộng vào **lương tháng tiếp theo** (hoặc chuyển khoản riêng)
-
-**API:**
-- `POST/GET /api/v1/business-trips`
-- `PUT /api/v1/business-trips/{id}/approve`
-- `POST/GET /api/v1/business-trips/{id}/expenses`
-- `PUT /api/v1/business-trips/{id}/expense/{expense_id}/approve`
-- `POST /api/v1/business-trips/{id}/reimbursement`
 
 ---
 
-## 29. Quản lý Chính Sách & Quy Định (Policy & Compliance)
+## 29. Quản lý Chính Sách & Quy Định (Policy & Compliance) [ĐÃ LƯỢC BỎ KHỎI PHẠM VI]
 
-**Mô tả:** Lưu trữ chính sách công ty, phát hành mới, xác nhận nhân viên đã đọc, quản lý yêu cầu từ cơ quan
-
-**Luồng hoạt động:**
-
-1. HR tạo **Policy Document** (tiêu đề, nội dung, ngày effective, phạm vi áp dụng, yêu cầu acknowledgement, deadline)
-2. HR **phát hành** → gửi thông báo
-3. Nhân viên **xác nhận đã đọc** (click "I agree", hệ thống ghi: ai, khi nào, IP)
-4. HR theo dõi **confirmation rate** → nhắc nhở nhân viên chưa confirm
-5. Khi cập nhật chính sách → tạo **phiên bản mới** (không ghi đè)
-6. Nhân viên có thể **tra cứu lịch sử** chính sách
-
-**Yêu cầu từ Cơ quan Nhà nước (NEW):**
-1. HR ghi nhận yêu cầu (loại: Sở Lao động, Cảnh sát PCCC, Thuế, v.v.), nội dung, deadline
-2. Phân công bộ phận xử lý
-3. Theo dõi tiến độ (% hoàn thành, ghi chú)
-4. **Submit lên cơ quan** (lưu bằng chứng: ngày, giờ, file, chữ ký)
-5. **Lưu phản hồi** từ cơ quan
-
-**API:**
-- `POST/GET/PUT /api/v1/policies`
-- `POST /api/v1/policies/{id}/publish`
-- `POST /api/v1/policies/{id}/acknowledge`
-- `GET /api/v1/policies/{id}/versions`
-- `GET /api/v1/policies/{id}/acknowledgement-status`
-- `POST/GET /api/v1/government-requests`
-- `PUT /api/v1/government-requests/{id}/update-status`
+> ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án để tinh gọn hệ thống.
+> - Bản chất 90% là thuần CRUD lưu trữ văn bản (Document CMS) và ghi nhận click "Tôi đã đọc" (Audit Log), hoàn toàn độc lập và không thuộc chuỗi mắt xích cung ứng dữ liệu cốt lõi của Core HRM (Hồ sơ, Chấm công, Tính lương, Hợp đồng, Hiệu suất, Kỷ luật, Thôi việc).
+> - Doanh nghiệp số hóa và phổ biến tài liệu chính sách qua kho lưu trữ đám mây dùng chung (Google Drive, SharePoint, Notion, Wiki nội bộ).
+> - Quản lý yêu cầu/báo cáo cơ quan nhà nước được thực hiện qua văn thư/hệ thống quản lý công việc chung (Jira/Trello/Email).
 
 ---
 
-## 30. Behavior Tracking & Attrition Prediction
+## 30. Behavior Tracking & Attrition Prediction [ ] [CHƯA LÀM]
 
 **Mô tả:** Theo dõi hành vi nhân viên, dự báo rủi ro nghỉ việc, can thiệp kịp thời
 
@@ -1648,8 +1606,8 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 **Luồng hoạt động:**
 
-1. HR/Manager đăng **Internal Opportunity** (dự án ngắn hạn hoặc vị trí trống), gắn kỹ năng yêu cầu, thời gian, phòng ban
-2. Nhân viên xem danh sách cơ hội phù hợp với **Skill Profile** của mình (Module 33)
+1. HR/Manager đăng **Internal Opportunity** (dự án ngắn hạn hoặc vị trí trống), gắn yêu cầu vị trí, phòng ban, thời gian
+2. Nhân viên xem danh sách cơ hội phù hợp với chuyên môn/kinh nghiệm của mình
 3. Nhân viên **tự ứng tuyển** (Express Interest) — không bắt buộc qua manager hiện tại trước
 4. Hệ thống thông báo cho manager hiện tại (để biết, không phải để chặn)
 5. Manager của cơ hội mới xem hồ sơ, phỏng vấn nội bộ nếu cần (dùng lại Module 2.1 Interview Management)
@@ -1668,54 +1626,21 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 ---
 
-## 32. Mô phỏng Lộ trình Sự nghiệp (Career Pathing Simulator)
+## 32. Mô phỏng Lộ trình Sự nghiệp (Career Pathing Simulator) [ĐÃ GỘP VÀO MODULE 14]
 
-**Mô tả:** Gợi ý lộ trình thăng tiến khả thi cho từng nhân viên, dựa trên dữ liệu thăng tiến thực tế của những người có hồ sơ tương tự trong quá khứ.
-
-**Luồng hoạt động:**
-
-1. Hệ thống phân tích **Employee History** (Module 04) của toàn bộ nhân viên đã từng thăng tiến/chuyển vị trí
-2. Với 1 nhân viên cụ thể, tìm nhóm **"hồ sơ tương tự"** (cùng vị trí xuất phát, kỹ năng, thâm niên tương đương)
-3. Tổng hợp: "X% nhân viên hồ sơ tương tự sau Y năm đã lên vị trí Z"
-4. Hiển thị **lộ trình gợi ý** (1-3 hướng phổ biến nhất) kèm kỹ năng còn thiếu (tham chiếu Module 33 Skill Gap)
-5. Nhân viên có thể lưu lộ trình quan tâm, theo dõi tiến độ theo thời gian
-6. HR xem tổng hợp xu hướng thăng tiến theo phòng ban (phục vụ quy hoạch nhân sự)
-
-**Lưu ý:** Đây là gợi ý mang tính tham khảo dựa trên dữ liệu lịch sử, không phải cam kết thăng tiến.
-
-**API:**
-- `GET /api/v1/career-simulator/employee/{id}/suggested-paths`
-- `GET /api/v1/career-simulator/employee/{id}/similar-profiles`
-- `POST /api/v1/career-simulator/employee/{id}/save-path`
-- `GET /api/v1/career-simulator/department/{id}/trends`
+> 💡 **Ghi chú kiến trúc:** Module này đã được **hợp nhất hoàn toàn vào Module 14 (Phát triển Nhân sự - Career & Talent)**.
+> - Nghiệp vụ mô phỏng lộ trình thăng tiến chia sẻ chung miền dữ liệu cốt lõi với Career Paths, Succession Planning và Employee History.
+> - Việc hợp nhất giúp gom toàn bộ logic phát triển nghề nghiệp & tài năng về một package backend duy nhất (`com.cyclosa.talent`), tránh phân mảnh service và DTO.
+> - Chi tiết API và luồng nghiệp vụ xem tại **[Mục 14.2 — Module 14](#14-phát-triển-nhân-sự-career--talent)**.
 
 ---
 
-## 33. Bản đồ Kỹ năng & Phân tích Khoảng trống (Skill Graph & Gap Analysis)
+## 33. Bản đồ Kỹ năng & Phân tích Khoảng trống (Skill Graph & Gap Analysis) [ĐÃ LƯỢC BỎ KHỎI PHẠM VI]
 
-**Mô tả:** Xây dựng bản đồ kỹ năng toàn công ty (độc lập với chức danh), phát hiện khoảng trống kỹ năng theo phòng ban/dự án, gợi ý đào tạo.
-
-**Luồng hoạt động:**
-
-1. Xây dựng **Skill Taxonomy** (danh mục kỹ năng chuẩn hóa, có phân nhóm: kỹ thuật, mềm, quản lý...)
-2. Thu thập **Employee Skill Profile** từ nhiều nguồn:
-   - Tự khai báo
-   - Trích xuất từ CV đã parse (Module 23)
-   - Suy ra từ khóa đào tạo đã hoàn thành (Module 10)
-   - Manager xác nhận/đánh giá mức độ (beginner/intermediate/expert)
-3. HR/Manager định nghĩa **Required Skills** cho từng vị trí hoặc dự án sắp tới
-4. Hệ thống tính **Gap Score** = kỹ năng yêu cầu - kỹ năng hiện có (theo cá nhân, theo team, theo phòng ban)
-5. Gợi ý **khóa đào tạo tương ứng** (Module 10) để lấp khoảng trống
-6. Dashboard: bản đồ nhiệt (heatmap) kỹ năng theo phòng ban, top khoảng trống toàn công ty
-
-**API:**
-- `POST/GET/PUT/DELETE /api/v1/skill-taxonomy`
-- `POST/GET/PUT /api/v1/employees/{id}/skill-profile`
-- `POST/GET/PUT /api/v1/positions/{id}/required-skills`
-- `GET /api/v1/skill-gap/employee/{id}`
-- `GET /api/v1/skill-gap/department/{id}`
-- `GET /api/v1/skill-gap/company-heatmap`
-- `GET /api/v1/skill-gap/{id}/recommended-trainings`
+> ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án để tinh gọn hệ thống.
+> - Việc phân tích khoảng trống kỹ năng để gợi ý khóa đào tạo đã mất đầu ra do Module 10 (Đào tạo) đã bị hủy.
+> - Đánh giá năng lực nhân sự đã được phản ánh thực chất và hiệu quả qua kết quả công việc thực tế (KPI/Goal Review) và đánh giá đa chiều (360 Feedback) tại Module 09 (Performance).
+> - Giảm thiểu gánh nặng hành chính cho nhân viên (tự khai báo) và quản lý (chấm điểm kỹ năng thủ công).
 
 ---
 
@@ -1723,31 +1648,10 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 > ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án do bản chất là diễn đàn mạng xã hội cựu nhân viên độc lập (Alumni Portal/Social CRUD), không ảnh hưởng đến luồng vận hành nhân sự và dữ liệu hàng ngày của doanh nghiệp.
 
-**Mô tả:** Duy trì liên lạc với cựu nhân viên chất lượng tốt sau khi nghỉ việc, phục vụ tuyển dụng lại (boomerang hiring) và giới thiệu ứng viên (referral).
-
-**Luồng hoạt động:**
-
-1. Khi Offboarding (Module 16) hoàn tất, HR đánh giá **Alumni Eligibility** (loại trừ trường hợp sa thải vì kỷ luật nghiêm trọng)
-2. Cựu nhân viên đủ điều kiện được mời tham gia **Alumni Portal** (tùy chọn, cần đồng ý)
-3. Alumni có thể:
-   - Cập nhật thông tin liên hệ, tình trạng công việc hiện tại
-   - Xem tin tuyển dụng công khai của công ty
-   - Giới thiệu ứng viên (liên kết Module 02 Recruitment — referral)
-4. HR gửi bản tin định kỳ (company update, sự kiện alumni)
-5. Khi có vị trí phù hợp, HR có thể chủ động liên hệ **Boomerang Candidate**
-6. Nếu tuyển lại, liên kết hồ sơ cũ (Employee History) để tham khảo — không tạo hồ sơ mới hoàn toàn
-
-**API:**
-- `POST/GET/PUT /api/v1/alumni`
-- `POST /api/v1/alumni/{id}/invite`
-- `PUT /api/v1/alumni/{id}/opt-in`
-- `POST /api/v1/alumni/{id}/referrals`
-- `GET /api/v1/alumni/boomerang-candidates`
-- `POST /api/v1/alumni/{id}/rehire`
 
 ---
 
-## 35. Radar Tuân thủ Pháp lý (Compliance Radar)
+## 35. Radar Tuân thủ Pháp lý (Compliance Radar) [ ] [CHƯA LÀM]
 
 **Mô tả:** Theo dõi chủ động các thay đổi trong luật lao động/BHXH/thuế TNCN, tự động rà soát tài liệu/chính sách bị ảnh hưởng trước khi luật có hiệu lực.
 
@@ -1756,9 +1660,9 @@ Hệ thống **tích hợp ML model** để dự báo:
 1. Admin cấu hình **Legal Source Feed** (nguồn theo dõi: cổng thông tin pháp luật, văn bản mới ban hành)
 2. Hệ thống (hoặc HR nhập thủ công) ghi nhận **Legal Change** mới: văn bản, ngày hiệu lực, phạm vi ảnh hưởng
 3. Hệ thống rà soát chéo với:
-   - **Contract Rules** đang áp dụng (Module 05)
-   - **Policy Documents** hiện hành (Module 29)
-   - **Payroll Rules** (Module 08 — thuế, BHXH)
+   - **Contract Rules & Mẫu HĐLĐ** đang áp dụng (Module 05)
+   - **Payroll Rules & Thuế/BHXH** (Module 08)
+   - **Cấu hình ca kíp & thời giờ làm việc** (Module 06)
 4. Đánh dấu các mục **bị ảnh hưởng**, gán mức độ ưu tiên, deadline cần xử lý trước khi luật hiệu lực
 5. Gửi cảnh báo cho HR/Legal team, theo dõi tiến độ xử lý (cập nhật chính sách, sửa hợp đồng mẫu, cấu hình lại rule tính lương)
 6. Lưu **lịch sử tuân thủ** — chứng minh công ty đã chủ động cập nhật đúng hạn
@@ -1772,7 +1676,7 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 ---
 
-## 36. Ứng lương Linh hoạt (Earned Wage Access)
+## 36. Ứng lương Linh hoạt (Earned Wage Access) [ ] [CHƯA LÀM]
 
 **Mô tả:** Cho phép nhân viên rút một phần lương đã làm (chưa tới kỳ trả lương chính thức), với phí thấp hoặc miễn phí.
 
@@ -1797,28 +1701,12 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 ---
 
-## 37. Phát hiện Bất thường Bảng lương (Payroll Anomaly Detection)
+## 37. Phát hiện Bất thường Bảng lương (Payroll Anomaly Detection) [ĐÃ GỘP VÀO MODULE 08]
 
-**Mô tả:** Dùng phân tích dữ liệu/ML để phát hiện bất thường trong bảng lương trước khi chi trả, hỗ trợ chống gian lận và phát hiện lỗi tính toán.
-
-**Luồng hoạt động:**
-
-1. Sau khi Module 08 tính xong bảng lương kỳ hiện tại, hệ thống chạy **Anomaly Scan** tự động
-2. Các loại bất thường được kiểm tra:
-   - Lương tăng/giảm đột biến so với kỳ trước (vượt ngưỡng %)
-   - Số giờ OT bất thường (vượt xa trung bình lịch sử của nhân viên/phòng ban)
-   - **Trùng số tài khoản ngân hàng** giữa nhiều nhân viên khác nhau
-   - Nhân viên đã có trạng thái "Terminated" nhưng vẫn phát sinh lương
-   - Phụ cấp/khoản khấu trừ không khớp với hồ sơ cấu hình
-3. Mỗi bất thường được gắn **mức độ rủi ro** (cao/trung bình/thấp) và lý do cụ thể
-4. HR/Kế toán xem danh sách cảnh báo, xác nhận hợp lệ hoặc yêu cầu điều chỉnh **trước khi duyệt chi trả**
-5. Ghi nhận lịch sử xử lý cảnh báo (audit — ai xác nhận, khi nào)
-
-**API:**
-- `POST /api/v1/payroll/{period_id}/anomaly-scan`
-- `GET /api/v1/payroll/{period_id}/anomalies`
-- `PUT /api/v1/payroll/anomalies/{id}/resolve`
-- `GET /api/v1/payroll/anomalies/history`
+> 💡 **Ghi chú kiến trúc:** Module này đã được **hợp nhất hoàn toàn vào Module 08 (Tiền lương - Payroll)**.
+> - Phát hiện bất thường là chốt chặn bảo vệ tài chính (Financial Guardrail Scan) trực thuộc chu trình xử lý bảng lương, kiểm tra các bản ghi `payroll_records` trước khi phê duyệt và xuất file chuyển khoản ngân hàng.
+> - Hợp nhất giúp gom toàn bộ nghiệp vụ kiểm soát chi trả lương về chung package `com.cyclosa.payroll` (`PayrollAnomalyService`), tránh phân mảnh bảng và service.
+> - Chi tiết luồng nghiệp vụ và danh sách API xem tại **[Mục 8.7 — Module 08](#87-quét--phát-hiện-bất-thường-bảng-lương-payroll-anomaly-detection---gộp-từ-module-37)**.
 
 ---
 
@@ -1826,26 +1714,10 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 > ⚠️ **Ghi chú kiến trúc:** Module này đã được **lược bỏ** khỏi phạm vi dự án. Tính năng nhân viên tặng phép năm cho nhau không phù hợp với quy định tại Điều 113 & 114 Bộ luật Lao động 2019 (ngày phép năm gắn liền với thâm niên và công sức cá nhân người lao động); đồng thời gây xung đột lớn khi tính toán thanh toán tiền phép tồn khi thôi việc và khấu trừ thuế TNCN.
 
-**Mô tả:** Cho phép nhân viên tặng ngày phép năm dư của mình cho đồng nghiệp đang gặp khó khăn (ốm đau dài ngày, biến cố gia đình).
-
-**Luồng hoạt động:**
-
-1. Nhân viên cần hỗ trợ (hoặc HR thay mặt) tạo **Leave Donation Request** — nêu lý do, số ngày cần
-2. HR xét duyệt điều kiện nhận (thường yêu cầu đã dùng hết phép cá nhân + có xác nhận y tế/hoàn cảnh nếu cần)
-3. Công bố nhu cầu (ẩn danh hoặc công khai theo lựa chọn người nhận) cho đồng nghiệp
-4. Nhân viên khác **tặng ngày phép năm dư** của mình (không được tặng quá số dư hiện có, không tặng phép đã âm)
-5. Hệ thống trừ ngày phép từ người tặng, cộng vào số dư người nhận — ghi nhận vào **Leave Balance History** (Module 07) của cả hai bên
-6. Khi đủ số ngày cần hoặc hết thời hạn kêu gọi → đóng chương trình
-
-**API:**
-- `POST/GET /api/v1/leave-donations/requests`
-- `PUT /api/v1/leave-donations/requests/{id}/approve`
-- `POST /api/v1/leave-donations/requests/{id}/donate`
-- `GET /api/v1/leave-donations/requests/{id}/progress`
 
 ---
 
-## 39. Trợ lý AI cho Buổi 1-1 (AI Meeting/1-1 Assistant)
+## 39. Trợ lý AI cho Buổi 1-1 (AI Meeting/1-1 Assistant) [ ] [CHƯA LÀM]
 
 **Mô tả:** Hỗ trợ tóm tắt buổi 1-1 giữa manager và nhân viên, trích xuất action items, theo dõi việc thực hiện ở lần gặp sau.
 
@@ -1872,60 +1744,25 @@ Hệ thống **tích hợp ML model** để dự báo:
 
 ---
 
-## 40. Chỉ số Hiệu quả Quản lý (Manager Effectiveness Score)
+## 40. Chỉ số Hiệu quả Quản lý (Manager Effectiveness Score) [ĐÃ GỘP VÀO MODULE 20]
 
-**Mô tả:** Đánh giá hiệu quả quản lý của từng manager dựa trên dữ liệu đã có sẵn trong hệ thống, không cần khảo sát bổ sung.
-
-**Luồng hoạt động:**
-
-1. Hệ thống tổng hợp định kỳ (hàng tháng/quý) các chỉ số của từng manager, từ dữ liệu sẵn có:
-   - Tỷ lệ nghỉ việc của team (Module 16, 30)
-   - Thời gian trung bình phản hồi/duyệt yêu cầu (leave, workflow — Module 07, 18)
-   - Tần suất tổ chức 1-1 với nhân viên (Module 39)
-   - Kết quả performance review trung bình của team (Module 09)
-   - eNPS trong team (nếu survey có phân theo team — Module 15)
-2. Tính **Manager Effectiveness Score** tổng hợp (trọng số có thể cấu hình)
-3. Hiển thị dashboard cho HR/cấp quản lý cao hơn: xu hướng theo thời gian, so sánh giữa các manager cùng cấp
-4. Nếu điểm thấp bất thường hoặc giảm liên tục → gợi ý HR trao đổi/coaching, **không tự động đánh giá kỷ luật**
-5. Manager có thể xem điểm số của chính mình + gợi ý cải thiện
-
-**Lưu ý đạo đức:** Chỉ số này mang tính hỗ trợ phát triển, cần minh bạch tiêu chí với manager, tránh dùng làm căn cứ duy nhất cho quyết định nhân sự quan trọng (thăng chức/kỷ luật).
-
-**API:**
-- `GET /api/v1/manager-effectiveness/{manager_id}/score`
-- `GET /api/v1/manager-effectiveness/{manager_id}/breakdown`
-- `GET /api/v1/manager-effectiveness/company-comparison`
-- `PUT /api/v1/manager-effectiveness/config-weights` (admin cấu hình trọng số)
+> 💡 **Ghi chú kiến trúc:** Module này đã được **hợp nhất hoàn toàn vào Module 20 (Báo cáo & Phân tích - Reports & Analytics)**.
+> - Bản chất chỉ số hiệu quả quản lý là một phân tích báo cáo (Analytics / KPI Dashboard) được tính toán tự động từ dữ liệu hiệu suất (Module 09), thời gian duyệt workflow (Module 18) và tỷ lệ thôi việc của team (Module 16).
+> - Hợp nhất giúp gom toàn bộ logic query báo cáo và thống kê về chung package `com.cyclosa.report`, tránh phân mảnh backend service.
+> - Chi tiết luồng nghiệp vụ và danh sách API xem tại **[Mục 20.2 — Module 20](#202-đánh-giá-hiệu-quả-quản-lý-manager-effectiveness-analytics---gộp-từ-module-40)**.
 
 ---
 
-## 41. Mô phỏng Tái cơ cấu (What-if Org Simulation)
+## 41. Mô phỏng Tái cơ cấu (What-if Org Simulation) [ĐÃ GỘP VÀO MODULE 01]
 
-**Mô tả:** Mở rộng "Impact Preview" của Module 01 — cho phép mô phỏng nhiều kịch bản tái cơ cấu trước khi thực thi, xem tác động tổng hợp.
-
-**Luồng hoạt động:**
-
-1. HR/lãnh đạo tạo **Simulation Scenario** (kịch bản: gộp phòng, tách phòng, chuyển nhóm nhân viên, đổi cost center)
-2. Trên giao diện kéo-thả, thử nghiệm các thay đổi **mà không ảnh hưởng dữ liệu thật**
-3. Hệ thống tính toán ngay:
-   - Số nhân viên bị ảnh hưởng theo từng thay đổi
-   - Tác động chi phí (Cost Center — Module 01)
-   - Số rule phân quyền / Workflow cần cập nhật (tái sử dụng logic Impact Preview đã có ở Module 01)
-   - Thời gian thực thi ước tính
-4. So sánh nhiều kịch bản song song (Scenario A vs B vs C)
-5. Khi chọn được phương án, **áp dụng chính thức** → chuyển thành thao tác thật trên Module 01 (ghi nhận effective date, audit trail như bình thường)
-6. Lưu lịch sử các kịch bản đã từng mô phỏng (kể cả kịch bản không chọn) để tham khảo sau
-
-**API:**
-- `POST/GET/DELETE /api/v1/org-simulations`
-- `POST /api/v1/org-simulations/{id}/changes` (thêm thay đổi vào kịch bản)
-- `GET /api/v1/org-simulations/{id}/impact-summary`
-- `GET /api/v1/org-simulations/compare?ids=`
-- `POST /api/v1/org-simulations/{id}/apply` (chuyển thành thay đổi thật)
+> 💡 **Ghi chú kiến trúc:** Module này đã được **hợp nhất hoàn toàn vào Module 01 (Cơ cấu Tổ chức - Organization)**.
+> - Tính năng mô phỏng kịch bản tái cơ cấu (What-if Scenario) là bước phát triển mở rộng của cơ chế Impact Preview vốn có của Module 01. Nó thao tác và tham chiếu trực tiếp trên cây đơn vị tổ chức và cost center của Module 01.
+> - Hợp nhất giúp tập trung toàn bộ dữ liệu và logic cơ cấu tổ chức trong package `com.cyclosa.organization`, tối ưu hóa việc tái sử dụng entity và validation.
+> - Chi tiết luồng nghiệp vụ và danh sách API xem tại **[Mục 1.2 — Module 01](#12-mô-phỏng-tái-cơ-cấu-tổ-chức-what-if-org-simulation---gộp-từ-module-41)**.
 
 ---
 
-## 42. Quản lý Sơ đồ Chỗ ngồi (Seating Chart / Workplace Management)
+## 42. Quản lý Sơ đồ Chỗ ngồi (Seating Chart / Workplace Management) [ ] [CHƯA LÀM]
 
 **Mô tả:** Quản lý không gian làm việc vật lý dưới dạng sơ đồ trực quan, cho phép nhân viên tìm vị trí đồng nghiệp, HR/Admin bố trí chỗ ngồi, và hỗ trợ mô hình làm việc linh hoạt (hot-desking).
 

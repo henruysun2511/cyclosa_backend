@@ -341,4 +341,17 @@ public class LeaveBalanceService {
             default -> filter.setExactEmployeeId(currentEmpId);
         }
     }
+
+    @Transactional(readOnly = true)
+    public BigDecimal getTotalRemainingLeaveDays(UUID employeeId, int year) {
+        if (employeeId == null) {
+            return BigDecimal.ZERO;
+        }
+        List<LeaveBalance> balances = balanceRepository.findAllByEmployeeIdAndYear(employeeId, year);
+        return balances.stream()
+                .map(LeaveBalance::getRemainingDays)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
 }
+

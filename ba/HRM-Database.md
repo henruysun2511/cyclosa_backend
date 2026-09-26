@@ -21,41 +21,41 @@
 
 | # | Module | Bảng |
 |---|---|---|
-| 01 | Tổ chức | companies, organizational_units, regions, branches, positions, job_levels, cost_centers |
+| 01 | Tổ chức | companies, organizational_units, regions, branches, positions, job_levels, cost_centers, org_simulation_scenarios, org_simulation_changes (gộp từ Module 41) |
 | 02 | Tuyển dụng | manpower_requests, job_positions, job_postings, candidates, applications, interviews, interview_evaluations, offers, talent_pool, **interview_kits, interview_kit_questions, interview_panel_members, interview_evaluation_scores** (bổ sung — Interview Management, xem Phần C) |
 | 03 | Onboarding | onboarding_checklist_templates, onboarding_checklist_template_items, onboarding_processes, onboarding_process_items, account_provisioning, orientation_sessions |
 | 04 | Nhân viên | employees, employee_personal_info, employee_employment_info, employee_emergency_contacts, employee_dependents, employee_documents, employee_history |
 | 05 | Hợp đồng | contract_types, contracts, contract_amendments, contract_terminations, workforce_restructuring_plans, workforce_restructuring_plan_items |
 | 06 | Chấm công | shifts, shift_assignments, attendance_records, overtime_requests, attendance_corrections |
 | 07 | Nghỉ phép | leave_types, leave_policies, sick_leave_entitlement_tiers, leave_balances, leave_requests |
-| 08 | Lương | salary_components, employee_salary_history, salary_advances, payroll_periods, payroll_records, payroll_record_items |
+| 08 | Lương | salary_components, employee_salary_history, salary_advances, payroll_periods, payroll_records, payroll_record_items, payroll_anomalies (gộp từ Module 37) |
 | 09 | Hiệu suất | performance_cycles, kpis, goals, performance_reviews, performance_evaluations |
-| 10 | Đào tạo | training_providers, training_programs, courses, training_registrations, certifications |
-| 11 | Phúc lợi | benefit_plans, benefit_enrollments, benefit_claims |
+| 10 | ~~Đào tạo~~ | *[ĐÃ LƯỢC BỎ]* *(Bằng cấp/chứng chỉ lưu tại `employee_documents`)* |
+| 11 | ~~Phúc lợi~~ | *[ĐÃ LƯỢC BỎ]* *(Phụ cấp & bảo hiểm xử lý trực tiếp tại Module 05 Contract & 08 Payroll)* |
 | 12 | Khen thưởng/Kỷ luật | rewards, disciplines, grievances, labor_union_members |
 | 13 | Tài sản | assets, asset_allocations, asset_inventory_checks, asset_inventory_check_items |
-| 14 | Career & Talent | career_paths, succession_plans, succession_candidates, internal_talent_pool |
-| 15 | Khảo sát | surveys, survey_questions, survey_question_options, survey_responses, survey_answers |
+| 14 | Career & Talent | career_paths, succession_plans, succession_candidates, internal_talent_pool, career_simulation_saved_paths (gộp từ Module 32) |
+| 15 | ~~Khảo sát~~ | *[ĐÃ LƯỢC BỎ]* *(Biểu mẫu khảo sát rời rạc, dùng công cụ chuyên dụng bên ngoài)* |
 | 16 | Offboarding | resignations, terminations, exit_interviews, offboarding_clearances |
-| 17 | ESS | *(không có bảng riêng — dùng chung dữ liệu module khác, lọc theo employee_id)* |
+| 17 | ESS | *(không có bảng riêng — triển khai phân tán qua các Controller `/api/v1/my-*` tại từng module nghiệp vụ)* |
 | 18 | Workflow | workflow_definitions, workflow_steps, workflow_conditions, workflow_instances, workflow_approval_steps, workflow_delegates |
 | 19 | Notification | notification_templates, notifications, reminders |
-| 20 | Reports | report_exports, dashboard_configs |
+| 20 | Reports | report_exports, dashboard_configs, manager_effectiveness_scores, manager_effectiveness_configs (gộp từ Module 40) |
 | 21 | System Admin | users, roles, permissions, role_permissions, user_roles, audit_logs, system_settings, integrations, data_import_jobs |
 | 22 | AI Features | ai_interaction_logs, ai_conversations, ai_messages, ai_intent_logs, knowledge_base_documents, knowledge_base_chunks, ai_unanswered_questions, ai_screening_logs, ai_bulk_screening_jobs |
 | 23 | Lưu kho & Hủy hồ sơ | record_retention_policies, record_metadata_field_configs, record_archive_submissions, record_disposal_proposals, record_disposal_committee_reviews |
 
 | 31 | Talent Marketplace | internal_opportunities, internal_opportunity_interests, internal_assignments |
-| 32 | Career Pathing Simulator | career_simulation_saved_paths *(dùng lại `employee_history`, `career_paths` đã có ở Module 04/14, không tạo bảng dữ liệu nguồn mới)* |
-| 33 | Skill Graph & Gap Analysis | skill_categories, skills, employee_skills, position_required_skills |
-| 34 | Alumni Network | alumni, alumni_referrals |
+| 32 | ~~Career Pathing Simulator~~ | *[ĐÃ GỘP VÀO MODULE 14]* *(Bảng `career_simulation_saved_paths` chuyển về Module 14)* |
+| 33 | ~~Skill Graph & Gap Analysis~~ | *[ĐÃ LƯỢC BỎ]* *(Đánh giá năng lực đã tích hợp qua KPI/360-Review ở Module 09)* |
+| 34 | ~~Alumni Network~~ | *[ĐÃ LƯỢC BỎ]* *(Mạng xã hội cựu nhân viên độc lập)* |
 | 35 | Compliance Radar | legal_changes, legal_change_affected_items |
 | 36 | Earned Wage Access | wage_access_requests |
-| 37 | Payroll Anomaly Detection | payroll_anomalies |
-| 38 | Time-off Donation | leave_donation_requests, leave_donations |
+| 37 | ~~Payroll Anomaly Detection~~ | *[ĐÃ GỘP VÀO MODULE 08]* *(Bảng `payroll_anomalies` chuyển về Module 08)* |
+| 38 | ~~Time-off Donation~~ | *[ĐÃ LƯỢC BỎ]* *(Không phù hợp Điều 113-114 BLLĐ 2019)* |
 | 39 | AI 1-1 Assistant | one_on_ones, one_on_one_action_items |
-| 40 | Manager Effectiveness Score | manager_effectiveness_scores, manager_effectiveness_configs |
-| 41 | What-if Org Simulation | org_simulation_scenarios, org_simulation_changes |
+| 40 | ~~Manager Effectiveness Score~~ | *[ĐÃ GỘP VÀO MODULE 20]* *(Bảng chuyển về Module 20)* |
+| 41 | ~~What-if Org Simulation~~ | *[ĐÃ GỘP VÀO MODULE 01]* *(Bảng chuyển về Module 01)* |
 | 42 | Seating Chart / Workplace | workplace_sites, workplace_floors, workplace_zones, workplace_rows, workplace_seats, workplace_seat_linked_assets, workplace_non_desk_objects, workplace_hotdesk_bookings, workplace_floor_plans |
 
 **Tổng cộng:** 22 module gốc có bảng dữ liệu (**117 bảng**) + **12 module đề xuất bổ sung (31-42, 34 bảng mới)** = **151 bảng**. Module 22 và 23 bổ sung trường mới vào các bảng đã có ở Module 02/04: `job_positions`, `candidates`, `applications`, `employee_documents` (xem chi tiết ở Phần B tương ứng). Chi tiết schema Module 31-42 và phần bổ sung Interview Management (Module 02) xem **Phần C**.
@@ -148,10 +148,6 @@
 | 31 | `opportunity_type_enum` | short_term_project, open_position |
 | 31 | `interest_status_enum` | expressed, shortlisted, selected, rejected |
 | 31 | `assignment_status_enum` | active, completed, cancelled |
-| 33 | `skill_proficiency_enum` | beginner, intermediate, advanced, expert |
-| 33 | `skill_source_enum` | self_declared, cv_parsed, training_derived, manager_confirmed |
-| 34 | `alumni_eligibility_enum` | eligible, not_eligible |
-| 34 | `alumni_opt_in_status` | invited, opted_in, opted_out |
 | 35 | `legal_change_priority_enum` | high, medium, low |
 | 35 | `legal_change_status_enum` | new, reviewing, resolved |
 | 35 | `affected_item_type_enum` | contract_rule, policy_document, payroll_rule |
@@ -159,7 +155,6 @@
 | 37 | `anomaly_type_enum` | salary_spike, abnormal_overtime, duplicate_bank_account, salary_after_termination, mismatched_allowance |
 | 37 | `anomaly_risk_level_enum` | high, medium, low |
 | 37 | `anomaly_status_enum` | flagged, resolved, false_positive |
-| 38 | `leave_donation_status_enum` | open, in_progress, fulfilled, closed |
 | 39 | `one_on_one_status_enum` | scheduled, completed, cancelled |
 | 39 | `action_item_status_enum` | open, completed, overdue |
 | 41 | `simulation_status_enum` | draft, applied, discarded |
@@ -413,6 +408,25 @@ audit_logs n───1 users
 | name | VARCHAR | |
 | code | VARCHAR | |
 | rank_order | INT | Thứ tự cấp bậc |
+
+### Tính năng nâng cao — Mô phỏng Tái cơ cấu (gộp từ Module 41)
+
+`org_simulation_scenarios`
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| name | VARCHAR | |
+| created_by_employee_id | UUID (FK) | |
+| status | ENUM(`simulation_status_enum`) | |
+| applied_at | DATETIME (nullable) | Khi chuyển thành thay đổi thật trên Module 01 |
+
+`org_simulation_changes`
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| org_simulation_scenario_id | UUID (FK) | |
+| change_type | ENUM(`simulation_change_type_enum`) | |
+| payload | JSONB | Chi tiết thay đổi (VD: `{from_unit_id, to_unit_id, employee_ids: [...]}`) |
+| estimated_cost_impact | DECIMAL (nullable) | |
+| affected_employee_count | INT | |
 
 ---
 
@@ -936,6 +950,17 @@ audit_logs n───1 users
 | salary_component_id | UUID (FK) | |
 | amount | DECIMAL | |
 
+`payroll_anomalies` *(Rà soát bất thường bảng lương - gộp từ Module 37)*
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| payroll_record_id | UUID (FK `payroll_records`) | |
+| anomaly_type | ENUM(`anomaly_type_enum`) | Lương tăng đột biến, OT quá trần, nhân viên đã thôi việc, trùng STK ngân hàng... |
+| risk_level | ENUM(`anomaly_risk_level_enum`) | LOW / MEDIUM / HIGH |
+| detail | JSONB | Số liệu cụ thể phát hiện bất thường (VD: % tăng so với kỳ trước, giờ OT thực tế) |
+| status | ENUM(`anomaly_status_enum`) | PENDING / RESOLVED / ADJUSTED |
+| resolved_by_employee_id | UUID (FK, nullable) | Kế toán hoặc HR xác nhận giải trình |
+| resolved_at | DATETIME (nullable) | |
+
 ---
 
 ## 09. Quản lý Hiệu suất
@@ -990,84 +1015,15 @@ audit_logs n───1 users
 
 ---
 
-## 10. Đào tạo & Phát triển
-
-`training_providers`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| name | VARCHAR | |
-| provider_type | ENUM(`training_provider_type`) | |
-| contact_info | VARCHAR | |
-
-`training_programs`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| training_provider_id | UUID (FK, nullable) | |
-| name | VARCHAR | |
-| description | TEXT | |
-| budget_amount | DECIMAL | |
-| actual_cost | DECIMAL (nullable) | |
-
-`courses`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| training_program_id | UUID (FK) | |
-| name | VARCHAR | |
-| start_date | DATE | |
-| end_date | DATE | |
-| location_or_link | VARCHAR | |
-| capacity | INT | |
-| trainer_name | VARCHAR | |
-
-`training_registrations`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| course_id | UUID (FK) | |
-| employee_id | UUID (FK) | |
-| registered_at | DATETIME | |
-| status | ENUM(`training_registration_status`) | Bao gồm cả điểm danh (attended/absent) |
-
-`certifications`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| employee_id | UUID (FK) | |
-| course_id | UUID (FK, nullable) | |
-| name | VARCHAR | |
-| issued_by | VARCHAR | |
-| issued_date | DATE | |
-| expiry_date | DATE (nullable) | |
-| file_url | VARCHAR | |
+## 10. ~~Đào tạo & Phát triển~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ để tinh gọn hệ thống. Bằng cấp, chứng chỉ chuyên môn của nhân sự được quản lý và số hóa trực tiếp tại bảng `employee_documents` (Module Onboarding & Employee Profile).*
 
 ---
 
-## 11. Phúc lợi
+## 11. ~~Phúc lợi~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ để tinh gọn hệ thống. Toàn bộ phụ cấp phúc lợi tiền tệ đã được cấu hình trong Hợp đồng (Module 05 Contract) và tự động tính toán vào Bảng lương (Module 08 Payroll qua `salary_components`). Chế độ bảo hiểm bắt buộc đã được tính toán theo luật trong Payroll.*
 
-`benefit_plans`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| name | VARCHAR | |
-| plan_type | ENUM(`benefit_plan_type`) | |
-| provider_name | VARCHAR (nullable) | |
-| description | TEXT | |
 
-`benefit_enrollments`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| employee_id | UUID (FK) | |
-| benefit_plan_id | UUID (FK) | |
-| dependent_id | UUID (FK employee_dependents, nullable) | |
-| enrolled_date | DATE | |
-| status | ENUM(`enrollment_status`) | |
-
-`benefit_claims`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| benefit_enrollment_id | UUID (FK) | |
-| claim_date | DATE | |
-| amount | DECIMAL | |
-| description | TEXT | |
-| file_url | VARCHAR | |
-| status | ENUM(`approval_status_enum`) | |
 
 ---
 
@@ -1199,48 +1155,18 @@ audit_logs n───1 users
 | note | TEXT | |
 | added_by_employee_id | UUID (FK) | |
 
+`career_simulation_saved_paths` *(Mô phỏng lộ trình cá nhân - gộp từ Module 32)*
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| employee_id | UUID (FK) | |
+| target_position_id | UUID (FK, nullable) | Vị trí mục tiêu mong muốn thăng tiến |
+| suggested_path | JSONB | Snapshot kết quả gợi ý tại thời điểm lưu (vị trí, % tương đồng, thời gian trung bình) |
+| saved_at | DATETIME | |
+
 ---
 
-## 15. Khảo sát & Gắn kết
-
-`surveys`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| title | VARCHAR | |
-| description | TEXT | |
-| start_date | DATE | |
-| end_date | DATE | |
-| is_anonymous | BOOLEAN | |
-| status | ENUM(`survey_status`) | |
-
-`survey_questions`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| survey_id | UUID (FK) | |
-| question_text | TEXT | |
-| question_type | ENUM(`survey_question_type`) | |
-| order_index | INT | |
-
-`survey_question_options`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| question_id | UUID (FK) | |
-| option_text | VARCHAR | |
-| order_index | INT | |
-
-`survey_responses`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| survey_id | UUID (FK) | |
-| employee_id | UUID (FK, nullable) | Null nếu is_anonymous=true |
-| submitted_at | DATETIME | |
-
-`survey_answers`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| survey_response_id | UUID (FK) | |
-| question_id | UUID (FK) | |
-| answer_value | TEXT | Số/text/option_id tùy loại câu hỏi |
+## 15. ~~Khảo sát & Gắn kết~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ khỏi phạm vi dự án do tính chất biểu mẫu khảo sát rời rạc độc lập (tương tự Google Forms), không thuộc chuỗi cung ứng dữ liệu vận hành Core HRM.*
 
 ---
 
@@ -1412,6 +1338,20 @@ Không có bảng riêng — lớp API đọc/ghi trên các bảng module khác
 | name | VARCHAR | |
 | owner_employee_id | UUID (FK, nullable) | Null = dashboard toàn công ty |
 | widgets_config | JSON | |
+
+`manager_effectiveness_scores` *(Đánh giá hiệu quả quản lý - gộp từ Module 40)*
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| manager_employee_id | UUID (FK) | |
+| period | VARCHAR | VD "2026-Q3" |
+| overall_score | DECIMAL | |
+| breakdown | JSONB | Điểm thành phần: turnover, response_time, one_on_one_frequency, team_performance |
+
+`manager_effectiveness_configs` *(Cấu hình trọng số chỉ số - gộp từ Module 40)*
+| Trường | Kiểu | Ghi chú |
+|---|---|---|
+| metric_key | VARCHAR | VD "turnover_rate" |
+| weight | DECIMAL | Trọng số cấu hình được (admin) |
 
 ---
 
@@ -1699,7 +1639,7 @@ Không có bảng riêng — lớp API đọc/ghi trên các bảng module khác
 | title | VARCHAR | |
 | opportunity_type | ENUM(`opportunity_type_enum`) | |
 | department_id | UUID (FK) | |
-| required_skills | JSONB (nullable) | Tham chiếu `skills.id` |
+| required_skills | JSONB (nullable) | Danh sách yêu cầu kỹ năng/tiêu chí chuyên môn (dạng JSON Array) |
 | posted_by_employee_id | UUID (FK) | |
 | start_date / end_date | DATE (nullable) | Chỉ áp dụng với short_term_project |
 | status | ENUM(`job_position_status`) | Tái dùng enum Module 02 |
@@ -1722,66 +1662,19 @@ Không có bảng riêng — lớp API đọc/ghi trên các bảng module khác
 
 ---
 
-## 32. Career Pathing Simulator
+## 32. ~~Career Pathing Simulator~~ *[ĐÃ GỘP VÀO MODULE 14]*
 
-> Không cần bảng dữ liệu nguồn mới — tính toán động từ `employee_history` (Module 04) và `career_paths` (Module 14). Chỉ cần 1 bảng lưu lộ trình nhân viên đã lưu quan tâm.
-
-`career_simulation_saved_paths`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| employee_id | UUID (FK) | |
-| suggested_path | JSONB | Snapshot kết quả gợi ý tại thời điểm lưu (vị trí, % tương đồng, thời gian trung bình) |
-| saved_at | DATETIME | |
+> *Lưu ý: Module này đã được hợp nhất hoàn toàn vào Module 14 (Phát triển Nhân sự - Career & Talent). Bảng `career_simulation_saved_paths` và toàn bộ cấu trúc dữ liệu mô phỏng lộ trình sự nghiệp đã được chuyển sang quản lý tập trung tại [Phần B — Mục 14](#14-phát-triển-nhân-sự).*
 
 ---
 
-## 33. Skill Graph & Gap Analysis
-
-`skill_categories`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| name | VARCHAR | VD: Kỹ thuật, Mềm, Quản lý |
-
-`skills`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| skill_category_id | UUID (FK) | |
-| name | VARCHAR | |
-
-`employee_skills`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| employee_id | UUID (FK) | |
-| skill_id | UUID (FK) | |
-| proficiency_level | ENUM(`skill_proficiency_enum`) | |
-| source | ENUM(`skill_source_enum`) | |
-| confirmed_by_employee_id | UUID (FK, nullable) | Manager xác nhận (nếu source = manager_confirmed) |
-
-`position_required_skills`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| position_id | UUID (FK) | |
-| skill_id | UUID (FK) | |
-| required_level | ENUM(`skill_proficiency_enum`) | |
+## 33. ~~Skill Graph & Gap Analysis~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ khỏi phạm vi dự án để tinh gọn hệ thống. Đánh giá năng lực nhân sự đã được phản ánh thực chất và hiệu quả qua kết quả công việc (KPI/Goal) và đánh giá đa chiều tại Module 09 Performance.*
 
 ---
 
-## 34. Alumni Network
-
-`alumni`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| employee_id | UUID (FK) | Liên kết hồ sơ cũ, dùng lại khi boomerang hiring |
-| eligibility | ENUM(`alumni_eligibility_enum`) | HR đánh giá khi Offboarding hoàn tất |
-| opt_in_status | ENUM(`alumni_opt_in_status`) | |
-| current_contact_info | JSONB (nullable) | Email/SĐT cập nhật sau khi nghỉ |
-
-`alumni_referrals`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| alumni_id | UUID (FK) | |
-| candidate_id | UUID (FK `candidates`) | Ứng viên được giới thiệu |
-| referred_at | DATETIME | |
+## 34. ~~Alumni Network~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ khỏi phạm vi dự án do bản chất là mạng xã hội cựu nhân viên độc lập (Alumni Portal/Social CRUD), không tác động tới chuỗi vận hành nhân sự và dữ liệu hàng ngày của doanh nghiệp.*
 
 ---
 
@@ -1824,41 +1717,14 @@ Không có bảng riêng — lớp API đọc/ghi trên các bảng module khác
 
 ---
 
-## 37. Payroll Anomaly Detection
+## 37. ~~Payroll Anomaly Detection~~ *[ĐÃ GỘP VÀO MODULE 08]*
 
-`payroll_anomalies`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| payroll_record_id | UUID (FK `payroll_records`) | |
-| anomaly_type | ENUM(`anomaly_type_enum`) | |
-| risk_level | ENUM(`anomaly_risk_level_enum`) | |
-| detail | JSONB | Số liệu cụ thể phát hiện bất thường (VD: % tăng so với kỳ trước) |
-| status | ENUM(`anomaly_status_enum`) | |
-| resolved_by_employee_id | UUID (FK, nullable) | |
-| resolved_at | DATETIME (nullable) | |
+> *Lưu ý: Module này đã được hợp nhất hoàn toàn vào Module 08 (Tiền lương - Payroll). Bảng `payroll_anomalies` và các quy tắc quét rủi ro chi trả đã được chuyển sang quản lý tập trung tại [Phần B — Mục 08](#08-tiền-lương).*
 
 ---
 
-## 38. Time-off Donation
-
-`leave_donation_requests`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| requesting_employee_id | UUID (FK) | |
-| leave_type_id | UUID (FK `leave_types`) | |
-| days_needed | DECIMAL | |
-| reason | TEXT | |
-| is_anonymous | BOOLEAN | Ẩn danh người nhận khi công bố |
-| status | ENUM(`leave_donation_status_enum`) | |
-| approved_by_employee_id | UUID (FK, nullable) | |
-
-`leave_donations`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| leave_donation_request_id | UUID (FK) | |
-| donor_employee_id | UUID (FK) | |
-| days_donated | DECIMAL | |
-| donated_at | DATETIME | |
+## 38. ~~Time-off Donation~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Lưu ý: Module này đã được lược bỏ khỏi phạm vi dự án do không phù hợp quy định Điều 113-114 Bộ luật Lao động 2019 và gây xung đột quyết toán phép tồn khi thôi việc.*
 
 ---
 
@@ -1886,42 +1752,15 @@ Không có bảng riêng — lớp API đọc/ghi trên các bảng module khác
 
 ---
 
-## 40. Manager Effectiveness Score
+## 40. ~~Manager Effectiveness Score~~ *[ĐÃ GỘP VÀO MODULE 20]*
 
-`manager_effectiveness_scores`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| manager_employee_id | UUID (FK) | |
-| period | VARCHAR | VD "2026-Q3" |
-| overall_score | DECIMAL | |
-| breakdown | JSONB | Điểm thành phần: turnover, response_time, one_on_one_frequency, team_performance, team_enps |
-
-`manager_effectiveness_configs`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| metric_key | VARCHAR | VD "turnover_rate" |
-| weight | DECIMAL | Trọng số cấu hình được (admin) |
+> *Lưu ý: Module này đã được hợp nhất hoàn toàn vào Module 20 (Báo cáo & Phân tích - Reports & Analytics). Các bảng `manager_effectiveness_scores` và `manager_effectiveness_configs` đã được chuyển sang quản lý tập trung tại [Phần B — Mục 20](#20-báo-cáo--phân-tích).*
 
 ---
 
-## 41. What-if Org Simulation
+## 41. ~~What-if Org Simulation~~ *[ĐÃ GỘP VÀO MODULE 01]*
 
-`org_simulation_scenarios`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| name | VARCHAR | |
-| created_by_employee_id | UUID (FK) | |
-| status | ENUM(`simulation_status_enum`) | |
-| applied_at | DATETIME (nullable) | Khi chuyển thành thay đổi thật trên Module 01 |
-
-`org_simulation_changes`
-| Trường | Kiểu | Ghi chú |
-|---|---|---|
-| org_simulation_scenario_id | UUID (FK) | |
-| change_type | ENUM(`simulation_change_type_enum`) | |
-| payload | JSONB | Chi tiết thay đổi (VD: `{from_unit_id, to_unit_id, employee_ids: [...]}`) |
-| estimated_cost_impact | DECIMAL (nullable) | |
-| affected_employee_count | INT | |
+> *Lưu ý: Module này đã được hợp nhất hoàn toàn vào Module 01 (Cơ cấu Tổ chức - Organization). Các bảng `org_simulation_scenarios` và `org_simulation_changes` đã được chuyển sang quản lý tập trung tại [Phần B — Mục 01](#01-quản-lý-tổ-chức).*
 
 ---
 

@@ -1,67 +1,67 @@
 # HRM - Xác định Role & Ma trận Phân quyền
 
-## 1. Danh sách Role đề xuất
+## 1. Danh sách 10 Role chuẩn hóa sau tinh gọn
 
-| # | Role | Mô tả | Phạm vi dữ liệu |
-|---|---|---|---|
-| 1 | **Super Admin** | Quản trị toàn hệ thống, cấu hình, phân quyền, tích hợp. Không thao tác nghiệp vụ hàng ngày. | Toàn bộ hệ thống, mọi công ty (multi-company) |
-| 2 | **HR Admin / HR Manager** | Trưởng phòng Nhân sự. Có quyền cao nhất trong phạm vi nghiệp vụ HR: duyệt cấp cao, cấu hình chính sách. | Toàn bộ nhân viên trong công ty/chi nhánh phụ trách |
-| 3 | **HR Specialist (theo mảng)** | Chuyên viên HR phụ trách từng mảng: Tuyển dụng, C&B (Lương thưởng), Đào tạo, Hành chính nhân sự. Có thể tách thành 4 role con nếu công ty lớn. | Theo mảng phụ trách, toàn bộ nhân viên |
-| 4 | **Department Manager / Line Manager** | Trưởng phòng ban trực tiếp. Duyệt các yêu cầu của nhân viên thuộc phòng, đánh giá hiệu suất. | Nhân viên trực thuộc phòng ban mình quản lý |
-| 5 | **Team Leader** | Trưởng nhóm. Quyền hạn tương tự Manager nhưng phạm vi nhỏ hơn (cấp team), thường không duyệt các quyết định lớn (hợp đồng, lương). | Nhân viên trong team mình phụ trách |
-| 6 | **Employee** | Nhân viên chính thức/thử việc. Chỉ thao tác trên dữ liệu của chính mình qua ESS. | Chỉ dữ liệu cá nhân (self) |
-| 7 | **Recruiter** | Có thể là HR hoặc cộng tác viên tuyển dụng. Quản lý tin tuyển dụng, hồ sơ ứng viên, lịch phỏng vấn. | Module Tuyển dụng, Onboarding (giai đoạn đầu) |
-| 8 | **Interviewer** | Nhân viên nội bộ được mời phỏng vấn (không thuộc HR). Chỉ xem hồ sơ ứng viên liên quan và nhập đánh giá phỏng vấn. | Chỉ các buổi phỏng vấn được gán |
-| 9 | **Candidate (Ứng viên)** | Người dùng ngoài hệ thống công ty, dùng cổng ứng tuyển. | Chỉ hồ sơ/ứng tuyển của chính mình |
-| 10 | **Payroll/Accountant (Kế toán lương)** | Bộ phận Kế toán/Tài chính, xử lý và đối soát số liệu lương, thuế, bảo hiểm. Có thể độc lập với HR để tách bạch kiểm soát. | Module Payroll, Benefits (liên quan tài chính) |
-| 11 | **IT Admin** | Phụ trách tài khoản hệ thống, tích hợp, thiết bị cấp phát. | Module Onboarding (account provisioning), Asset Management, System Integration |
-| 12 | **Executive / Board of Directors (BOD)** | Ban lãnh đạo. Chỉ xem báo cáo, dashboard tổng quan, không thao tác nghiệp vụ chi tiết. | Chỉ xem (read-only) Module Reports & Analytics, dashboard toàn công ty |
-| 13 | **Auditor / Compliance** | Kiểm toán nội bộ hoặc tuân thủ. Xem audit log, hồ sơ hợp đồng, dữ liệu lương phục vụ kiểm tra, không có quyền chỉnh sửa. | Read-only trên toàn hệ thống, đặc biệt Audit Log, Contract, Payroll |
-| 14 | **Union Representative (Đại diện công đoàn)** *(tùy chọn)* | Đại diện người lao động, xem/xử lý các vụ việc liên quan khen thưởng-kỷ luật-khiếu nại. | Module Reward & Discipline (phần liên quan công đoàn) |
+### Nhóm 1: Quản trị & Nghiệp vụ Nhân sự
+| # | Role | Mã Role (Code) | Mô tả | Phạm vi dữ liệu (Data Scope) |
+|---|---|---|---|---|
+| 1 | **Super Admin** | `SUPER_ADMIN` | Quản trị cao nhất toàn hệ thống, cấu hình nền tảng, phân quyền tenant, cấu hình kỹ thuật | Toàn bộ hệ thống, mọi công ty (`ALL`) |
+| 2 | **HR Admin / HR Manager** | `HR_ADMIN` | Trưởng phòng Nhân sự, toàn quyền quản trị nghiệp vụ HR trong phạm vi công ty | Toàn bộ nhân viên trong công ty (`COMPANY`) |
+| 3 | **HR Specialist** | `HR_SPECIALIST` | Chuyên viên Nhân sự thực thi nghiệp vụ (Hồ sơ, Hợp đồng, C&B, Đào tạo, Khen thưởng - Kỷ luật...) | Toàn công ty theo mảng phụ trách (`COMPANY`) |
+| 4 | **Recruiter** | `RECRUITER` | Chuyên viên tuyển dụng, quản lý tin đăng, nguồn ứng viên, điều phối phỏng vấn (không xem lương C&B) | Phân hệ Tuyển dụng & Onboarding (`COMPANY`) |
+| 5 | **Payroll / Accountant** | `PAYROLL_ACCOUNTANT` | Kế toán tiền lương, đối soát bảng lương, bảo hiểm, quyết toán thuế TNCN — độc lập với HR | Module Payroll, Chi phí nhân sự (`COMPANY`) |
 
-> **Lưu ý:** "Approver" không nên thiết kế là 1 role cố định, mà là **thuộc tính động** gắn theo Approval Matrix (Module 18) — ví dụ "quản lý trực tiếp của nhân viên X" — vì người duyệt thay đổi theo từng nhân viên/phòng ban, không phải một nhóm quyền tĩnh.
+### Nhóm 2: Cán bộ Quản lý & Vận hành
+| # | Role | Mã Role (Code) | Mô tả | Phạm vi dữ liệu (Data Scope) |
+|---|---|---|---|---|
+| 6 | **Executive / BOD** | `EXECUTIVE` | Ban Lãnh đạo (BOD/CEO), xem dashboard BI tổng thể và báo cáo phân tích chiến lược | Chỉ xem (Read-only) toàn công ty (`COMPANY` / `ALL`) |
+| 7 | **Manager** | `MANAGER` | Quản lý và phê duyệt đơn từ, đề xuất nhân sự, đánh giá KPI — *(gộp Department Manager + Team Leader)* | Xác định động bằng `data_scope` (`DEPARTMENT` / `TEAM`) + `org_unit_id` |
+
+### Nhóm 3: Nhân viên & Hỗ trợ Chuyên trách
+| # | Role | Mã Role (Code) | Mô tả | Phạm vi dữ liệu (Data Scope) |
+|---|---|---|---|---|
+| 8 | **Employee** | `EMPLOYEE` | Nhân viên (Chính thức/Thử việc/Thực tập), sử dụng cổng tự phục vụ nhân viên (ESS) | Chỉ dữ liệu của bản thân (`OWN`) |
+| 9 | **Office Admin** | `OFFICE_ADMIN` | Quản trị cơ sở vật chất, mặt bằng, sơ đồ chỗ ngồi và cấp phát/thu hồi tài sản công nghệ — *(gộp IT Admin + Facility Admin)* | Module Tài sản, Mặt bằng & Chỗ ngồi (`COMPANY`) |
+| 10 | **Auditor / Compliance** | `AUDITOR` | Kiểm toán nội bộ, giám sát Audit Logs, rà soát tính hợp lệ quy trình độc lập với Admin | Read-only Audit Logs và Báo cáo tuân thủ (`ALL` / `COMPANY`) |
+
+> 💡 **Ghi chú các điểm tinh gọn & hợp nhất:**
+> - **Gộp `DEPARTMENT_MANAGER` & `TEAM_LEADER` thành `MANAGER`:** Tránh phân mảnh role theo cấp bậc tĩnh. Quyền quản lý và phê duyệt được quyết định linh hoạt qua cấp độ `data_scope` (`DEPARTMENT` hoặc `TEAM`) gắn với `org_unit_id` của cán bộ quản lý.
+> - **Gộp `IT_ADMIN` & `FACILITY_ADMIN` thành `OFFICE_ADMIN`:** Hợp nhất quản trị tài sản trang thiết bị làm việc, hạ tầng công nghệ và mặt bằng/sơ đồ chỗ ngồi (Module 13 & 42).
+> - **Chuyển `INTERVIEWER` thành cơ chế gán hội đồng (Panel Assignment):** Người tham gia phỏng vấn là nhân sự/quản lý nội bộ được chỉ định theo từng buổi qua bảng `interview_panel_members`, thao tác qua quyền chấm điểm Scorecard được cấp theo phiên thay vì cấp role tĩnh.
+> - ~~**Candidate (Ứng viên):**~~ *[ĐÃ LOẠI BỎ]* Ứng viên nộp hồ sơ qua Landing Page bên ngoài (bảng `candidates`), không phải tài khoản người dùng nội bộ (`users`).
+> - ~~**Union Representative (Đại diện công đoàn):**~~ *[ĐÃ LOẠI BỎ]* Đại diện công đoàn là nhân sự kiêm nhiệm, tham gia cuộc họp kỷ luật qua danh sách thành phần họp (`meeting_attendees`).
 
 ---
 
-## 2. Ma trận phân quyền theo Module
+## 2. Ma trận phân quyền theo Module (10 Roles)
 
 Ký hiệu: **F** = Full (CRUD) · **A** = Approve/Xử lý · **V** = View only · **O** = Chỉ dữ liệu của bản thân (Own) · **–** = Không truy cập
 
-| Module | Super Admin | HR Admin | HR Specialist | Dept Manager | Team Leader | Employee | Recruiter | Interviewer | Payroll/Acct | IT Admin | Executive | Auditor |
-|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 01. Tổ chức | F | F | V | V | V | – | – | – | V | – | V | V |
-| 02. Tuyển dụng | F | F | F | A (manpower req) | – | – | F | V (giới hạn) | – | – | V | V |
-| 03. Onboarding | F | F | F | V | V | O | V | – | – | F (account) | – | V |
-| 04. Hồ sơ nhân viên | F | F | F | V (phòng mình) | V (team mình) | O | – | – | V | – | – | V |
-| 05. Hợp đồng | F | F | F | V (phòng mình) | – | O | – | – | V | – | V | V |
-| 06. Chấm công & Ca | F | F | F | A (phòng mình) | A (team mình) | O | – | – | V | – | V | V |
-| 07. Nghỉ phép | F | F | F | A (phòng mình) | A (team mình) | O | – | – | V | – | V | V |
-| 08. Lương | F | F (cấu hình) | F (nhập liệu) | V (giới hạn, nếu cần) | – | O (payslip) | – | – | F | – | V (chi phí) | V |
-| 09. Hiệu suất | F | F | F | A/F (phòng mình) | A (team mình) | O | – | – | – | – | V | V |
-| 10. Đào tạo | F | F | F | A (đề xuất) | V | O | – | – | – | – | V | V |
-| 11. Phúc lợi | F | F | F | V | V | O | – | – | V | – | V | V |
-| 12. Khen thưởng & Kỷ luật | F | F | F | A (đề xuất) | V | O | – | – | – | – | V | V |
-| 13. Tài sản | F | F | F (HR hành chính) | V | V | O | – | – | – | F | – | V |
-| 14. Career & Talent | F | F | F | A (đề xuất) | V | O | – | – | – | – | V | V |
-| 15. Khảo sát | F | F | F | V (kết quả team) | V | O (trả lời) | – | – | – | – | V | V |
-| 16. Offboarding | F | F | F | A (phòng mình) | V | O (resignation) | – | – | V (final payroll) | F (account) | V | V |
-| 17. ESS | – | – | – | – | – | F (chính mình) | – | – | – | – | – | – |
-| 18. Workflow/Approval | F | F | V | A (theo vai trò duyệt) | A (theo vai trò duyệt) | – (chỉ tạo request) | – | – | – | – | – | V |
-| 19. Notification | F | F | V | V | V | V (nhận) | – | – | – | – | – | – |
-| 20. Reports & Analytics | F | F | F (theo mảng) | V (phòng mình) | V (team mình) | – | V (tuyển dụng) | – | V (lương) | – | F (toàn công ty) | F |
-| 21. System Admin | F | – | – | – | – | – | – | – | – | F (giới hạn IT) | – | V (audit log) |
-| 31. Talent Marketplace | F | F | F | A (cơ hội phòng mình) | V | O (ứng tuyển) | – | – | – | – | V | V |
-| 32. Career Pathing Simulator | F | F | V | V (team mình) | – | O | – | – | – | – | V | – |
-| 33. Skill Graph & Gap Analysis | F | F | F | V (phòng mình) | V (team mình) | O (khai báo) | – | – | – | – | V | – |
-| 34. Alumni Network | F | F | F | – | – | – | F | – | – | – | V | – |
-| 35. Compliance Radar | F | F (Legal/C&B) | V | – | – | – | – | – | V | – | V | F (view) |
-| 36. Earned Wage Access | F | V | – | – | – | O (tạo yêu cầu) | – | – | F | – | V | V |
-| 37. Payroll Anomaly Detection | F | V | – | – | – | – | – | – | F | – | – | V |
-| 38. Time-off Donation | F | A | F | – | – | O (tặng/nhận) | – | – | – | – | – | – |
-| 39. AI 1-1 Assistant | F | – | – | F (team mình) | F (team mình) | O (xem của mình) | – | – | – | – | – | – |
-| 40. Manager Effectiveness Score | F | F | V | O (điểm của mình) | O (điểm của mình) | – | – | – | – | – | V | V |
-| 41. What-if Org Simulation | F | F | – | – | – | – | – | – | – | – | V | – |
-| 42. Seating Chart / Workplace | F | F | F | V (phòng mình) | V (team mình) | O (xem sơ đồ, đặt hot-desk) | – | – | – | F (tài sản gắn liền) | – | – |
+| Module | Super Admin | HR Admin | HR Specialist | Recruiter | Payroll Acct | Executive | Manager | Employee | Office Admin | Auditor |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 01. Tổ chức & What-if | F | F | V | – | V | V | V | – | – | V |
+| 02. Tuyển dụng | F | F | F | F | – | V | A (đề xuất) | – | – | V |
+| 03. Onboarding | F | F | F | V | – | – | V | O | F (tài sản/setup) | V |
+| 04. Hồ sơ nhân viên | F | F | F | – | V | – | V (đơn vị) | O | V (liên hệ) | V |
+| 05. Hợp đồng | F | F | F | – | V | V | V (đơn vị) | O | – | V |
+| 06. Chấm công & Ca | F | F | F | – | V | V | A (đơn vị) | O | – | V |
+| 07. Nghỉ phép | F | F | F | – | V | V | A (đơn vị) | O | – | V |
+| 08. Lương & Chi phí | F | F (cấu hình) | F (nhập liệu) | – | F | V (chi phí) | V (quỹ lương) | O (payslip) | – | V |
+| 09. Hiệu suất (KPI/OKR) | F | F | F | – | – | V | A/F (đơn vị) | O | – | V |
+| 12. Khen thưởng - Kỷ luật | F | F | F | – | – | V | A (đề xuất) | O | – | V |
+| 13. Quản lý Tài sản | F | F | V | – | – | – | V | O | F | V |
+| 14. Career & Talent | F | F | F | – | – | V | A (đề xuất) | O | – | V |
+| 16. Offboarding | F | F | F | – | V (final pay) | V | A (đơn vị) | O (đơn xin) | F (thu hồi tài sản) | V |
+| 17. ESS (Tự phục vụ) | – | – | – | – | – | – | – | F (cá nhân) | – | – |
+| 18. Workflow/Approval | F | F | V | – | – | – | A (theo ma trận) | – (tạo request) | – | V |
+| 19. Thông báo nội bộ | F | F | V | – | – | – | V | V (nhận) | V | – |
+| 20. Báo cáo & Phân tích | F | F | F (mảng) | V (tuyển dụng) | V (lương) | F (toàn cty) | V (đơn vị) | – | V (tài sản) | F |
+| 21. Quản trị hệ thống | F | – | – | – | – | – | – | – | V (phân bổ) | V (audit log) |
+| 31. Talent Marketplace | F | F | F | – | – | V | A (dự án) | O (ứng tuyển) | – | V |
+| 35. Compliance Radar | F | F (Legal) | V | – | V | V | – | – | – | F (view) |
+| 36. Ứng lương linh hoạt | F | V | – | – | F | V | – | O (yêu cầu) | – | V |
+| 39. AI 1-1 Assistant | F | – | – | – | – | – | F (đơn vị) | O (của mình) | – | – |
+| 42. Sơ đồ chỗ ngồi | F | F | F | – | – | – | V (đơn vị) | O (xem/hotdesk) | F (layout/ghế) | – |
 
 ---
 
@@ -79,7 +79,8 @@ Ký hiệu: **F** = Full (CRUD) · **A** = Approve/Xử lý · **V** = View only
 
 - **Interview Management (2.1, mở rộng Module 02):** dùng lại nguyên role **Interviewer** đã có — chỉ mở rộng phạm vi: Interviewer giờ chấm điểm theo Scorecard (`interview_kits`) thay vì nhận xét tự do, quyền vẫn giới hạn "chỉ các buổi phỏng vấn được gán" như cũ.
 - **Module 42 (Seating Chart):** không tạo role mới — dùng **HR Admin/IT Admin** cho việc thiết kế sơ đồ (Layout Editor), **Dept Manager/Team Leader** chỉ xem (V) khu vực phòng/team mình để hỗ trợ định hướng nhân viên mới. Nếu công ty có bộ phận Hành chính/Facility riêng biệt với HR, cân nhắc thêm role **Facility Admin** (F trên Module 42, V trên Module 01/04) thay vì gán toàn quyền cho HR Admin.
-- **Module 40 (Manager Effectiveness Score):** Dept Manager/Team Leader chỉ xem điểm **của chính mình** (O), không xem được điểm của manager khác — tránh so sánh trực tiếp gây tiêu cực nội bộ; chỉ HR Admin/Executive mới xem bảng so sánh toàn công ty.
+- **Manager Effectiveness Score (Đã gộp vào Module 20):** Dept Manager/Team Leader chỉ xem điểm **của chính mình** (O), không xem được điểm của manager khác — tránh so sánh trực tiếp gây tiêu cực nội bộ; chỉ HR Admin/Executive mới xem bảng so sánh toàn công ty. Cấu hình trọng số chỉ dành cho Super Admin/HR Admin.
+- **What-if Org Simulation (Đã gộp vào Module 01):** Quyền tạo/chạy kịch bản mô phỏng và áp dụng vào sơ đồ thật chỉ dành riêng cho **Super Admin & HR Admin** (F), **Executive** (V để xem báo cáo tác động).
 - **Module 39 (AI 1-1 Assistant):** dữ liệu ghi âm/tóm tắt chỉ 2 bên (manager + nhân viên) truy cập — kể cả HR Admin mặc định không có quyền V trừ khi có khiếu nại chính thức cần can thiệp (ghi nhận qua Module 12 Grievance).
 - **Module 35 (Compliance Radar):** nên giới hạn F cho HR Specialist mảng C&B/Legal thay vì mọi HR Specialist, tương tự nguyên tắc tách bạch Payroll ở mục 3.4.
 

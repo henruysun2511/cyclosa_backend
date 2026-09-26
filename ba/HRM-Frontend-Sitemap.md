@@ -27,6 +27,7 @@
 | Quản lý phòng ban / nhóm | CRUD Department và Team | Bảng danh sách phân cấp, form thêm/sửa (tên, phòng ban cha, trưởng phòng/nhóm), modal xác nhận xóa | Super Admin, HR Admin |
 | Quản lý chức danh & cấp bậc | CRUD Position và Job Level | 2 tab: Chức danh (gắn phòng ban + cấp bậc) và Cấp bậc (thứ tự rank), bảng danh sách, form thêm/sửa | Super Admin, HR Admin |
 | Quản lý Cost Center | CRUD trung tâm chi phí phục vụ phân bổ lương | Bảng danh sách, form thêm/sửa | Super Admin, HR Admin |
+| Mô phỏng tái cơ cấu (What-if Scenario) | Thiết kế & so sánh kịch bản tái cơ cấu (gộp từ Module 41) | Canvas kéo-thả sơ đồ tổ chức, bảng so sánh kịch bản, tính toán tác động chi phí/nhân sự, nút Apply | Super Admin, HR Admin |
 
 ### Module 02 — Tuyển dụng
 
@@ -106,6 +107,7 @@
 | Bảng tính lương chi tiết (kỳ lương) | Xem/duyệt kết quả tính lương toàn bộ nhân viên trong 1 kỳ | Bảng lưới (nhân viên x các khoản lương), nút chạy tính lương, nút duyệt, xuất file chuyển khoản | Payroll/Accountant, HR Admin |
 | Danh sách yêu cầu ứng lương | Duyệt Salary Advance | Bảng danh sách chờ duyệt, nút duyệt/từ chối | Payroll/Accountant, Dept Manager |
 | Phiếu lương (Payslip viewer) | Xem chi tiết phiếu lương của 1 nhân viên trong 1 kỳ | Bảng chi tiết các khoản thu nhập/khấu trừ, nút tải PDF | Payroll/Accountant, HR Admin, Employee (bản thân qua ESS) |
+| Rà soát bất thường bảng lương | Xem danh sách anomaly kiểm tra rủi ro trước khi duyệt chi trả (gộp từ Module 37) | Bảng danh sách cảnh báo kèm mức rủi ro, chi tiết lý do, nút xác nhận giải trình/yêu cầu điều chỉnh | Payroll/Accountant, HR Admin |
 
 ### Module 09 — Quản lý Hiệu suất
 
@@ -117,21 +119,11 @@
 | Trang đánh giá của quản lý (Manager review) | Quản lý chấm điểm nhân viên | Danh sách nhân viên cần đánh giá, form nhập điểm + nhận xét, xem self-review đối chiếu | Dept Manager, Team Leader |
 | Kết quả đánh giá hiệu suất | Xem tổng hợp điểm cuối cùng | Bảng điểm theo nhân viên/phòng ban, biểu đồ phân bổ rating, nút chốt điểm (finalize) | HR Admin, Dept Manager (xem team) |
 
-### Module 10 — Đào tạo & Phát triển
+### Module 10 — ~~Đào tạo & Phát triển~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai. Việc số hóa chứng chỉ nhân viên được tích hợp trực tiếp vào màn hình Hồ sơ nhân viên / Onboarding (mục Documents).*
 
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh sách chương trình đào tạo | Quản lý Training Program và ngân sách | Bảng danh sách, form thêm/sửa (nhà cung cấp, ngân sách) | HR Admin, HR Specialist |
-| Chi tiết khóa học & đăng ký | Quản lý Course, danh sách học viên đăng ký, điểm danh | Thông tin khóa học, bảng danh sách đăng ký kèm trạng thái điểm danh | HR Admin, HR Specialist |
-| Danh sách chứng chỉ nhân viên | Theo dõi Certification đã cấp, cảnh báo sắp hết hạn | Bảng danh sách, bộ lọc theo nhân viên/loại chứng chỉ | HR Admin |
-
-### Module 11 — Phúc lợi
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh sách gói phúc lợi | CRUD Benefit Plan | Bảng danh sách, form thêm/sửa | HR Admin |
-| Danh sách đăng ký phúc lợi | Duyệt Benefit Enrollment | Bảng danh sách chờ duyệt, nút duyệt | HR Admin |
-| Danh sách yêu cầu chi trả (Claims) | Duyệt Benefit Claim kèm chứng từ | Bảng danh sách, xem file chứng từ đính kèm, nút duyệt/từ chối | HR Admin, Payroll/Accountant |
+### Module 11 — ~~Phúc lợi~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai. Các chế độ phúc lợi tiền tệ, phụ cấp và bảo hiểm được tích hợp trực tiếp vào màn hình Quản lý Hợp đồng & Bảng lương.*
 
 ### Module 12 — Khen thưởng & Kỷ luật
 
@@ -156,14 +148,10 @@
 | Sơ đồ lộ trình thăng tiến | Xem/cấu hình Career Path giữa các vị trí | Sơ đồ dạng cây/luồng giữa các chức danh | HR Admin, Dept Manager (view) |
 | Kế hoạch kế nhiệm | Quản lý Succession Plan cho vị trí trọng yếu | Bảng danh sách vị trí trọng yếu kèm mức rủi ro, danh sách ứng viên kế nhiệm gắn mức độ sẵn sàng | HR Admin, Executive (view) |
 | Talent Pool nội bộ | Theo dõi nhân sự tiềm năng | Bảng danh sách, gắn thẻ/tag, ghi chú | HR Admin, Dept Manager |
+| Xu hướng & Mô phỏng thăng tiến | Xem tổng hợp xu hướng thăng tiến và mô phỏng lộ trình (gộp từ Module 32) | Biểu đồ Sankey/dòng chảy vị trí, bộ lọc phòng ban, kịch bản lộ trình | HR Admin, Executive |
 
-### Module 15 — Khảo sát & Gắn kết
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh sách khảo sát | Quản lý Survey | Bảng danh sách kèm trạng thái, tỷ lệ phản hồi | HR Admin |
-| Tạo khảo sát | Soạn bộ câu hỏi khảo sát | Form builder kéo-thả câu hỏi (thang điểm/chọn 1/chọn nhiều/tự luận), cấu hình đối tượng và thời gian | HR Admin |
-| Kết quả khảo sát | Xem báo cáo tổng hợp và eNPS | Biểu đồ điểm trung bình theo câu hỏi, chỉ số eNPS, bộ lọc theo phòng ban | HR Admin, Executive |
+### Module 15 — ~~Khảo sát & Gắn kết~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai. Doanh nghiệp sử dụng công cụ khảo sát chuyên dụng bên ngoài.*
 
 ### Module 16 — Nghỉ việc
 
@@ -192,6 +180,7 @@
 | Báo cáo Phễu tuyển dụng | Số lượng ứng viên qua từng giai đoạn | Biểu đồ phễu (funnel chart), bảng chi tiết theo vị trí | HR Admin, Recruiter, Executive |
 | Báo cáo Tỷ lệ nghỉ việc (Turnover) | Turnover rate theo thời gian/phòng ban/lý do | Biểu đồ đường, bảng phân loại theo lý do nghỉ | HR Admin, Executive |
 | Báo cáo Phân bổ hiệu suất | Phân bổ rating hiệu suất toàn công ty | Biểu đồ cột/phân phối theo rating, bộ lọc phòng ban | HR Admin, Executive |
+| Báo cáo Hiệu quả Quản lý (Manager Effectiveness) | So sánh điểm hiệu quả quản lý, breakdown chỉ số (turnover, duyệt đơn, họp 1-1, KPI team) | Bảng xếp hạng manager, biểu đồ breakdown từng chỉ số, form slider/cấu hình trọng số (gộp từ Module 40) | HR Admin, Executive, Super Admin |
 
 ### Module 21 — Quản trị Hệ thống
 
@@ -216,34 +205,14 @@
 | Danh sách người quan tâm | Xem nhân viên đã Express Interest cho 1 cơ hội | Bảng danh sách kèm % match kỹ năng, nút shortlist/chọn | HR Admin, Dept Manager |
 | Thống kê Marketplace | Tỷ lệ tham gia, tỷ lệ thành công theo thời gian | Biểu đồ xu hướng, bảng theo phòng ban | HR Admin, Executive |
 
-### Module 32 — Career Pathing Simulator
+### Module 32 — ~~Career Pathing Simulator~~ *[ĐÃ GỘP VÀO MODULE 14]*
+> *Module đã được hợp nhất hoàn toàn vào Module 14 (Phát triển Nhân sự). Màn hình xu hướng thăng tiến và mô phỏng lộ trình được quản lý tập trung trong phân hệ Career & Talent.*
 
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Xu hướng thăng tiến theo phòng ban | Xem tổng hợp lộ trình phổ biến để quy hoạch nhân sự | Biểu đồ Sankey/dòng chảy vị trí, bộ lọc phòng ban | HR Admin, Executive |
+### Module 33 — ~~Skill Graph & Gap Analysis~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai. Đánh giá năng lực tích hợp qua KPI/Goal & 360 Feedback ở Module 09.*
 
-### Module 33 — Skill Graph & Gap Analysis
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh mục kỹ năng (Skill Taxonomy) | CRUD Skill Category và Skill | Bảng danh sách phân nhóm, form thêm/sửa | HR Admin |
-| Yêu cầu kỹ năng theo vị trí | Gán Required Skills cho từng Position | Form chọn kỹ năng + mức yêu cầu | HR Admin, Dept Manager |
-| Bản đồ nhiệt kỹ năng | Xem khoảng trống kỹ năng toàn công ty/phòng ban | Heatmap theo phòng ban x kỹ năng, top gap, gợi ý khóa đào tạo | HR Admin, Dept Manager (phòng mình), Executive |
-
-### Module 34 — Alumni Network
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh sách Alumni | Quản lý cựu nhân viên đủ điều kiện/đã opt-in | Bảng danh sách, bộ lọc trạng thái, nút mời tham gia | HR Admin, Recruiter |
-| Boomerang Candidates | Xem alumni phù hợp với vị trí đang mở | Bảng gợi ý match, nút liên hệ | HR Admin, Recruiter |
-
-### Alumni Portal (bên ngoài, giống Candidate Portal)
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Trang chủ Alumni | Xem tin công ty, tin tuyển dụng công khai | Bản tin, danh sách job posting | Alumni (opted-in) |
-| Cập nhật thông tin liên hệ | Alumni tự cập nhật email/SĐT/tình trạng công việc | Form thông tin cá nhân | Alumni |
-| Giới thiệu ứng viên | Alumni giới thiệu người quen ứng tuyển | Form nhập thông tin người được giới thiệu + vị trí | Alumni |
+### Module 34 — ~~Alumni Network~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai. Doanh nghiệp không triển khai mạng xã hội cựu nhân viên độc lập.*
 
 ### Module 35 — Compliance Radar
 
@@ -259,17 +228,11 @@
 | Danh sách yêu cầu ứng lương | Duyệt/theo dõi Wage Access Request | Bảng danh sách, bộ lọc trạng thái, nút duyệt/giải ngân | HR Admin, Payroll/Accountant |
 | Báo cáo chương trình ứng lương | Tần suất sử dụng, tổng chi phí | Biểu đồ, bảng tổng hợp | Payroll/Accountant, Executive |
 
-### Module 37 — Payroll Anomaly Detection
+### Module 37 — ~~Payroll Anomaly Detection~~ *[ĐÃ GỘP VÀO MODULE 08]*
+> *Module đã được hợp nhất hoàn toàn vào Module 08 (Tiền lương). Màn hình rà soát bất thường bảng lương được tích hợp trực tiếp vào phân hệ quản lý kỳ lương.*
 
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Cảnh báo bất thường bảng lương | Xem danh sách anomaly trước khi duyệt chi trả | Bảng danh sách kèm mức rủi ro, chi tiết lý do, nút xác nhận/yêu cầu điều chỉnh | Payroll/Accountant, HR Admin |
-
-### Module 38 — Time-off Donation
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Danh sách yêu cầu chia sẻ phép | Duyệt điều kiện nhận, theo dõi tiến độ quyên góp | Bảng danh sách, thanh tiến độ số ngày đã nhận/cần | HR Admin |
+### Module 38 — ~~Time-off Donation~~ *[ĐÃ LƯỢC BỎ]*
+> *Module đã được lược bỏ khỏi phạm vi triển khai do không phù hợp quy định Điều 113-114 Bộ luật Lao động 2019.*
 
 ### Module 39 — AI Meeting/1-1 Assistant
 
@@ -277,18 +240,11 @@
 |---|---|---|---|
 | Lịch sử 1-1 & Action Items | Manager xem lại các buổi 1-1 đã tổ chức với nhân viên | Danh sách buổi họp, tóm tắt AI, danh sách action items kèm trạng thái | Dept Manager, Team Leader |
 
-### Module 40 — Manager Effectiveness Score
+### Module 40 — ~~Manager Effectiveness Score~~ *[ĐÃ GỘP VÀO MODULE 20]*
+> *Module đã được hợp nhất hoàn toàn vào Module 20 (Báo cáo & Phân tích). Màn hình Dashboard hiệu quả quản lý và cấu hình trọng số chỉ số được tích hợp trực tiếp vào phân hệ báo cáo quản trị.*
 
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Dashboard hiệu quả quản lý | So sánh điểm giữa các manager, xu hướng theo thời gian | Bảng xếp hạng, biểu đồ breakdown từng chỉ số | HR Admin, Executive |
-| Cấu hình trọng số | Chỉnh trọng số từng chỉ số cấu thành điểm | Form slider/nhập % trọng số | Super Admin, HR Admin |
-
-### Module 41 — What-if Org Simulation
-
-| Trang | Mô tả | Thành phần chính | Vai trò truy cập |
-|---|---|---|---|
-| Trình mô phỏng tái cơ cấu | Kéo-thả thử nghiệm thay đổi tổ chức, xem tác động | Canvas kéo-thả org chart, panel tác động (chi phí, số người ảnh hưởng), so sánh nhiều kịch bản, nút áp dụng thật | HR Admin, Executive |
+### Module 41 — ~~What-if Org Simulation~~ *[ĐÃ GỘP VÀO MODULE 01]*
+> *Module đã được hợp nhất hoàn toàn vào Module 01 (Cơ cấu Tổ chức). Màn hình Trình mô phỏng tái cơ cấu và so sánh kịch bản tổ chức được tích hợp trực tiếp vào phân hệ quản lý sơ đồ tổ chức.*
 
 ### Module 42 — Quản lý Sơ đồ Chỗ ngồi
 
@@ -311,16 +267,11 @@
 | Nghỉ phép của tôi | Xem số dư và tạo đơn xin nghỉ | Widget số dư theo loại phép, form tạo đơn, danh sách đơn đã gửi kèm trạng thái | Employee |
 | Hợp đồng của tôi | Xem hợp đồng hiện tại và lịch sử | Thông tin hợp đồng, file PDF viewer | Employee |
 | Phiếu lương của tôi | Xem/tải phiếu lương các kỳ | Danh sách kỳ lương, chi tiết từng khoản, nút tải PDF | Employee |
-| Phúc lợi của tôi | Xem phúc lợi đang hưởng, gửi yêu cầu chi trả | Danh sách gói đang tham gia, form gửi claim kèm chứng từ | Employee |
 | Yêu cầu của tôi | Trang tổng hợp mọi loại yêu cầu đã gửi (nghỉ phép, OT, ứng lương, điều chỉnh công...) | Danh sách gộp theo loại, trạng thái xử lý, timeline duyệt | Employee |
-| Đào tạo của tôi | Xem khóa học đã đăng ký, chứng chỉ đã đạt | Danh sách khóa học + trạng thái, danh sách chứng chỉ | Employee |
 | Đánh giá hiệu suất của tôi | Xem Goal, thực hiện tự đánh giá, xem kết quả | Danh sách goal, form self-review, kết quả đánh giá các kỳ trước | Employee |
-| Khảo sát của tôi | Trả lời khảo sát đang mở | Danh sách khảo sát đang mở, form trả lời câu hỏi | Employee |
-| Cơ hội nội bộ | Xem/ứng tuyển cơ hội nội bộ phù hợp (Module 31) | Danh sách cơ hội gợi ý theo skill profile, nút "Express Interest" | Employee |
-| Lộ trình sự nghiệp của tôi | Xem gợi ý Career Path dựa trên hồ sơ tương tự (Module 32) | Sơ đồ lộ trình gợi ý, kỹ năng còn thiếu, nút lưu lộ trình quan tâm | Employee |
-| Hồ sơ kỹ năng của tôi | Tự khai báo/xem Skill Profile (Module 33) | Danh sách kỹ năng + mức độ, nút thêm kỹ năng | Employee |
+| Cơ hội nội bộ | Xem/ứng tuyển cơ hội nội bộ phù hợp (Module 31) | Danh sách cơ hội gợi ý theo phòng ban/vị trí, nút "Express Interest" | Employee |
+| Lộ trình sự nghiệp của tôi | Xem gợi ý Career Path dựa trên hồ sơ tương tự (Module 14) | Sơ đồ lộ trình gợi ý theo thâm niên/hiệu suất, nút lưu lộ trình quan tâm | Employee |
 | Ứng lương của tôi | Xem số dư khả dụng, tạo yêu cầu ứng lương (Module 36) | Widget số dư, form tạo yêu cầu, lịch sử đã ứng | Employee |
-| Chia sẻ ngày phép | Tặng phép cho đồng nghiệp hoặc tạo yêu cầu nhận hỗ trợ (Module 38) | Danh sách yêu cầu đang mở (ẩn danh tùy chọn), form tặng ngày phép, form tạo yêu cầu | Employee |
 | Buổi 1-1 của tôi | Xem lịch sử 1-1 với manager, action items (Module 39) | Danh sách buổi họp, tóm tắt, action items kèm trạng thái hoàn thành | Employee |
 | Sơ đồ chỗ ngồi | Tìm vị trí đồng nghiệp, đặt hot-desk (Module 42) | Sơ đồ tương tác (pan/zoom), tìm kiếm theo tên → highlight ghế, tô màu theo phòng ban, form đặt hot-desk theo ngày, nút check-in | Employee |
 

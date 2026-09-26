@@ -346,38 +346,13 @@ Với lỗi validate nhiều trường cùng lúc, trả về mảng `errors`:
 
 ---
 
-## 11. Module 10 — Đào tạo & Phát triển
-
-### `POST /api/v1/training-registrations` — Đăng ký khóa học
-
-**Validate nghiệp vụ:**
-| Kiểm tra | Lỗi trả về |
-|---|---|
-| `course_id` tồn tại và `start_date` chưa tới | 404 `COURSE_NOT_FOUND` / 422 `REGISTRATION_CLOSED` |
-| Số lượng đăng ký hiện tại (`status IN (registered, attended)`) chưa đạt `capacity` | 422 `COURSE_FULL` |
-| Nhân viên chưa đăng ký khóa này trước đó (tránh trùng) | 409 `ALREADY_REGISTERED` |
+## 11. Module 10 — ~~Đào tạo & Phát triển~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Module đã được loại bỏ để tinh gọn hệ thống.*
 
 ---
 
-## 12. Module 11 — Phúc lợi
-
-### `POST /api/v1/benefit-enrollments` — Đăng ký phúc lợi
-
-**Validate nghiệp vụ:**
-| Kiểm tra | Lỗi trả về |
-|---|---|
-| `benefit_plan_id` tồn tại | 404 `BENEFIT_PLAN_NOT_FOUND` |
-| Nhân viên chưa có `enrollment` khác đang `active` cho cùng `benefit_plan_id` | 409 `ALREADY_ENROLLED` |
-| Nếu có `dependent_id`: phải thuộc đúng nhân viên đang đăng ký | 404 `DEPENDENT_NOT_FOUND` / 403 `DEPENDENT_OWNERSHIP_MISMATCH` |
-| Nhân viên phải đã qua thời gian thử việc nếu `benefit_plan` yêu cầu | 422 `EMPLOYEE_STILL_ON_PROBATION` |
-
-### `POST /api/v1/benefit-claims` — Yêu cầu chi trả
-
-**Validate nghiệp vụ:**
-| Kiểm tra | Lỗi trả về |
-|---|---|
-| `benefit_enrollment_id` phải đang `active` | 422 `ENROLLMENT_NOT_ACTIVE` |
-| `amount` không được vượt hạn mức còn lại của gói trong năm (tổng các claim `approved` trước đó + claim hiện tại) | 422 `CLAIM_EXCEEDS_ANNUAL_LIMIT` |
+## 12. Module 11 — ~~Phúc lợi~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Module đã được loại bỏ để tinh gọn hệ thống.*
 
 ---
 
@@ -426,16 +401,8 @@ Với lỗi validate nhiều trường cùng lúc, trả về mảng `errors`:
 
 ---
 
-## 16. Module 15 — Khảo sát & Gắn kết
-
-### `POST /api/v1/surveys/{id}/responses` — Nộp câu trả lời khảo sát
-
-**Validate nghiệp vụ:**
-| Kiểm tra | Lỗi trả về |
-|---|---|
-| Survey phải đang `status = active` và trong khoảng `start_date`-`end_date` | 422 `SURVEY_NOT_ACTIVE` |
-| Nếu `is_anonymous = false`: nhân viên chỉ được trả lời 1 lần/survey | 409 `ALREADY_RESPONDED` |
-| Phải trả lời đủ toàn bộ câu hỏi bắt buộc | 422 `INCOMPLETE_ANSWERS` (kèm `details.missing_question_ids`) |
+## 16. Module 15 — ~~Khảo sát & Gắn kết~~ *[ĐÃ LƯỢC BỎ KHỎI SCOPE]*
+> *Module đã được loại bỏ khỏi phạm vi triển khai để tinh gọn hệ thống.*
 
 ---
 

@@ -69,6 +69,7 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 03. Onboarding
                 p("onboarding.view", "onboarding", "view", "Xem quy trình onboarding"),
+                p("onboarding.view_own", "onboarding", "view_own", "Xem tiến trình onboarding của bản thân"),
                 p("onboarding.manage", "onboarding", "manage", "Quản lý tiến trình onboarding và cấp tài khoản/thiết bị"),
 
                 // 04. Employee
@@ -127,8 +128,28 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 09. Performance
                 p("performance.view", "performance", "view", "Xem KPI, mục tiêu và kết quả đánh giá"),
+                p("performance.view_own", "performance", "view_own", "Xem phiếu đánh giá hiệu suất của chính mình"),
                 p("performance.evaluate", "performance", "evaluate", "Đánh giá hiệu suất nhân viên"),
                 p("performance.manage", "performance", "manage", "Tạo chu kỳ và cấu hình đánh giá hiệu suất"),
+                p("performance.cycle.view", "performance", "view", "Xem danh sách chu kỳ đánh giá hiệu suất"),
+                p("performance.cycle.manage", "performance", "manage", "Quản lý chu kỳ đánh giá hiệu suất"),
+                p("performance.kpi.view", "performance", "view", "Xem danh mục chỉ số KPI"),
+                p("performance.kpi.manage", "performance", "manage", "Quản lý danh mục chỉ số KPI"),
+
+                // 12. Reward & Discipline
+                p("reward.view", "reward", "view", "Xem danh sách khen thưởng"),
+                p("reward.manage", "reward", "manage", "Tạo và quản lý quyết định khen thưởng"),
+                p("discipline.view", "discipline", "view", "Xem hồ sơ kỷ luật và khiếu nại"),
+                p("discipline.manage", "discipline", "manage", "Lập hồ sơ và ban hành quyết định kỷ luật"),
+                p("grievance.view", "discipline", "view", "Xem danh sách và chi tiết khiếu nại"),
+                p("grievance.apply", "discipline", "apply", "Tạo và gửi đơn khiếu nại cá nhân"),
+                p("grievance.manage", "discipline", "manage", "Tiếp nhận, xử lý và giải quyết khiếu nại"),
+
+                // 16. Offboarding
+                p("offboarding.view", "offboarding", "view", "Xem danh sách thủ tục thôi việc"),
+                p("offboarding.view_own", "offboarding", "view_own", "Xem đơn và tiến trình thôi việc của tôi"),
+                p("offboarding.manage", "offboarding", "manage", "Quản lý và điều phối thủ tục thôi việc"),
+                p("offboarding.approve", "offboarding", "approve", "Duyệt đơn thôi việc và xác nhận bàn giao"),
 
                 // 13. Asset
                 p("asset.view", "asset", "view", "Xem danh mục tài sản thiết bị"),
@@ -168,7 +189,17 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
 
                 // 19. Notification
                 p("notification.view", "notification", "view", "Xem danh sách và đánh dấu đọc thông báo cá nhân"),
-                p("notification.manage", "notification", "manage", "Quản trị và gửi thông báo hệ thống")
+                p("notification.manage", "notification", "manage", "Quản trị và gửi thông báo hệ thống"),
+
+                // 14. Career & Talent
+                p("career_path.view", "talent", "view", "Xem danh sách và chi tiết lộ trình thăng tiến chuẩn"),
+                p("career_path.manage", "talent", "manage", "Tạo, cập nhật, xóa lộ trình thăng tiến chuẩn"),
+                p("succession.view", "talent", "view", "Xem danh sách và chi tiết kế hoạch kế nhiệm"),
+                p("succession.manage", "talent", "manage", "Lập kế hoạch kế nhiệm, thêm/sửa/xóa ứng viên kế nhiệm"),
+                p("talent_pool.view", "talent", "view", "Xem danh sách hồ sơ trong kho nhân tài nội bộ"),
+                p("talent_pool.manage", "talent", "manage", "Đưa nhân sự vào/ra kho nhân tài và cập nhật thông tin"),
+                p("career_simulation.view", "talent", "view", "Xem gợi ý mô phỏng lộ trình và xu hướng thăng tiến"),
+                p("career_simulation.manage", "talent", "manage", "Lưu và quản lý kịch bản mô phỏng lộ trình sự nghiệp")
         );
 
         Map<String, Permission> map = new HashMap<>();
@@ -222,8 +253,10 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                     "leave.view", "leave.apply",
                     "contract.view",
                     "workflow.view", "workflow.delegate",
-                    "payroll.view", "payroll.advance", "performance.view",
-                    "asset.view_own", "notification.view"
+                    "payroll.view", "payroll.advance", "performance.view", "performance.view_own",
+                    "asset.view_own", "notification.view", "offboarding.view_own", "onboarding.view_own",
+                    "reward.view", "discipline.view", "grievance.apply", "grievance.view",
+                    "career_path.view", "career_simulation.view", "career_simulation.manage"
             );
             for (String code : empPermCodes) {
                 Permission p = permMap.get(code);
@@ -234,23 +267,58 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
             rolePermissionRepository.saveAll(rps);
         }
 
-        Role deptManager = roleMap.get("DEPARTMENT_MANAGER");
-        if (deptManager != null && rolePermissionRepository.findByRoleId(deptManager.getId()).isEmpty()) {
+        Role manager = roleMap.get("MANAGER");
+        if (manager != null && rolePermissionRepository.findByRoleId(manager.getId()).isEmpty()) {
             List<RolePermission> rps = new ArrayList<>();
-            List<String> dmPermCodes = List.of(
+            List<String> mgrPermCodes = List.of(
                     "employee.view", "attendance.view", "attendance.view_own", "attendance.approve",
                     "attendance.shift.view", "attendance.schedule.view", "attendance.record.view",
                     "attendance.explain.view", "attendance.timesheet.view",
                     "leave.view", "leave.approve", "contract.view",
                     "payroll.view", "payroll.advance",
-                    "performance.view", "performance.evaluate",
+                    "performance.view", "performance.evaluate", "performance.cycle.view", "performance.kpi.view",
                     "recruitment.request", "workflow.view", "workflow.approve", "workflow.delegate",
-                    "notification.view"
+                    "notification.view",
+                    "reward.view", "discipline.view", "grievance.view", "offboarding.view", "offboarding.approve",
+                    "onboarding.view",
+                    "career_path.view", "succession.view", "succession.manage", "talent_pool.view", "career_simulation.view"
             );
-            for (String code : dmPermCodes) {
+            for (String code : mgrPermCodes) {
                 Permission p = permMap.get(code);
                 if (p != null) {
-                    rps.add(RolePermission.builder().role(deptManager).permission(p).dataScope(DataScope.DEPARTMENT).build());
+                    rps.add(RolePermission.builder().role(manager).permission(p).dataScope(DataScope.DEPARTMENT).build());
+                }
+            }
+            rolePermissionRepository.saveAll(rps);
+        }
+
+        Role officeAdmin = roleMap.get("OFFICE_ADMIN");
+        if (officeAdmin != null && rolePermissionRepository.findByRoleId(officeAdmin.getId()).isEmpty()) {
+            List<RolePermission> rps = new ArrayList<>();
+            List<String> officePermCodes = List.of(
+                    "asset.view", "asset.create", "asset.update", "asset.manage",
+                    "asset.assign", "asset.allocate", "asset.return", "asset.inventory",
+                    "employee.view", "notification.view"
+            );
+            for (String code : officePermCodes) {
+                Permission p = permMap.get(code);
+                if (p != null) {
+                    rps.add(RolePermission.builder().role(officeAdmin).permission(p).dataScope(DataScope.COMPANY).build());
+                }
+            }
+            rolePermissionRepository.saveAll(rps);
+        }
+
+        Role auditor = roleMap.get("AUDITOR");
+        if (auditor != null && rolePermissionRepository.findByRoleId(auditor.getId()).isEmpty()) {
+            List<RolePermission> rps = new ArrayList<>();
+            List<String> auditorPermCodes = List.of(
+                    "audit.view", "admin.audit.view", "report.view", "notification.view"
+            );
+            for (String code : auditorPermCodes) {
+                Permission p = permMap.get(code);
+                if (p != null) {
+                    rps.add(RolePermission.builder().role(auditor).permission(p).dataScope(DataScope.ALL).build());
                 }
             }
             rolePermissionRepository.saveAll(rps);

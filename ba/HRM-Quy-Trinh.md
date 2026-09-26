@@ -51,7 +51,7 @@
 | 24 | Chạy kỳ lương (mở kỳ → tính → duyệt → phát hành) | 08 | Admin/Payroll | ✅ (bước rà soát & phê duyệt HR trưởng) | 10 bước, batch processing toàn công ty |
 | 25 | Ứng lương (Salary Advance) | 08 | Nhân viên | ✅ | |
 | 26 | Ứng lương linh hoạt (Earned Wage Access) | 36 | Nhân viên | ⚙️ | Tự động duyệt nếu trong hạn mức, qua Workflow nếu vượt ngưỡng |
-| 27 | Quét bất thường bảng lương (Anomaly Scan) | 37 | Hệ thống (tự động sau khi tính lương) | ❌ | HR/Kế toán xác nhận thủ công, không phải luồng duyệt chuẩn |
+| 27 | Quét bất thường bảng lương (Anomaly Scan) | 08 | Hệ thống (tự động sau khi tính lương) | ❌ | HR/Kế toán xác nhận thủ công trước khi duyệt chốt kỳ lương |
 | 28 | Đối soát & xuất Bank Transfer file | 08 | Payroll/Accountant | ❌ | |
 
 ## 5. Hiệu suất & Phát triển
@@ -61,32 +61,23 @@
 | 29 | Chu kỳ đánh giá hiệu suất (Goal → Self Review → Manager Review → Evaluation) | 09 | HR (mở cycle), Nhân viên/Manager (thực hiện) | ❌ | Có bước "calibration" tổng hợp, không phải Workflow approval chuẩn |
 | 30 | 360-Degree Feedback | 09 | HR/Manager | ❌ | |
 | 31 | Coaching/Mentoring Session | 09 | Manager/Coach | ❌ | |
-| 32 | Đăng ký khóa đào tạo | 10 | Nhân viên/HR | ❌ | Có thể duyệt nếu công ty yêu cầu (không bắt buộc trong tài liệu gốc) |
-| 33 | Cấp chứng chỉ (Certification) | 10 | HR | ❌ | |
 | 34 | Succession Planning & rà soát Candidate | 14 | HR | ❌ | |
 | 35 | Ứng tuyển cơ hội nội bộ (Talent Marketplace) | 31 | Nhân viên | ❌ (Express Interest tự do) | Manager mới tự chọn, không phải Workflow chuẩn |
-| 36 | Mô phỏng lộ trình sự nghiệp | 32 | Nhân viên (xem/lưu) | ❌ | Chỉ gợi ý, không phải quyết định |
-| 37 | Khai báo/xác nhận Skill Profile | 33 | Nhân viên/Manager | ❌ | |
+| 36 | Mô phỏng lộ trình sự nghiệp (Career Simulator) | 14 | Nhân viên (xem/lưu) | ❌ | Gợi ý tham khảo, tính năng mở rộng của Module 14 |
 | 38 | Buổi 1-1 & Action Items | 39 | Manager | ❌ | Cần consent ghi âm từ nhân viên |
-| 39 | Tính điểm Manager Effectiveness | 40 | Hệ thống (định kỳ) | ❌ | Chỉ gợi ý coaching, không tự động kỷ luật |
+| 39 | Tính điểm Manager Effectiveness | 20 (gộp từ 40) | Hệ thống (định kỳ) | ❌ | Chỉ gợi ý coaching, không tự động kỷ luật |
 
-## 6. Phúc lợi & Đãi ngộ
+## 6. Phúc lợi & Đãi ngộ *[ĐÃ LƯỢC BỎ]*
 
-| # | Quy trình | Module | Người khởi tạo | Qua Workflow? | Ghi chú |
-|---|---|---|---|---|---|
-| 40 | Đăng ký Benefit Plan | 11 | Nhân viên | ❌ | HR duyệt trực tiếp (không phải Workflow Engine chuẩn) |
-| 41 | Yêu cầu chi trả Benefit Claim | 11 | Nhân viên | ❌ | Kèm chứng từ |
-| 42 | Khám sức khỏe định kỳ | 11.2 | HR | ❌ | |
-| 43 | Chia sẻ ngày phép (Time-off Donation) | 38 | Nhân viên (cần hỗ trợ) | ✅ | HR duyệt điều kiện nhận trước khi công bố |
+> *Lưu ý: Module 11 (Phúc lợi) và Module 38 (Chia sẻ ngày phép) đã được lược bỏ khỏi phạm vi triển khai. Phụ cấp và bảo hiểm xử lý trực tiếp tại Module 05 Contract & 08 Payroll.*
 
-## 7. Kỷ luật, Khiếu nại & Khảo sát
+## 7. Kỷ luật & Khiếu nại
 
 | # | Quy trình | Module | Người khởi tạo | Qua Workflow? | Ghi chú |
 |---|---|---|---|---|---|
 | 44 | Xử lý kỷ luật lao động | 12 | HR | ✅ | Bắt buộc đủ thành phần (NLĐ + công đoàn nếu có) mới ra quyết định |
 | 45 | Xóa kỷ luật tự động (hết thời hiệu) | 12.7 | Hệ thống (batch job) | ❌ | |
 | 46 | Xử lý khiếu nại (Grievance) | 12 | Nhân viên | ❌ | Có trạng thái open → investigating → resolved |
-| 47 | Khảo sát & thu thập eNPS | 15 | HR | ❌ | Gửi lời mời qua Notification (Module 19), không phải duyệt |
 
 ## 8. Tài sản & Không gian làm việc
 
@@ -98,7 +89,7 @@
 | 51 | Gán/giải phóng chỗ ngồi cố định | 42 | HR | ❌ | |
 | 52 | Đặt chỗ hot-desk theo ngày | 42 | Nhân viên | ❌ | Tự đặt, tự check-in qua ESS |
 
-## 9. Nghỉ việc & Sau nghỉ việc
+## 9. Nghỉ việc (Offboarding)
 
 | # | Quy trình | Module | Người khởi tạo | Qua Workflow? | Ghi chú |
 |---|---|---|---|---|---|
@@ -108,19 +99,14 @@
 | 56 | Khóa tài khoản IT | 16, 03 | IT Admin | ❌ | |
 | 57 | Tính lương cuối (Final Payroll) | 16, 08 | Payroll | ❌ | Gồm phép chưa dùng + trợ cấp |
 | 58 | Clearance từng phòng ban | 16 | Các phòng ban liên quan | ❌ | Xác nhận không nợ |
-| 59 | Đánh giá Alumni Eligibility & mời Alumni Portal | 34 | HR | ❌ | Sau khi Offboarding hoàn tất |
-| 60 | Boomerang hiring (tuyển lại Alumni) | 34 | HR/Recruiter | ❌ | Dùng lại luồng Recruitment (mục 1) |
 
-## 10. Công tác, Chính sách & Tuân thủ
+## 10. Tuân thủ Pháp lý (Compliance Radar)
 
 | # | Quy trình | Module | Người khởi tạo | Qua Workflow? | Ghi chú |
 |---|---|---|---|---|---|
-| 61 | Yêu cầu đi công tác (Business Trip) | 28 | Nhân viên | ✅ | Manager + HR duyệt |
-| 62 | Submit & duyệt chi phí công tác | 28 | Nhân viên → HR/Kế toán | ❌ | Có OCR (Module 25) hỗ trợ trích hóa đơn |
-| 63 | Hoàn tiền công tác (Reimbursement) | 28 | HR/Kế toán | ❌ | Cộng vào lương tháng sau |
-| 64 | Phát hành & xác nhận đã đọc Policy | 29 | HR | ❌ | Nhân viên tự "I agree", ghi log |
-| 65 | Xử lý yêu cầu từ cơ quan nhà nước | 29 | HR | ❌ | Theo dõi tiến độ, lưu bằng chứng nộp |
 | 66 | Rà soát ảnh hưởng thay đổi pháp luật (Compliance Radar) | 35 | Hệ thống/HR | ❌ | Gắn cờ cho HR xử lý trước deadline hiệu lực |
+
+> *Lưu ý: Module 29 (Quản lý Chính sách & Yêu cầu cơ quan nhà nước) đã được lược bỏ khỏi phạm vi triển khai để tinh gọn hệ thống. Doanh nghiệp lưu trữ chính sách trên kho đám mây dùng chung.*
 
 ## 11. Nền tảng dùng chung (không phải quy trình nghiệp vụ độc lập)
 
@@ -134,7 +120,7 @@
 | 72 | Import dữ liệu hàng loạt | 21 | Super Admin/HR Admin |
 | 73 | Nộp lưu kho hồ sơ (Archive Submission) | 22 | ✅ Qua Workflow (`request_type = records_archive_submission`) |
 | 74 | Đề xuất & duyệt hủy hồ sơ hết hạn lưu | 22 | ✅ Qua hội đồng xét duyệt (`committee_reviews`), không phải Workflow chuẩn |
-| 75 | Mô phỏng tái cơ cấu (What-if) | 41 | ❌ Chỉ thật sự tạo thay đổi khi "Apply" — lúc đó mới chạy lại quy trình tái cơ cấu chuẩn ở mục 2 |
+| 75 | Mô phỏng tái cơ cấu (What-if) | 01 (gộp từ 41) | ❌ Chỉ thật sự tạo thay đổi khi "Apply" — lúc đó mới chạy lại quy trình tái cơ cấu chuẩn ở mục 2 |
 
 ## 12. AI Features (chạy nền, hỗ trợ các quy trình trên)
 

@@ -249,6 +249,14 @@ public class LeaveRequestService {
         return res;
     }
 
+    @Transactional(readOnly = true)
+    public boolean isEmployeeOnApprovedLeave(UUID employeeId, LocalDate date) {
+        if (employeeId == null || date == null) {
+            return false;
+        }
+        return !requestRepository.findApprovedRequestsInRange(employeeId, date, date).isEmpty();
+    }
+
     @Transactional
     public LeaveRequestResponse approveLeaveRequest(UUID companyId, UUID id) {
         LeaveRequest entity = requestRepository.findById(id)
