@@ -29,6 +29,11 @@ public class ApiResponse<T> {
                 .success(true).code(200).message(message).data(data).build();
     }
 
+    public static <T> ApiResponse<T> created(T data) {
+        return ApiResponse.<T>builder()
+                .success(true).code(201).message("Created").data(data).build();
+    }
+
     public static <T> ApiResponse<T> created(T data, String message) {
         return ApiResponse.<T>builder()
                 .success(true).code(201).message(message).data(data).build();

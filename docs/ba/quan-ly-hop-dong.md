@@ -2,313 +2,176 @@
 
 > **Module Code:** `contract`  
 > **Package:** `com.cyclosa.contract`  
-> **Phiên bản:** 1.0  
-> **Căn cứ pháp lý:** 
-> - **Bộ luật Lao động 2019** (Luật số 45/2019/QH14)
-> - **Nghị định 145/2020/NĐ-CP** (Quy định chi tiết và hướng dẫn thi hành một số điều của BLLĐ về điều kiện lao động và quan hệ lao động)
-> - **Luật Bảo hiểm Xã hội 2014** (Luật số 58/2014/QH13) & **Luật Việc làm 2013** (Luật số 38/2013/QH13)
-> - Tài liệu kiến trúc BA: [ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md](file:///f:/Project/CYCLOSA/ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md) & [ba/HRM-API-Validation-Rules.md](file:///f:/Project/CYCLOSA/ba/HRM-API-Validation-Rules.md)
+> **Phiên bản:** 2.0 (Chuẩn hóa Backend Standards & Legal Automation)  
+> **Căn cứ pháp lý:**  
+> - **Bộ luật Lao động 2019** (Luật số 45/2019/QH14) — Chương III: Hợp đồng lao động (Điều 13 đến Điều 51).  
+> - **Nghị định 145/2020/NĐ-CP:** Quy định chi tiết điều kiện lao động, quan hệ lao động, tiền trợ cấp thôi việc & mất việc làm.  
+> - **Luật Bảo hiểm Xã hội 2014 & Luật Việc làm 2013:** Mức lương đóng BHXH bắt buộc, thời gian tham gia BHTN.  
+> - **Nghị định số 74/2024/NĐ-CP:** Mức lương tối thiểu vùng theo địa bàn chi nhánh làm việc.
 
 ---
 
-## 1. Tôn chỉ Nghiệp vụ & Nguyên tắc Thiết kế (Design Principles)
+## 1. Tôn chỉ Nghiệp vụ & Nguyên tắc Thiết kế (Core Principles)
 
-Trong hệ sinh thái CYCLOSA HRM, **Hợp đồng Lao động (HĐLĐ)** là cơ sở pháp lý cao nhất ràng buộc quyền lợi và nghĩa vụ giữa Người sử dụng lao động (NSDLĐ) và Người lao động (NLĐ).
+Trong hệ sinh thái **CYCLOSA HRM**, **Hợp đồng Lao động (HĐLĐ)** là cơ sở pháp lý cao nhất ràng buộc quyền lợi và nghĩa vụ giữa Người sử dụng lao động (NSDLĐ) và Người lao động (NLĐ).
 
+```
+┌─────────────────────────┐       ┌────────────────────────────────┐       ┌─────────────────────────┐
+│   Module 04: Employee   │       │  Module 05: Contract           │       │  Module 08: Payroll     │
+│  - Nhân viên tiếp nhận  │ ────> │  - Hợp đồng lao động, Phụ lục  │ ────> │  - Lương cơ bản đóng BH │
+│  - Vị trí, Chi nhánh    │       │  - Thẩm định cứng BLLĐ 2019    │       │  - Trợ cấp thôi việc    │
+└─────────────────────────┘       │  - Template Mail-Merge & E-Sign│       └─────────────────────────┘
+                                  └────────────────────────────────┘
+```
+
+### 1.1. Chuẩn hóa Thiết kế Không dùng Interface + Impl thừa thãi (Concrete Service Pattern)
+Theo chuẩn kiến trúc tại `docs/BACKEND_STANDARDS.md`:
+- Toàn bộ service của module được viết trực tiếp dưới dạng **Concrete Service**:
+  - `ContractService.java`: Service trung tâm duy nhất quản lý vòng đời hợp đồng, phụ lục, gia hạn, chấm dứt và tích hợp nghiệp vụ.
+  - `ContractTemplateService.java`: Quản lý kho mẫu hợp đồng động và cơ chế Mail-Merge.
+  - `ContractScheduler.java`: Job quét định kỳ hằng ngày lúc **01:30 AM** để phát hiện hợp đồng sắp hết hạn (30-45 ngày) và tự động chuyển đổi hợp đồng sau 30 ngày (Điều 20.2.b).
+  - `ContractLegalValidator.java`: Bộ thẩm định độc lập chặn cứng các vi phạm pháp luật lao động.
+- **Tuyệt đối không tạo thư mục `impl/`** hay interface 1-1 hình thức.
+
+### 1.2. Đóng gói Kiến trúc Modular Monolith & Giao tiếp Liên Module
+1. **Lấy dữ liệu hạ tầng qua Public Service của module lân cận:**
+   - `EmployeeService`: `getEmployeeByIdInternal`, `getEmployeeSummaries`, `updateEmploymentStatus` — xác thực nhân viên, người ký, cập nhật trạng thái làm việc khi HĐ kích hoạt hoặc chấm dứt.
+   - `PositionService` & `JobLevelService`: nạp chức danh, cấp bậc để đối chiếu thời hạn thử việc tối đa (Điều 25).
+   - `LeaveRequestService`: kiểm tra xem nhân viên có đang nghỉ ốm, thai sản (Điều 37) khi NSDLĐ đơn phương chấm dứt.
+2. **Batch Enrichment chống N+1 Query:** Mọi API danh sách gom `Set<UUID>` (`employeeIds`, `signerIds`, `companyIds`) và nạp batch dạng `EmployeeSummary`.
+
+### 1.3. Nguyên Tắc Bắt Buộc: Hard Validation (Chặn Cứng Pháp Lý)
 > [!CAUTION]
-> **NGUYÊN TẮC BẮT BUỘC: HARD VALIDATION (CHẶN CỨNG)**
-> Hệ thống **PHẢI CHẶN CỨNG** mọi thao tác vi phạm quy định của pháp luật lao động Việt Nam, **TUYỆT ĐỐI KHÔNG CHỈ DỪNG Ở MỨC CẢNH BÁO (WARNING)**. Bất kỳ hành vi nhập sai thời hạn, lương dưới chuẩn, gia hạn quá số lần hoặc chấm dứt sai quy định đều phải trả về lỗi `422 Unprocessable Entity` hoặc `409 Conflict` kèm mã lỗi pháp lý cụ thể.
+> **Hệ thống PHẢI CHẶN CỨNG mọi thao tác vi phạm quy định của pháp luật lao động Việt Nam, TUYỆT ĐỐI KHÔNG CHỈ DỪNG Ở MỨC CẢNH BÁO (WARNING)**. Mọi hành vi nhập sai thời hạn, lương dưới chuẩn, gia hạn quá số lần quy định hoặc chấm dứt sai thủ tục đều phải trả về lỗi HTTP 422 hoặc 409 kèm mã lỗi pháp lý `ContractErrorCode` cụ thể.
+
+### 1.4. Template Engine Động & Tự Động Hóa Giám Sát Hiệu Lực
+- Áp dụng cơ chế **Template Variable Engine + Mail-Merge** với các biến chuẩn `{{employee_name}}`, `{{basic_salary}}`, `{{basic_salary_words}}` để sinh văn bản PDF/DOCX chuẩn A4 khóa sửa tự do.
+- Scheduler giám sát tự động cảnh báo trước 30-45 ngày và hỗ trợ chuyển đổi tự động nếu quá 30 ngày vẫn phát sinh ngày công thực tế.
 
 ---
 
-## 2. Chi tiết Tuân thủ Bộ Luật Lao Động 2019 & Nghị Định 145/2020/NĐ-CP
+## 2. Tuân thủ Bộ Luật Lao Động 2019 & Mô hình CSDL Chi tiết
 
 ### 2.1. Phân loại Loại Hợp đồng Hợp pháp (Điều 20 BLLĐ 2019)
-Từ ngày 01/01/2021, Bộ luật Lao động 2019 bãi bỏ hoàn toàn "Hợp đồng mùa vụ". Hệ thống chỉ hỗ trợ **02 loại HĐLĐ chính thức**:
+Hệ thống chỉ hỗ trợ **02 loại HĐLĐ chính thức**:
 
 | Loại Hợp đồng | Ký hiệu Enum | Thời hạn hiệu lực | Quy tắc Chặn cứng (Hard Rule) |
 | :--- | :--- | :--- | :--- |
-| **Không xác định thời hạn** | `INDEFINITE_TERM` | Vô hạn (không ấn định ngày kết thúc) | `end_date` bắt buộc phải là `null`. |
-| **Xác định thời hạn** | `DEFINITE_TERM` | Tối đa **không quá 36 tháng** kể từ ngày có hiệu lực | Chặn lỗi `422 CONTRACT_DURATION_EXCEEDS_LIMIT` nếu `end_date - start_date > 36 tháng`. |
-| **Hợp đồng Thử việc** *(riêng biệt)* | `PROBATION` | Theo quy định Điều 25 | Không vượt quá 180 / 60 / 30 / 6 ngày tùy chức danh. |
+| **Không xác định thời hạn** | `INDEFINITE_TERM` | Vô hạn (không ấn định ngày kết thúc) | `end_date` bắt buộc phải là `null` (`4317 INDEFINITE_CONTRACT_CANNOT_HAVE_END_DATE`). |
+| **Xác định thời hạn** | `DEFINITE_TERM` | Tối đa **không quá 36 tháng** | `end_date` bắt buộc có; Chặn `4304 CONTRACT_DURATION_EXCEEDS_LIMIT` nếu vượt quá 36 tháng. |
+| **Hợp đồng Thử việc** | `PROBATION` | Theo quy định Điều 25 | Không vượt quá 180 / 60 / 30 / 6 ngày tùy cấp bậc chức danh. |
 
-* **Ràng buộc Tính Độc quyền:** Tại một thời điểm, một nhân viên chỉ được phép có **DUY NHẤT 01 hợp đồng lao động đang ở trạng thái hiệu lực (`status = ACTIVE`)**. Chặn lỗi `409 ACTIVE_CONTRACT_ALREADY_EXISTS`.
+* **Ràng buộc Tính Độc quyền:** Tại một thời điểm, một nhân viên chỉ được phép có **DUY NHẤT 01 hợp đồng lao động đang ở trạng thái hiệu lực (`contract_status = ACTIVE`)**. Chặn lỗi `4303 ACTIVE_CONTRACT_ALREADY_EXISTS`.
 
 ---
 
 ### 2.2. Chế định Thử việc (Điều 24, 25, 26, 27 BLLĐ 2019)
-
-1. **Thời hạn thử việc tối đa theo tính chất vị trí việc làm (Điều 25):**
-   * **Tối đa 180 ngày:** Người quản lý doanh nghiệp theo Luật Doanh nghiệp (Tổng Giám đốc, Giám đốc, Thành viên HĐQT).
-   * **Tối đa 60 ngày:** Công việc yêu cầu trình độ chuyên môn, kỹ thuật từ cao đẳng trở lên.
-   * **Tối đa 30 ngày:** Công việc yêu cầu trình độ trung cấp, công nhân kỹ thuật, nhân viên nghiệp vụ.
-   * **Tối đa 06 ngày làm việc:** Các công việc đơn giản khác.
-   * ⛔ **Quy tắc chặn:** Hệ thống đối chiếu `job_level` của nhân viên để tự động giới hạn `end_date - start_date`. Vượt quá số ngày quy định $\rightarrow$ Chặn `422 PROBATION_DURATION_EXCEEDS_LIMIT`.
-
-2. **Tiền lương trong thời gian thử việc (Điều 26):**
-   * Tiền lương thử việc do hai bên thỏa thuận nhưng **ít nhất phải bằng 85%** mức lương chính thức của công việc đó.
-   * ⛔ **Quy tắc chặn:** `probation_salary` $\ge 0.85 \times$ `official_salary`. Nếu nhỏ hơn 85% $\rightarrow$ Chặn `422 PROBATION_SALARY_BELOW_LEGAL_MINIMUM`.
-
-3. **Nguyên tắc thử việc 1 lần (Điều 24.2):**
-   * Chỉ được thử việc **01 lần** đối với một công việc.
-   * ⛔ **Quy tắc chặn:** Nếu nhân viên đã từng có hợp đồng thử việc hoặc làm việc tại vị trí (`position_id`) đó trong công ty $\rightarrow$ Chặn `422 PROBATION_ALREADY_COMPLETED`.
+1. **Thời hạn thử việc tối đa theo chức danh (Điều 25):**
+   * Tối đa 180 ngày: Người quản lý doanh nghiệp.
+   * Tối đa 60 ngày: Công việc trình độ cao đẳng trở lên.
+   * Tối đa 30 ngày: Công việc trình độ trung cấp, công nhân kỹ thuật.
+   * Tối đa 06 ngày làm việc: Công việc đơn giản khác.
+   * ⛔ Vượt quá số ngày quy định $\rightarrow$ Chặn `4306 PROBATION_DURATION_EXCEEDS_LIMIT`.
+2. **Tiền lương thử việc (Điều 26):** `probation_salary` $\ge 0.85 \times$ `official_salary`. Nhỏ hơn 85% $\rightarrow$ Chặn `4307 PROBATION_SALARY_BELOW_LEGAL_MINIMUM`.
+3. **Thử việc 1 lần (Điều 24.2):** Nếu nhân viên đã từng thử việc vị trí này $\rightarrow$ Chặn `4308 PROBATION_ALREADY_COMPLETED`.
 
 ---
 
 ### 2.3. Quy tắc Gia hạn Hợp đồng Xác định Thời hạn (Điều 20.2 BLLĐ 2019)
+- *"HĐLĐ xác định thời hạn chỉ được ký tiếp 01 lần. Nếu tiếp tục làm việc thì phải ký HĐLĐ không xác định thời hạn."*
+- Nếu đã ký đủ 2 lần HĐ xác định thời hạn mà HR cố tình tạo thêm lần 3 $\rightarrow$ Chặn `4305 MAX_DEFINITE_CONTRACTS_EXCEEDED`.
+- **Tự động chuyển đổi sau 30 ngày (Điều 20.2.b):** Quá 30 ngày hết hạn mà NLĐ vẫn làm việc mà chưa ký HĐ mới $\rightarrow$ Scheduler tự động chuyển đổi sang loại `INDEFINITE_TERM`.
 
-Đây là điều khoản kiểm soát rủi ro pháp lý quan trọng nhất:
+---
 
-> *"Hợp đồng lao động xác định thời hạn chỉ được ký tiếp 01 lần. Nếu tiếp tục làm việc thì phải ký hợp đồng lao động không xác định thời hạn."*
+### 2.4. Cấm Đơn Phương Chấm Dứt (Điều 37 & 137.3 BLLĐ 2019)
+Hệ thống **CHẶN CỨNG** chức năng Chấm dứt HĐLĐ nếu nhân sự thuộc diện bảo vệ:
+1. Đang nghỉ ốm đau, tai nạn lao động điều trị y tế có phép.
+2. Đang trong kỳ nghỉ phép năm, nghỉ việc riêng được duyệt.
+3. Lao động nữ mang thai, nghỉ thai sản hoặc nam/nữ nuôi con dưới 12 tháng tuổi.
+- ⛔ Trả về lỗi: `4309 TERMINATION_RESTRICTED_BY_LAW`.
+
+---
+
+### 2.5. Thuật toán Tính Trợ Cấp Thôi Việc vs Mất Việc Làm (Điều 46, 47)
+- **Trợ cấp thôi việc (Điều 46):** Mỗi năm làm việc được trợ cấp 1/2 tháng tiền lương:
+  $$\text{Tiền trợ cấp thôi việc} = \text{Thời gian tính trợ cấp (năm)} \times \text{Tiền lương bình quân 6 tháng liền kề} \times 0.5$$
+- **Trợ cấp mất việc làm (Điều 47):** Áp dụng khi thay đổi cơ cấu, công nghệ: Mỗi năm làm việc trả 01 tháng tiền lương, tối thiểu bằng 02 tháng tiền lương.
+- **Thời gian tính trợ cấp:** Tổng thời gian làm việc thực tế trừ đi thời gian đã tham gia BHTN theo Luật Việc làm.
+
+---
+
+### 2.6. Mô hình Thực thể & CSDL Chi tiết (Database Schema)
 
 ```mermaid
-graph TD
-    A[HĐ Xác định thời hạn Lần 1] -->|Hết hạn & Ký tiếp| B[HĐ Xác định thời hạn Lần 2 - Gia hạn tối đa]
-    B -->|Tiếp tục làm việc| C{Hệ thống kiểm tra}
-    C -->|Ký HĐ xác định thời hạn Lần 3| D[⛔ CHẶN CỨNG 422: MAX_DEFINITE_CONTRACTS_EXCEEDED]
-    C -->|Ký HĐ Không xác định thời hạn| E[✅ HỢP PHÁP: Ký HĐ Không xác định thời hạn]
-```
+erDiagram
+    EMPLOYEES ||--o{ CONTRACTS : "signs"
+    COMPANIES ||--o{ CONTRACTS : "employs"
+    CONTRACTS ||--o{ CONTRACT_ADDENDA : "amends"
+    CONTRACTS ||--o| CONTRACT_TERMINATIONS : "terminates"
+    CONTRACT_TEMPLATES ||--o{ CONTRACTS : "instantiates"
 
-* **Quy tắc kiểm soát số lần ký:**
-  * Hệ thống đếm tổng số HĐLĐ xác định thời hạn đã ký giữa Nhân viên và Công ty (`definite_contract_count`).
-  * Nếu `definite_contract_count >= 2` mà HR cố tình tạo thêm HĐ xác định thời hạn $\rightarrow$ Báo lỗi `422 MAX_DEFINITE_CONTRACTS_EXCEEDED`.
-  * **Ngoại lệ hợp pháp duy nhất (Điều 149.1, 151.2):** Cho phép ký nhiều lần HĐ xác định thời hạn đối với:
-    1. Người lao động cao tuổi (đã đủ tuổi nghỉ hưu theo lộ trình Điều 169).
-    2. Người lao động nước ngoài làm việc tại Việt Nam (theo thời hạn Giấy phép lao động).
-    3. Thành viên ban lãnh đạo của tổ chức đại diện người lao động tại cơ sở.
+    CONTRACTS {
+        UUID id PK
+        VARCHAR contract_number UK
+        UUID company_id FK
+        UUID employee_id FK
+        VARCHAR contract_type
+        VARCHAR contract_status
+        DATE start_date
+        DATE end_date
+        DATE sign_date
+        UUID signer_employee_id FK
+        DECIMAL basic_salary
+        DECIMAL insurance_salary
+        VARCHAR working_hours_type
+        UUID branch_id FK
+        UUID template_id FK
+        VARCHAR signed_contract_url
+        INT renewal_count
+        TIMESTAMP deleted_at
+    }
 
-* **Quy tắc Tự động chuyển đổi sau 30 ngày (Điều 20.2.b):**
-  * Trong thời hạn 30 ngày kể từ ngày HĐLĐ hết hạn, hai bên phải ký HĐLĐ mới.
-  * Nếu hết 30 ngày mà không ký HĐ mới, nhưng NLĐ vẫn tiếp tục làm việc (có phát sinh chấm công trong Module 06) $\rightarrow$ **Hệ thống tự động kích hoạt Scheduled Job chuyển đổi Hợp đồng cũ sang loại `INDEFINITE_TERM`** và bắn thông báo khẩn cấp tới HR.
+    CONTRACT_ADDENDA {
+        UUID id PK
+        UUID contract_id FK
+        VARCHAR addendum_number
+        VARCHAR addendum_type
+        DATE effective_date
+        TEXT modified_terms
+        DECIMAL new_basic_salary
+        VARCHAR signed_file_url
+        TIMESTAMP deleted_at
+    }
 
----
+    CONTRACT_TERMINATIONS {
+        UUID id PK
+        UUID contract_id FK
+        VARCHAR dismissal_ground
+        DATE termination_date
+        DATE notice_date
+        DECIMAL severance_allowance
+        TEXT reason
+        TIMESTAMP created_at
+    }
 
-### 2.4. Các Trường hợp CẤM Người Sử Dụng Lao Động Đơn Phương Chấm Dứt (Điều 37 BLLĐ 2019)
-
-Hệ thống **CHẶN CỨNG** chức năng Chấm dứt HĐLĐ (`terminateContract`) nếu nhân viên thuộc một trong các diện bảo vệ đặc biệt sau:
-
-1. **Nghỉ ốm đau / Điều trị y tế (Điều 37.1):** Người lao động đang nghỉ điều trị bệnh tật, tai nạn lao động, bệnh nghề nghiệp theo chỉ định của cơ sở khám bệnh, chữa bệnh có thẩm quyền (kiểm tra có `leave_request` loại `SICK` đang `APPROVED` bao trùm ngày chấm dứt).
-2. **Nghỉ phép thường niên (Điều 37.2):** Người lao động đang trong thời gian nghỉ hằng năm, nghỉ việc riêng được NSDLĐ đồng ý.
-3. **Bảo vệ Thai sản & Con nhỏ (Điều 37.3 & Điều 137.3):**
-   * Lao động nữ đang mang thai.
-   * Lao động nữ đang nghỉ thai sản (6 tháng theo Luật BHXH).
-   * Lao động nam/nữ đang nuôi con nhỏ **dưới 12 tháng tuổi**.
-   * ⛔ Lỗi trả về: `422 TERMINATION_RESTRICTED_BY_LAW` kèm chi tiết lý do bảo vệ pháp lý.
-
----
-
-### 2.5. 13 Căn Cứ Chấm Dứt Hợp Đồng & Thời Hạn Báo Trước (Điều 34, 35, 36 BLLĐ 2019)
-
-Khi thực hiện chấm dứt HĐLĐ, API bắt buộc phải truyền mã căn cứ pháp lý (`termination_ground_code`):
-
-| Mã Căn cứ | Căn cứ Pháp lý | Bên khởi xướng | Thời hạn Báo trước Bắt buộc | Có Trợ cấp Thôi việc? |
-| :--- | :--- | :--- | :--- | :---: |
-| `EXPIRED` | Hết hạn hợp đồng lao động (Điều 34.1) | Tự động | Không cần báo trước | ✅ Có |
-| `TASK_COMPLETED` | Đã hoàn thành công việc theo HĐLĐ (Điều 34.2) | Cả hai | Không cần báo trước | ✅ Có |
-| `MUTUAL_AGREEMENT` | Hai bên thỏa thuận chấm dứt (Điều 34.3) | Cả hai | Theo thỏa thuận | ✅ Có |
-| `EMPLOYEE_REGULAR` | NLĐ đơn phương chấm dứt hợp pháp (Điều 35.1) | NLĐ | **45 ngày** (HĐ KTH) / **30 ngày** (HĐ 12-36T) / **3 ngày** (<12T) | ✅ Có |
-| `EMPLOYEE_SPECIAL` | NLĐ đơn phương không cần báo trước (Điều 35.2) *(bị nợ lương, ngược đãi, quấy rối tình dục, mang thai...)* | NLĐ | **0 ngày** (Không cần báo trước) | ✅ Có |
-| `EMPLOYEE_ILLEGAL` | NLĐ đơn phương chấm dứt **trái luật** (Điều 39) | NLĐ | Vi phạm thời hạn báo trước | ❌ **KHÔNG** + Phải bồi thường nửa tháng lương & tiền vi phạm ngày báo |
-| `EMPLOYER_REGULAR` | NSDLĐ đơn phương chấm dứt đúng luật (Điều 36.1) *(thường xuyên không hoàn thành KPI, ốm đau kéo dài, thiên tai dịch bệnh...)* | NSDLĐ | **45 ngày** (HĐ KTH) / **30 ngày** (HĐ 12-36T) / **3 ngày** (<12T) | ✅ Có |
-| `EMPLOYER_ILLEGAL` | NSDLĐ đơn phương chấm dứt **trái luật** (Điều 41) | NSDLĐ | Sai căn cứ hoặc vi phạm Điều 37 | ✅ Có + Bồi thường ít nhất 2 tháng lương + đóng bù BHXH |
-| `DISCIPLINARY` | Sa thải do xử lý kỷ luật lao động (Điều 125) | NSDLĐ | Không cần | ❌ **KHÔNG** |
-| `RESTRUCTURING` | Cho thôi việc do thay đổi cơ cấu, công nghệ (Điều 42) | NSDLĐ | Theo phương án (tối thiểu thông báo 15 ngày) | 🌟 **Hưởng Trợ cấp Mất việc làm** (Điều 47) |
-| `MERGER_ACQUISITION` | Cho thôi việc do chia tách, sáp nhập, M&A (Điều 43) | NSDLĐ | Theo phương án | 🌟 **Hưởng Trợ cấp Mất việc làm** (Điều 47) |
-| `FORCE_MAJEURE_DEATH` | NLĐ chết, mất năng lực hành vi hoặc mất tích (Điều 34.7) | Pháp lý | Không | ✅ Có |
-| `COMPANY_DISSOLUTION` | Công ty chấm dứt hoạt động, phá sản (Điều 34.8) | Pháp lý | Theo quy định phá sản | ✅ Có |
-
----
-
-### 2.6. Thuật toán Phân biệt & Tính toán Trợ cấp Thôi việc vs Mất việc làm
-
-> [!IMPORTANT]
-> **Không cho phép HR tự điền số tiền trợ cấp bằng tay.** Hệ thống tự động truy vấn `employee_history` và tính toán theo đúng quy định tại Điều 46, Điều 47 và Nghị định 145/2020/NĐ-CP:
-
-```
-Thời gian tính trợ cấp = Tổng thời gian làm việc thực tế - Thời gian đã tham gia BHTN - Thời gian đã được chi trả trợ cấp trước đó
-```
-*(Số tháng lẻ: từ 01 đến dưới 06 tháng tính bằng 1/2 năm; từ đủ 06 tháng trở lên tính bằng 01 năm).*
-
-* **Tiền lương làm căn cứ tính:** Bình quân tiền lương theo HĐLĐ của **06 tháng liền kề** trước khi chấm dứt.
-
-#### 1. Trợ cấp Thôi việc (Severance Allowance - Điều 46):
-$$\text{Tiền trợ cấp} = \text{Thời gian tính trợ cấp (năm)} \times 0.5 \times \text{Mức lương bình quân 6 tháng}$$
-
-#### 2. Trợ cấp Mất việc làm (Job Loss Allowance - Điều 47):
-$$\text{Tiền trợ cấp} = \text{Thời gian tính trợ cấp (năm)} \times 1.0 \times \text{Mức lương bình quân 6 tháng}$$
-* ⛔ **Quy định sàn bảo vệ:** Mức trợ cấp mất việc làm **thấp nhất không được dưới 02 tháng tiền lương**.
-
----
-
-### 2.7. Quy tắc Phương án Sử dụng Lao động khi Tái cơ cấu (Điều 42, 44 BLLĐ 2019)
-* Khi tái cơ cấu dẫn đến cho thôi việc từ **02 người lao động trở lên**, công ty bắt buộc phải lập **Phương án sử dụng lao động (`WorkforceRestructuringPlan`)**.
-* Phương án phải được trao đổi ý kiến với Ban đại diện công đoàn và **thông báo công khai ít nhất 15 ngày** cho người lao động trước khi thực hiện.
-* ⛔ **Quy tắc chặn:** Hệ thống không cho phép thực hiện hàng loạt API Chấm dứt HĐ (`executeTerminations`) nếu phương án chưa qua đủ 15 ngày kể từ ngày `published_at`.
-
----
-
-## 3. Kiến Trúc & Đề Xuất Các Phân Hệ Chức Năng Cốt Lõi (Functional Breakdown)
-
-Hệ thống quản lý hợp đồng được chia làm **7 phân hệ chức năng nghiệp vụ**, giải quyết triệt để bài toán từ khâu soạn thảo, ký kết, quản lý hiệu lực, đến thanh lý:
-
-```mermaid
-flowchart TB
-    subgraph F1[1. Hồ Sơ & Vòng Đời HĐ]
-        F1A[Soạn thảo & Đánh mã HĐ tự động]
-        F1B[Tra cứu, Lọc & Phân quyền DataScope]
-        F1C[Lịch sử biến động & Audit Log]
-    end
-
-    subgraph F2[2. Template Engine & Sinh Văn Bản]
-        F2A[Kho Mẫu HĐ DOCX/HTML]
-        F2B[Gài Biến Placeholder Mail-Merge]
-        F2C[Auto-Generate PDF/DOCX chuẩn A4]
-    end
-
-    subgraph F3[3. Phụ Lục Hợp Đồng]
-        F3A[Điều chỉnh Lương & Phụ cấp]
-        F3B[Bổ nhiệm / Điều chuyển Địa bàn]
-        F3C[Kiểm soát không vượt hạn luật định]
-    end
-
-    subgraph F4[4. Phê Duyệt & Ký Kết]
-        F4A[Workflow Duyệt đa cấp Trưởng phòng/GĐ]
-        F4B[Ký điện tử E-Sign / OTP]
-        F4C[Upload Bản Scan PDF đã ký]
-    end
-
-    subgraph F5[5. Giám Sát & Cảnh Báo]
-        F5A[Cảnh báo trước 30-45 ngày hết hạn]
-        F5B[Scheduler tự động chuyển đổi sau 30 ngày]
-        F5C[Dashboard theo dõi tỷ lệ tái ký]
-    end
-
-    subgraph F6[6. Chấm Dứt & Trợ Cấp]
-        F6A[Bắt buộc chọn 1 trong 13 căn cứ luật định]
-        F6B[Kiểm tra thời hạn báo trước 45/30/3 ngày]
-        F6C[Engine tự tính Trợ cấp Điều 46/47]
-    end
-
-    subgraph F7[7. Khai Trình Lao Động]
-        F7A[Quản lý đăng ký HĐ tại Sở LĐ-TB&XH]
-        F7B[Xuất báo cáo định kỳ 6 tháng / năm]
-    end
-
-    F1 --> F2 --> F4 --> F5 --> F6
-    F1 --> F3
-    F1 --> F7
+    CONTRACT_TEMPLATES {
+        UUID id PK
+        UUID company_id FK
+        VARCHAR code UK
+        VARCHAR name
+        VARCHAR template_type
+        TEXT content_template
+        VARCHAR file_url
+        TIMESTAMP deleted_at
+    }
 ```
 
 ---
 
-### 3.1. Phân hệ 1: Quản lý Hồ sơ & Thông tin Hợp đồng (Contract Registry)
-* **Sinh mã hợp đồng tự động theo quy chuẩn:** Cấu trúc `{Mã Cty}/{Năm}/{Loại HĐ}/{Số nhảy}` (Ví dụ: `CYC/2026/HDLD-CT/00142`).
-* **Form nhập liệu chuẩn hóa dữ liệu pháp lý:**
-  * Thông tin người sử dụng lao động: Đại diện pháp luật, chức vụ, địa chỉ trụ sở, mã số thuế.
-  * Thông tin người lao động: Họ tên, số CCCD, ngày cấp, nơi cấp, địa chỉ thường trú, chức danh tuyển dụng.
-  * Chế độ tiền lương: Mức lương cơ bản (đóng BHXH), phụ cấp trách nhiệm, phụ cấp ăn trưa, phụ cấp xăng xe/điện thoại, hình thức trả lương (chuyển khoản), ngày trả lương hàng tháng.
-  * Chế độ làm việc: Thời giờ làm việc (giờ/ngày, ca làm việc), trang bị bảo hộ lao động, địa điểm làm việc (`branch_id`).
-* **Tra cứu & Tìm kiếm đa tiêu chí:** Lọc theo phòng ban, chi nhánh, loại hợp đồng, tình trạng hiệu lực, dải ngày ký kết, quản lý trực tiếp.
+## 3. Các Luồng Nghiệp vụ Trọng tâm & Máy Trạng Thái (Workflows)
 
----
-
-### 3.2. Phân hệ 2: Mẫu Hợp đồng Động & Trộn Văn bản (Dynamic Template Engine & Mail-Merge)
-
-> [!NOTE]
-> **Định hướng Giải pháp Soạn thảo Văn bản:**
-> Hệ thống **không sử dụng trình soạn thảo tự do dạng trang trắng (free-text editor)** cho từng hợp đồng nhằm bảo vệ tính toàn vẹn dữ liệu và đảm bảo tuân thủ pháp lý. Thay vào đó, áp dụng cơ chế **Template Variable Engine + Mail-Merge**.
-
-1. **Kho Mẫu Hợp đồng Chuẩn hóa (`contract_templates`):**
-   * Cho phép Admin/HR tải lên các file mẫu chuẩn (`.docx` hoặc template HTML) theo từng nhóm vị trí:
-     * *Mẫu HĐLĐ Thử việc*.
-     * *Mẫu HĐLĐ Xác định thời hạn (Cán bộ nhân viên văn phòng)*.
-     * *Mẫu HĐLĐ Xác định thời hạn (Khối vận hành / Sản xuất)*.
-     * *Mẫu HĐLĐ Không xác định thời hạn*.
-     * *Mẫu Phụ lục hợp đồng điều chỉnh lương*.
-2. **Hệ thống Biến Placeholder (Mail-Merge Variables):**
-   * Hệ thống cung cấp danh mục biến chuẩn được bao bởi dấu ngoặc kép `{{...}}`. Khi sinh hợp đồng, backend tự động lấy dữ liệu từ DB để điền vào:
-     * **Thông tin cá nhân:** `{{employee_name}}`, `{{cccd_number}}`, `{{cccd_issue_date}}`, `{{permanent_address}}`, `{{phone_number}}`.
-     * **Công việc & Tổ chức:** `{{position_title}}`, `{{job_level}}`, `{{department_name}}`, `{{branch_name}}`, `{{work_location_address}}`.
-     * **Thời hạn:** `{{start_date}}`, `{{end_date}}`, `{{contract_duration_months}}`.
-     * **Tiền lương & Chế độ:** `{{basic_salary}}` (dạng số), `{{basic_salary_words}}` (tự động đọc thành chữ tiếng Việt, ví dụ: *Hai mươi triệu đồng chẵn*), `{{allowance_lunch}}`, `{{insurance_salary}}`.
-     * **Đại diện công ty:** `{{company_name}}`, `{{company_representative_name}}`, `{{representative_title}}`.
-3. **Cơ chế Xuất Văn bản Linh hoạt:**
-   * **Xuất PDF chuẩn in ấn A4:** File PDF được render tự động, khóa chỉnh sửa, có sẵn vị trí ký và đóng dấu giáp lai để in ký trực tiếp hoặc ký số.
-   * **Xuất file Word (`.docx`):** Cho phép HR tải về file Word đã điền sẵn dữ liệu trong trường hợp hai bên cần đàm phán thêm các thỏa thuận riêng biệt đặc thù trước khi ký chính thức.
-   * **Lưu trữ bản ký Scan:** Cho phép upload bản PDF scan có chữ ký sống và con dấu đỏ (`signed_contract_url`) để lưu kho điện tử lâu dài.
-
----
-
-### 3.3. Phân hệ 3: Quản lý Phụ lục Hợp đồng Lao động (Contract Addenda)
-* **Căn cứ Điều 22 BLLĐ 2019:** Phụ lục HĐLĐ là một bộ phận của HĐLĐ và có hiệu lực như HĐLĐ.
-* **Các loại Phụ lục được hỗ trợ:**
-  * `SALARY_ADJUSTMENT`: Tăng/giảm lương, điều chỉnh cơ cấu phụ cấp (thay đổi mức đóng BHXH).
-  * `POSITION_TRANSFER`: Bổ nhiệm chức danh mới, chuyển đổi phòng ban/chi nhánh làm việc.
-  * `TERM_MODIFICATION`: Sửa đổi thời hạn hợp đồng (hệ thống chặn kéo dài quá 36 tháng đối với HĐ xác định thời hạn).
-  * `OTHER_TERMS`: Bổ sung điều khoản bảo mật thông tin (NDA), cam kết đào tạo (Training Bond).
-* **Ràng buộc nghiệp vụ:**
-  * Mỗi phụ lục phải đánh số thứ tự tăng dần (`addendum_number`: 01, 02, 03...).
-  * Khi phụ lục có hiệu lực, hệ thống tự động cập nhật mức lương mới vào hồ sơ nhân viên để phục vụ Module Payroll kỳ tiếp theo.
-
----
-
-### 3.4. Phân hệ 4: Quy trình Phê duyệt & Ký kết Điện tử (Approval Workflow & E-Sign)
-* **Tích hợp Workflow Engine Đa cấp:**
-  * Soạn thảo HĐ (`DRAFT`) $\rightarrow$ Khởi tạo yêu cầu phê duyệt qua `workflow-engine`.
-  * Bước 1: Trưởng phòng Nhân sự thẩm tra điều khoản và chế độ đãi ngộ.
-  * Bước 2: Giám đốc Tài chính (CFO) duyệt quỹ lương đối với mức lương vượt khung ngân sách.
-  * Bước 3: Tổng Giám đốc / Đại diện pháp luật ký duyệt.
-* **Ký kết Điện tử (Digital Signature / E-Sign):**
-  * Tích hợp gửi link ký điện tử qua Email / Mobile App cho nhân viên mới (xác thực OTP qua số điện thoại/email).
-  * Gắn mã bưu chính điện tử hoặc Timestamp có chữ ký số doanh nghiệp (CA Token) đảm bảo tính toàn vẹn văn bản.
-
----
-
-### 3.5. Phân hệ 5: Giám sát Hiệu lực & Cảnh báo Tự động (Expiration Monitoring & Scheduler)
-* **Cảnh báo trước khi hết hạn:**
-  * Hệ thống chạy Scheduled Job hàng ngày lúc 02:00 AM.
-  * Quét các hợp đồng sẽ hết hạn trong vòng **45 ngày** và **30 ngày** tới.
-  * Bắn thông báo (`Notification`) và gửi Email tự động cho:
-    1. Chuyên viên Nhân sự phụ trách (HR Admin).
-    2. Người quản lý trực tiếp (Manager) để lấy ý kiến đánh giá tái ký/thôi việc.
-* **Quy trình Tái ký / Gia hạn (Contract Renewal):**
-  * Manager điền phiếu đánh giá hết hạn hợp đồng: *Đề xuất tái ký* hoặc *Đề xuất chấm dứt*.
-  * Nếu tái ký: Hệ thống kiểm tra số lần gia hạn (chặn nếu đã đủ 2 lần HĐ xác định thời hạn).
-* **Tự động Chuyển đổi sau 30 ngày (Auto-conversion):**
-  * Tự động phát hiện hợp đồng hết hạn quá 30 ngày mà nhân viên vẫn đang làm việc (có bảng chấm công) $\rightarrow$ Tự động chuyển đổi thành HĐ Không xác định thời hạn và lập biên bản ghi nhận tự động.
-
----
-
-### 3.6. Phân hệ 6: Chấm dứt Hợp đồng & Trợ cấp (Termination & Severance Calculation)
-* **Quy trình Chấm dứt Chuẩn hóa:**
-  1. Tiếp nhận đề xuất chấm dứt (từ NLĐ hoặc NSDLĐ).
-  2. Bắt buộc chọn đúng **01 trong 13 căn cứ pháp lý** (Điều 34).
-  3. Hệ thống kiểm tra chốt chặn **Điều 37** (cấm chấm dứt với người ốm đau, thai sản, con < 12 tháng).
-  4. Hệ thống kiểm tra thời hạn báo trước (45/30/3 ngày). Nếu vi phạm, tự động tính số tiền bồi thường ngày công báo trước.
-* **Engine Tự Động Tính Toán Quyền Lợi:**
-  * Lấy lịch sử 06 tháng lương liền kề gần nhất từ Module Payroll.
-  * Tính số năm làm việc thực tế trừ đi thời gian đã đóng Bảo hiểm Thất nghiệp (BHTN).
-  * Tự động tính:
-    * **Trợ cấp thôi việc** (Điều 46): $0.5 \times \text{Lương bình quân 6 tháng} \times \text{Số năm}$.
-    * **Trợ cấp mất việc làm** (Điều 47): $1.0 \times \text{Lương bình quân 6 tháng} \times \text{Số năm}$ (sàn $\ge 2$ tháng).
-    * Thanh toán tiền ngày phép năm chưa nghỉ hết (Điều 113.3 BLLĐ 2019).
-* **Kích hoạt Offboarding Tự động:**
-  * Đồng bộ đổi trạng thái Employee sang `RESIGNED` hoặc `TERMINATED`.
-  * Tự động khóa User Account trên hệ thống.
-  * Sinh checklist thu hồi tài sản công ty (Module 13 Asset) và bàn giao công việc.
-
----
-
-### 3.7. Phân hệ 7: Đăng ký Hợp đồng & Báo cáo Cơ quan Nhà nước (Labor Authority Compliance)
-* **Quản lý Đăng ký HĐLĐ tại Sở Lao động - TB&XH:**
-  * Quản lý trạng thái: `NOT_REGISTERED`, `SUBMITTED`, `REGISTERED`, `EXPIRED`.
-  * Lưu trữ ngày đăng ký, số công văn tiếp nhận của Sở LĐ-TB&XH, cán bộ thụ lý.
-* **Xuất Báo cáo Tình hình Thay đổi Lao động Định kỳ:**
-  * Tự động kết xuất báo cáo Khai trình sử dụng lao động theo **Mẫu số 01/PLI** ban hành kèm theo Nghị định 145/2020/NĐ-CP (báo cáo định kỳ 6 tháng và hàng năm gửi Phòng/Sở LĐ-TB&XH).
-
----
-
-## 4. Máy Trạng Thái Hợp Đồng (Contract Lifecycle State Machine)
+### 3.1. Máy Trạng Thái Vòng Đời Hợp Đồng (Contract Lifecycle State Machine)
 
 ```mermaid
 stateDiagram-v2
@@ -318,52 +181,82 @@ stateDiagram-v2
     PENDING_APPROVAL --> APPROVED: Trưởng phòng / Ban Giám đốc phê duyệt
     APPROVED --> ACTIVE: Hai bên ký kết & Đến ngày bắt đầu hiệu lực
     
-    ACTIVE --> EXPIRING_SOON: Scheduler quét trước 45 ngày hết hạn
-    EXPIRING_SOON --> RENEWED: Ký tiếp / Gia hạn hợp pháp
+    ACTIVE --> EXPIRING_SOON: Scheduler quét trước 30-45 ngày hết hạn
+    EXPIRING_SOON --> RENEWED: Ký tiếp / Gia hạn hợp pháp (tối đa 2 lần xác định thời hạn)
     EXPIRING_SOON --> EXPIRED: Hết hạn hợp đồng (Không tái ký)
     
-    ACTIVE --> TERMINATING: Khởi tạo Chấm dứt HĐ (Bắt đầu đếm ngày báo trước)
-    TERMINATING --> TERMINATED: Hoàn tất thanh toán trợ cấp, bàn giao & khóa tài khoản
+    ACTIVE --> TERMINATING: Khởi tạo Chấm dứt HĐ (Đếm ngày báo trước Điều 35/36)
+    TERMINATING --> TERMINATED: Hoàn tất thanh toán trợ cấp, bàn giao & cập nhật Employee
     
     RENEWED --> [*]
     EXPIRED --> [*]
     TERMINATED --> [*]
 ```
 
----
-
-## 5. Danh mục API & Phân quyền Bảo mật (Security & Permissions)
-
-Vì Hợp đồng lao động chứa thông tin nhạy cảm về mức lương (`basic_salary`, `insurance_salary`), ma trận phân quyền phải được kiểm soát nghiêm ngặt theo **RBAC và Data Scope**:
-
-| STT | Phương thức | Endpoint URI | Mô tả Nghiệp vụ | Quyền yêu cầu (`Permission`) | Kiểm tra Data Scope |
-| :---: | :---: | :--- | :--- | :--- | :--- |
-| 1 | `GET` | `/api/v1/contracts` | Danh sách hợp đồng phân trang | `contract.view` | `OWN`, `DEPARTMENT`, `COMPANY` |
-| 2 | `GET` | `/api/v1/contracts/{id}` | Xem chi tiết hợp đồng, phụ lục & bản ký | `contract.view` | Kiểm tra quyền sở hữu hoặc thẩm quyền phòng ban |
-| 3 | `POST` | `/api/v1/contracts` | Soạn thảo HĐLĐ mới từ Form + Template | `contract.create` | `DEPARTMENT` hoặc `COMPANY` |
-| 4 | `PUT` | `/api/v1/contracts/{id}` | Cập nhật dự thảo HĐLĐ | `contract.update` | Chỉ cho phép khi `status = DRAFT` |
-| 5 | `POST` | `/api/v1/contracts/{id}/submit-approval` | Gửi hợp đồng vào Workflow phê duyệt | `contract.create` | Khởi tạo quy trình `workflow-engine` |
-| 6 | `GET` | `/api/v1/contracts/{id}/export/pdf` | Sinh & Tải file PDF hợp đồng chuẩn A4 | `contract.view` | Đổ dữ liệu DB vào Template render PDF |
-| 7 | `GET` | `/api/v1/contracts/{id}/export/docx` | Sinh & Tải file Word (.docx) để HR tùy biến | `contract.view` | Mail-merge dữ liệu ra file Word |
-| 8 | `POST` | `/api/v1/contracts/{id}/upload-signed` | Upload bản scan PDF có con dấu/chữ ký sống | `contract.manage` | Lưu trữ file ký chính thức |
-| 9 | `POST` | `/api/v1/contracts/{id}/addenda` | Ký Phụ lục hợp đồng điều chỉnh lương/chức danh | `contract.manage` | Kiểm tra tính hợp lệ pháp lý của phụ lục |
-| 10 | `POST` | `/api/v1/contracts/{id}/renew` | Tái ký / Gia hạn HĐLĐ | `contract.create` | Chặn gia hạn quá 1 lần với HĐ xác định thời hạn |
-| 11 | `POST` | `/api/v1/contracts/{id}/terminate` | Quyết định chấm dứt HĐLĐ | `contract.terminate` | Bắt buộc chọn 1 trong 13 căn cứ, chặn Điều 37 |
-| 12 | `GET` | `/api/v1/contracts/{id}/severance-estimate` | Tính toán dự báo tiền trợ cấp thôi việc / mất việc | `contract.view` | Tự động tính theo công thức Điều 46, 47 |
-| 13 | `GET` | `/api/v1/contracts/expiring` | Danh sách HĐ sắp hết hạn (30 - 45 ngày) | `contract.view` | Phục vụ Dashboard và cảnh báo HR |
-| 14 | `GET` | `/api/v1/contract-templates` | Danh sách các mẫu hợp đồng chuẩn trong kho | `contract.config` | Quản lý mẫu hợp đồng doanh nghiệp |
-| 15 | `POST` | `/api/v1/contract-templates` | Upload mẫu hợp đồng DOCX/HTML mới kèm biến | `contract.config` | Đăng ký mẫu biểu mới vào hệ thống |
+### 3.2. Luồng Tác Động Lan Tỏa Sang Các Phân Hệ Khác
+1. **Module Employee:** HĐ chuyển `ACTIVE` $\rightarrow$ Cập nhật `EmploymentStatus = ACTIVE`. Khi HĐ chuyển `TERMINATED` $\rightarrow$ Tự động chuyển `EmploymentStatus = TERMINATED` và khóa tài khoản `User` liên kết.
+2. **Module Payroll:** Cung cấp `basic_salary` và `insurance_salary` làm căn cứ trích đóng BHXH và thuế TNCN hàng tháng.
+3. **Module Workflow:** Mọi HĐ mới và đề xuất chấm dứt đều đi qua Workflow engine phê duyệt có kiểm tra điều kiện ngân sách.
 
 ---
 
-## 6. Tác Động Lan Tỏa Sang Các Module Khác (System Integrations)
+## 4. Danh mục RESTful API Chi tiết
 
-1. **Module Hồ Sơ Nhân Sự (`employee`):**
-   * Khi HĐ chuyển `ACTIVE` $\rightarrow$ Tự động cập nhật `EmploymentStatus` từ `PROBATION` lên `ACTIVE`.
-   * Khi HĐ chuyển `TERMINATED` $\rightarrow$ Tự động cập nhật `EmploymentStatus = TERMINATED` hoặc `RESIGNED`, ghi log `EmployeeHistory` (`change_type = STATUS_CHANGE`), và tự động khóa tài khoản `User` liên kết (`status = LOCKED`).
-2. **Module Quy Trình Phê Duyệt (`workflow`):**
-   * Duyệt hợp đồng lao động mới và phê duyệt đề xuất chấm dứt hợp đồng đều được điều phối bởi **Workflow Approval Engine** đa cấp, kiểm tra điều kiện SpEL và phân quyền duyệt.
-3. **Module Bảng Lương (`payroll`):**
-   * Cung cấp dữ liệu tiền lương pháp lý gốc: `basic_salary` (lương cơ bản theo hợp đồng) và `insurance_salary` (lương đóng BHXH bắt buộc) làm căn cứ trích đóng bảo hiểm, tính thuế TNCN và tính đơn giá làm thêm giờ (OT).
-4. **Module Chấm Công (`attendance`):**
-   * Cung cấp thông tin ngày bắt đầu làm việc chính thức để phân ca làm việc (`ShiftAssignment`) và theo dõi phát sinh ngày công thực tế sau ngày hết hạn HĐLĐ.
+Base URI: `/api/v1/contracts`
+
+| HTTP Method | Endpoint URI | Phân Quyền (@PreAuthorize) | DTO Request / Response | Chức Năng Nghiệp Vụ |
+| :---: | :--- | :--- | :--- | :--- |
+| `GET` | `/` | `@perm.has('contract.view')` | `ContractFilter` $\rightarrow$ `ApiResponse<PageData<ContractResponse>>` | Tra cứu danh sách HĐ (phân trang, lọc theo DataScope). |
+| `GET` | `/{id}` | `@perm.has('contract.view')` | Path `id` $\rightarrow$ `ApiResponse<ContractDetailResponse>` | Xem chi tiết hợp đồng, phụ lục, tiền lương, bản scan ký. |
+| `POST` | `/` | `@perm.has('contract.create')` | `CreateContractRequest` $\rightarrow$ `ApiResponse<ContractResponse>` | Soạn thảo HĐLĐ mới từ Form + Template (kiểm tra BLLĐ). |
+| `PUT` | `/{id}` | `@perm.has('contract.update')` | `UpdateContractRequest` $\rightarrow$ `ApiResponse<ContractResponse>` | Cập nhật dự thảo HĐLĐ (chỉ khi `status = DRAFT`). |
+| `POST` | `/{id}/submit-approval` | `@perm.has('contract.create')` | Path `id` $\rightarrow$ `ApiResponse<Void>` | Gửi hợp đồng vào quy trình phê duyệt đa cấp. |
+| `GET` | `/{id}/export/pdf` | `@perm.has('contract.view')` | Path `id` $\rightarrow$ `ResponseEntity<byte[]>` | Sinh & tải file PDF hợp đồng chuẩn in ấn A4. |
+| `GET` | `/{id}/export/docx`| `@perm.has('contract.view')` | Path `id` $\rightarrow$ `ResponseEntity<byte[]>` | Sinh & tải file Word (.docx) đã trộn biến placeholder. |
+| `POST` | `/{id}/upload-signed` | `@perm.has('contract.manage')`| Multipart `file` $\rightarrow$ `ApiResponse<ContractResponse>` | Lưu trữ file PDF scan có chữ ký sống và con dấu đỏ. |
+| `POST` | `/{id}/addenda` | `@perm.has('contract.manage')`| `CreateAddendumRequest` $\rightarrow$ `ApiResponse<AddendumResponse>` | Lập Phụ lục hợp đồng điều chỉnh mức lương / vị trí. |
+| `POST` | `/{id}/renew` | `@perm.has('contract.create')` | `RenewContractRequest` $\rightarrow$ `ApiResponse<ContractResponse>` | Tái ký / Gia hạn HĐLĐ (kiểm soát số lần Điều 20.2). |
+| `POST` | `/{id}/terminate` | `@perm.has('contract.terminate')`| `TerminateContractRequest` $\rightarrow$ `ApiResponse<Void>` | Chấm dứt HĐLĐ (chặn Điều 37, tính thời hạn báo trước). |
+| `GET` | `/{id}/severance-estimate` | `@perm.has('contract.view')` | Path `id` $\rightarrow$ `ApiResponse<SeveranceEstimateResponse>` | Tính toán dự báo tiền trợ cấp thôi việc/mất việc. |
+| `GET` | `/expiring` | `@perm.has('contract.view')` | Query `days` $\rightarrow$ `ApiResponse<List<ContractSummaryResponse>>`| Danh sách hợp đồng sắp hết hạn phục vụ cảnh báo HR. |
+| `GET` | `/api/v1/contract-templates` | `@perm.has('contract.config')` | `TemplateFilter` $\rightarrow$ `ApiResponse<PageData<TemplateResponse>>` | Danh sách mẫu hợp đồng chuẩn trong kho doanh nghiệp. |
+| `POST` | `/api/v1/contract-templates` | `@perm.has('contract.config')` | `CreateTemplateRequest` $\rightarrow$ `ApiResponse<TemplateResponse>` | Upload mẫu hợp đồng DOCX/HTML mới kèm gài biến. |
+
+---
+
+## 5. Danh mục Mã lỗi Module Contract (`ContractErrorCode`)
+
+| Mã Lỗi (Enum) | Mã Số | HTTP Status | Thông Điệp Tiếng Việt | Nguyên Nhân & Căn Cứ Kích Hoạt |
+| :--- | :---: | :---: | :--- | :--- |
+| `CONTRACT_NOT_FOUND` | **4301** | `404 Not Found` | Không tìm thấy hợp đồng lao động | `contract_id` không tồn tại hoặc đã bị xóa mềm. |
+| `CONTRACT_NUMBER_EXISTS` | **4302** | `409 Conflict` | Số hợp đồng đã tồn tại trong hệ thống | Trùng `contract_number` trong cùng `company_id`. |
+| `ACTIVE_CONTRACT_ALREADY_EXISTS` | **4303** | `409 Conflict` | Nhân viên hiện đang có hợp đồng lao động có hiệu lực | Nhân sự đã có 1 HĐLĐ ở trạng thái `ACTIVE`. |
+| `CONTRACT_DURATION_EXCEEDS_LIMIT` | **4304** | `422 Unprocessable` | Thời hạn hợp đồng xác định thời hạn không được vượt quá 36 tháng | Vi phạm Điều 20 BLLĐ 2019: `end_date - start_date > 36 tháng`. |
+| `MAX_DEFINITE_CONTRACTS_EXCEEDED` | **4305** | `422 Unprocessable` | Đã ký đủ 02 lần HĐ xác định thời hạn, lần tiếp theo phải ký HĐ không xác định thời hạn | Vi phạm Điều 20.2 BLLĐ 2019: ký lần thứ 3 xác định thời hạn. |
+| `PROBATION_DURATION_EXCEEDS_LIMIT`| **4306** | `422 Unprocessable` | Thời gian thử việc vượt quá giới hạn luật định theo cấp bậc | Vi phạm Điều 25 BLLĐ 2019 (vượt quá 180, 60, 30 hoặc 6 ngày). |
+| `PROBATION_SALARY_BELOW_LEGAL_MINIMUM` | **4307** | `422 Unprocessable` | Tiền lương thử việc phải đạt ít nhất 85% lương chính thức | Vi phạm Điều 26 BLLĐ 2019: lương thử việc < 85% lương chính thức. |
+| `PROBATION_ALREADY_COMPLETED` | **4308** | `422 Unprocessable` | Nhân sự chỉ được thử việc 01 lần duy nhất cho một vị trí công việc | Vi phạm Điều 24.2 BLLĐ 2019: thử việc lại vị trí đã làm. |
+| `TERMINATION_RESTRICTED_BY_LAW` | **4309** | `422 Unprocessable` | Cấm NSDLĐ đơn phương chấm dứt HĐ với nhân sự đang nghỉ ốm đau, thai sản hoặc con dưới 12 tháng | Vi phạm Điều 37 & Điều 137.3 BLLĐ 2019. |
+| `CANNOT_MODIFY_ACTIVE_CONTRACT` | **4310** | `400 Bad Request` | Hợp đồng đang có hiệu lực không thể sửa trực tiếp, vui lòng lập Phụ lục | Vi phạm Điều 22 BLLĐ 2019: sửa nội dung HĐ đang `ACTIVE`. |
+| `INVALID_CONTRACT_STATUS_TRANSITION`| **4311** | `400 Bad Request` | Chuyển đổi trạng thái hợp đồng không hợp lệ | Sai luồng máy trạng thái (VD: từ `TERMINATED` về `DRAFT`). |
+| `ADDENDUM_NOT_FOUND` | **4312** | `404 Not Found` | Không tìm thấy phụ lục hợp đồng | `addendum_id` không tồn tại trong hệ thống. |
+| `ADDENDUM_NUMBER_EXISTS` | **4313** | `409 Conflict` | Số phụ lục hợp đồng đã tồn tại cho hợp đồng này | Trùng lặp `addendum_number`. |
+| `CONTRACT_TEMPLATE_NOT_FOUND` | **4314** | `404 Not Found` | Không tìm thấy mẫu hợp đồng yêu cầu | `template_id` không tồn tại trong kho mẫu. |
+| `TEMPLATE_CODE_EXISTS` | **4315** | `409 Conflict` | Mã mẫu hợp đồng đã tồn tại trong hệ thống | Trùng lặp `code` mẫu hợp đồng trong công ty. |
+| `CONTRACT_ALREADY_TERMINATED` | **4316** | `400 Bad Request` | Hợp đồng này đã chấm dứt trước đó | Gọi API chấm dứt trên HĐ đã ở trạng thái `TERMINATED`. |
+| `INDEFINITE_CONTRACT_CANNOT_HAVE_END_DATE` | **4317** | `400 Bad Request` | Hợp đồng không xác định thời hạn không được có ngày kết thúc | Loại `INDEFINITE_TERM` nhưng request gửi lên `end_date != null`. |
+| `DEFINITE_CONTRACT_REQUIRES_END_DATE` | **4318** | `400 Bad Request` | Hợp đồng xác định thời hạn bắt buộc phải có ngày kết thúc | Loại `DEFINITE_TERM` nhưng request để `end_date == null`. |
+| `INVALID_NOTICE_PERIOD` | **4319** | `422 Unprocessable` | Vi phạm thời hạn báo trước theo luật định khi chấm dứt hợp đồng | Vi phạm Điều 35, 36 BLLĐ 2019 (thiếu thời hạn 45/30/3 ngày). |
+
+---
+
+## 6. Phân bổ Quyền Hạn & Ma trận Vai trò (RBAC Matrix)
+
+| Mã Quyền (Permission) | Mô Tả Hành Động | Super Admin | HR Admin | Dept Manager | Employee |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| `contract.view` | Xem danh sách HĐ, chi tiết điều khoản, phụ lục và tải PDF | **FULL (ALL)** | **FULL (COMPANY)** | **DEPT ONLY** | **SELF ONLY (OWN)** |
+| `contract.create` | Soạn thảo dự thảo HĐLĐ mới, gửi duyệt, tái ký | **FULL** | **FULL** | ⛔ | ⛔ |
+| `contract.update` | Hiệu chỉnh nội dung dự thảo HĐ đang ở trạng thái DRAFT | **FULL** | **FULL** | ⛔ | ⛔ |
+| `contract.manage` | Ký phụ lục hợp đồng, upload bản scan ký chính thức | **FULL** | **FULL** | ⛔ | ⛔ |
+| `contract.terminate` | Quyết định đơn phương hoặc thỏa thuận chấm dứt HĐLĐ | **FULL** | **FULL** | **Đề xuất / Xem** | ⛔ |
+| `contract.config` | Quản trị kho mẫu biểu hợp đồng động (Template Engine) | **FULL** | **FULL** | ⛔ | ⛔ |

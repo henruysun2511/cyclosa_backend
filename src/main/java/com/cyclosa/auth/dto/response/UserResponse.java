@@ -1,33 +1,33 @@
 package com.cyclosa.auth.dto.response;
 
-import com.cyclosa.common.enums.UserStatus;
+import com.cyclosa.auth.enums.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Thông tin chi tiết tài khoản người dùng")
+@Schema(description = "Thông tin tài khoản người dùng trong danh sách")
 public class UserResponse {
 
+    @Schema(description = "ID người dùng")
     private UUID id;
-    private UUID employeeId;
-    private String username;
+
+    @Schema(description = "Email tài khoản", example = "admin@cyclosa.com")
     private String email;
-    private String fullName;
-    private String phone;
-    private String avatarUrl;
+
+    @Schema(description = "Trạng thái tài khoản", example = "ACTIVE")
     private UserStatus status;
-    private List<String> roles;
+
+    @Schema(description = "Thời điểm đăng nhập thành công gần nhất")
     private LocalDateTime lastLoginAt;
+
+    @Schema(description = "Thời điểm tạo tài khoản")
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }
+

@@ -3,42 +3,28 @@ package com.cyclosa.auth.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.List;
 import java.util.UUID;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yêu cầu tạo tài khoản nhân viên từ phía quản trị viên")
+@Schema(description = "Yêu cầu tạo tài khoản nhân viên mới từ Quản trị viên")
 public class CreateUserRequest {
 
-    @Schema(description = "ID bản ghi nhân viên tương ứng trong hệ thống HRM (nếu có)")
-    private UUID employeeId;
-
     @NotBlank(message = "Email không được để trống")
-    @Email(message = "Email không đúng định dạng")
-    @Schema(description = "Email làm việc của nhân viên", example = "hoang.nv@cyclosa.com")
+    @Email(message = "Định dạng email không hợp lệ")
+    @Schema(description = "Email doanh nghiệp hoặc cá nhân của nhân viên", example = "nhanvien.a@cyclosa.com")
     private String email;
 
-    @NotBlank(message = "Họ và tên không được để trống")
-    @Size(min = 2, max = 150, message = "Họ và tên từ 2 đến 150 ký tự")
-    @Schema(description = "Họ và tên nhân viên", example = "Nguyễn Văn Hoàng")
-    private String fullName;
+    @Schema(description = "ID nhân sự tương ứng (tùy chọn)", example = "a1b2c3d4-e5f6-7a8b-9c0d-1e2f3a4b5c6d")
+    private UUID employeeId;
 
-    @Size(max = 20, message = "Số điện thoại tối đa 20 ký tự")
-    @Schema(description = "Số điện thoại", example = "0912345678")
-    private String phone;
-
-    @Schema(description = "Danh sách mã vai trò gán ban đầu (mặc định: EMPLOYEE)", example = "[\"EMPLOYEE\"]")
+    @Schema(description = "Danh sách mã hoặc ID vai trò phân quyền ban đầu (ví dụ: EMPLOYEE, HR_ADMIN)", example = "[\"EMPLOYEE\"]")
     private List<String> roleCodes;
-
-    @Schema(description = "ID công ty mà vai trò thuộc về (nếu có)")
-    private UUID companyId;
 }
+

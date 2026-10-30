@@ -1,285 +1,152 @@
 package com.cyclosa.auth.service;
 
 import com.cyclosa.auth.dto.request.CreateUserRequest;
-import com.cyclosa.auth.dto.request.UserFilter;
-import com.cyclosa.auth.dto.response.UserInfo;
+import com.cyclosa.auth.dto.request.UserFilterRequest;
+import com.cyclosa.auth.dto.response.UserDetailResponse;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.entity.User;
-import com.cyclosa.auth.event.UserCreatedEvent;
-import com.cyclosa.auth.mapper.AuthMapper;
-import com.cyclosa.auth.repository.UserRepository;
+import com.cyclosa.auth.enums.UserStatus;
 import com.cyclosa.auth.exception.AuthErrorCode;
-import com.cyclosa.common.enums.UserStatus;
+import com.cyclosa.auth.mapper.UserMapper;
+import com.cyclosa.auth.repository.UserRepository;
+import com.cyclosa.auth.repository.specification.UserSpecification;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
-import com.cyclosa.common.util.PageableUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+import java.time.Duration;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class UserService {
 
+    private static final Duration ACTIVATION_TOKEN_TTL = Duration.ofHours(48);
+
     private final UserRepository userRepository;
-    private final AuthMapper authMapper;
-    private final ApplicationEventPublisher eventPublisher;
-    private final RedisTemplate<String, String> redisTemplate;
-    private final EmailService emailService;
-    private final PasswordEncoder passwordEncoder;
+    private final RedisTokenService redisTokenService;
+    private final MailService mailService;
+    private final UserMapper userMapper;
 
-    private static final Set<String> SORT_FIELDS = Set.of("fullName", "email", "createdAt", "lastLoginAt");
-
-    @Transactional(readOnly = true)
-    public PageData<UserResponse> getUsers(UserFilter req) {
-        String kw = PageableUtils.normalizeKeyword(req.getKeyword());
-        Pageable pageable = req.toPageable("createdAt", SORT_FIELDS);
-        Page<User> result = userRepository.searchUsers(kw, req.getStatus(), pageable);
-        return PageData.of(result, authMapper::toUserResponse);
-    }
-
-    @Transactional(readOnly = true)
-    public User findById(UUID id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> AppException.userNotFound(id));
-    }
-
-    @Transactional(readOnly = true)
-    public User findByIdWithRoles(UUID id) {
-        return userRepository.findByIdWithRoles(id)
-                .orElseThrow(() -> AppException.userNotFound(id));
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findByIdOptional(UUID id) {
-        return userRepository.findById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean existsById(UUID id) {
-        return userRepository.existsById(id);
-    }
-
-    @Transactional(readOnly = true)
-    public User findByEmailWithRoles(String email) {
-        return userRepository.findByEmailWithRoles(email)
-                .orElseThrow(AppException::invalidCredentials);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findByEmail(String email) {
-        return userRepository.findByEmail(email);
-    }
-
-    @Transactional(readOnly = true)
-    public boolean existsByEmail(String email) {
-        return userRepository.existsByEmail(email);
-    }
-
-    @Transactional(readOnly = true)
-    public Optional<User> findByEmployeeId(UUID employeeId) {
-        return userRepository.findByEmployeeId(employeeId);
-    }
-
-    @Transactional(readOnly = true)
-    public java.util.Map<UUID, com.cyclosa.common.dto.summary.UserSummary> getUserSummaries(java.util.Set<UUID> userIds) {
-        if (userIds == null || userIds.isEmpty()) {
-            return java.util.Map.of();
-        }
-        return userRepository.findAllById(userIds).stream()
-                .collect(java.util.stream.Collectors.toMap(
-                        User::getId,
-                        u -> com.cyclosa.common.dto.summary.UserSummary.builder()
-                                .id(u.getId())
-                                .username(u.getUsername())
-                                .fullName(u.getFullName())
-                                .email(u.getEmail())
-                                .avatarUrl(u.getAvatarUrl())
-                                .build()
-                ));
-    }
-
-    @Transactional(readOnly = true)
-    public UserInfo getUserInfo(UUID id) {
-        User user = findByIdWithRoles(id);
-        return authMapper.toUserInfo(user);
-    }
-
+    /**
+     * Quản trị viên khởi tạo tài khoản nhân viên mới (PENDING_ACTIVATION) và gửi mail 48h
+     */
     @Transactional
-    public User save(User user) {
-        return userRepository.save(user);
-    }
+    public UserDetailResponse createUser(CreateUserRequest request) {
+        String email = request.getEmail().trim().toLowerCase();
+        log.info("Admin tạo tài khoản nhân viên mới: {}", email);
 
-    @Transactional
-    public void updateLastLogin(UUID id) {
-        userRepository.findById(id).ifPresent(user -> {
-            user.setLastLoginAt(LocalDateTime.now());
-            userRepository.save(user);
-        });
-    }
-
-    @Transactional
-    public void updateUserStatus(UUID userId, UserStatus status) {
-        userRepository.findById(userId).ifPresent(user -> {
-            user.setStatus(status);
-            userRepository.save(user);
-            log.info("Updated User id={} status to {}", userId, status);
-        });
-    }
-
-    @Transactional
-    public UserResponse createUser(CreateUserRequest req) {
-        String cleanEmail = req.getEmail().toLowerCase().trim();
-        if (userRepository.existsByEmail(cleanEmail)) {
-            throw AppException.userEmailExists(cleanEmail);
+        // 1. Kiểm tra trùng lặp email
+        if (userRepository.existsByEmailAndDeletedFalse(email)) {
+            throw new AppException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
+        // 2. Tạo User ở trạng thái PENDING_ACTIVATION
         User user = User.builder()
-                .employeeId(req.getEmployeeId())
-                .email(cleanEmail)
-                .username(cleanEmail)
-                .fullName(req.getFullName().trim())
-                .phone(req.getPhone() != null ? req.getPhone().trim() : null)
+                .email(email)
                 .status(UserStatus.PENDING_ACTIVATION)
-                .version(0)
+                .deleted(false)
                 .build();
+        User saved = userRepository.save(user);
 
-        user = userRepository.save(user);
-
-        // Publish event để module role tự động gán vai trò theo mô hình Modular Monolith tách biệt
-        List<String> roleCodes = (req.getRoleCodes() != null && !req.getRoleCodes().isEmpty())
-                ? req.getRoleCodes()
-                : List.of("EMPLOYEE");
-
-        eventPublisher.publishEvent(UserCreatedEvent.builder()
-                .userId(user.getId())
-                .email(user.getEmail())
-                .roleCodes(roleCodes)
-                .companyId(req.getCompanyId())
-                .build());
-
-        // Generate activation token
+        // 3. Sinh token kích hoạt 48h lưu vào Redis
         String activationToken = UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set(
-                AuthService.ACTIVATION_TOKEN_PREFIX + activationToken,
-                user.getId().toString(),
-                48, TimeUnit.HOURS
-        );
-        redisTemplate.opsForValue().set(
-                AuthService.USER_ACTIVATION_PREFIX + user.getId(),
-                activationToken,
-                48, TimeUnit.HOURS
-        );
+        redisTokenService.saveActivationToken(activationToken, saved.getId(), ACTIVATION_TOKEN_TTL);
 
-        // Send activation email
-        emailService.sendActivationEmail(user.getEmail(), user.getFullName(), activationToken);
+        // 4. Bắn email kích hoạt bất đồng bộ
+        mailService.sendActivationEmail(saved.getEmail(), activationToken, ACTIVATION_TOKEN_TTL);
 
-        return authMapper.toUserResponse(user);
+        log.info("Đã tạo tài khoản thành công cho user id={}", saved.getId());
+        return userMapper.toDetailResponse(saved);
     }
 
-    @Transactional
+    /**
+     * Lấy danh sách tài khoản phân trang có lọc theo từ khóa và trạng thái
+     */
+    public PageData<UserResponse> getUsers(UserFilterRequest filter) {
+        log.debug("Lấy danh sách người dùng với filter: keyword={}, status={}",
+                filter.getKeyword(), filter.getStatus());
+
+        Pageable pageable = filter.toPageable("createdAt", UserFilterRequest.ALLOWED_SORT_FIELDS);
+        Specification<User> spec = UserSpecification.build(filter);
+
+        Page<User> page = userRepository.findAll(spec, pageable);
+        return PageData.of(page, userMapper::toResponse);
+    }
+
+    /**
+     * Lấy chi tiết thông tin một tài khoản theo ID
+     */
+    public UserDetailResponse getUserById(UUID userId) {
+        User user = findUserOrThrow(userId);
+        return userMapper.toDetailResponse(user);
+    }
+
+    /**
+     * Gửi lại mã kích hoạt cho tài khoản PENDING_ACTIVATION
+     */
     public void resendActivation(UUID userId) {
-        User user = findById(userId);
+        User user = findUserOrThrow(userId);
+
         if (user.getStatus() != UserStatus.PENDING_ACTIVATION) {
-            throw AppException.validationFailed("Tài khoản này không ở trạng thái chờ kích hoạt");
+            log.warn("Không thể gửi lại email kích hoạt cho user id={} vì trạng thái hiện tại là {}",
+                    userId, user.getStatus());
+            throw new AppException(AuthErrorCode.CANNOT_RESEND_ACTIVATION);
         }
 
-        // Delete old token if exists
-        String oldToken = redisTemplate.opsForValue().get(AuthService.USER_ACTIVATION_PREFIX + userId);
-        if (oldToken != null) {
-            redisTemplate.delete(AuthService.ACTIVATION_TOKEN_PREFIX + oldToken);
-        }
+        // Sinh token mới và cập nhật lại Redis 48h
+        String newActivationToken = UUID.randomUUID().toString();
+        redisTokenService.saveActivationToken(newActivationToken, user.getId(), ACTIVATION_TOKEN_TTL);
 
-        // Generate new token
-        String activationToken = UUID.randomUUID().toString();
-        redisTemplate.opsForValue().set(
-                AuthService.ACTIVATION_TOKEN_PREFIX + activationToken,
-                user.getId().toString(),
-                48, TimeUnit.HOURS
-        );
-        redisTemplate.opsForValue().set(
-                AuthService.USER_ACTIVATION_PREFIX + user.getId(),
-                activationToken,
-                48, TimeUnit.HOURS
-        );
-
-        emailService.sendActivationEmail(user.getEmail(), user.getFullName(), activationToken);
+        // Bắn email
+        mailService.sendActivationEmail(user.getEmail(), newActivationToken, ACTIVATION_TOKEN_TTL);
+        log.info("Đã gửi lại email kích hoạt cho user id={}", userId);
     }
 
+    /**
+     * Khóa tài khoản và ngắt phiên làm việc
+     */
     @Transactional
-    public UserResponse lockUser(UUID userId) {
-        User user = findById(userId);
+    public void lockUser(UUID userId) {
+        log.warn("Khóa tài khoản user id={}", userId);
+        User user = findUserOrThrow(userId);
+
         user.setStatus(UserStatus.LOCKED);
-        user = userRepository.save(user);
-
-        // Invalidate active refresh token in Redis
-        redisTemplate.delete(AuthService.REFRESH_TOKEN_PREFIX + userId);
-
-        return authMapper.toUserResponse(user);
-    }
-
-    @Transactional
-    public UserResponse unlockUser(UUID userId) {
-        User user = findById(userId);
-        if (user.getPasswordHash() == null) {
-            user.setStatus(UserStatus.PENDING_ACTIVATION);
-        } else {
-            user.setStatus(UserStatus.ACTIVE);
-        }
-        user = userRepository.save(user);
-
-        return authMapper.toUserResponse(user);
-    }
-
-    @Transactional(readOnly = true)
-    public UserResponse getUserDetail(UUID userId) {
-        User user = findByIdWithRoles(userId);
-        return authMapper.toUserResponse(user);
-    }
-
-    @Transactional
-    public void linkEmployeeToUser(UUID userId, UUID employeeId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> AppException.userNotFound(userId));
-        if (user.getEmployeeId() != null && !user.getEmployeeId().equals(employeeId)) {
-            throw new AppException(AuthErrorCode.USER_ALREADY_LINKED);
-        }
-        user.setEmployeeId(employeeId);
         userRepository.save(user);
-        log.info("Linked Employee id={} to User id={}", employeeId, userId);
+
+        // Thu hồi toàn bộ Refresh Token trên Redis để ngắt session
+        redisTokenService.deleteRefreshToken(userId);
+        log.info("Đã khóa tài khoản và hủy phiên đăng nhập của user id={}", userId);
     }
 
+    /**
+     * Mở khóa tài khoản người dùng
+     */
     @Transactional
-    public UUID createEmployeeUser(UUID employeeId, String email, String fullName, String employeeCode, UUID companyId) {
-        String cleanEmail = email.trim().toLowerCase();
-        if (userRepository.findByEmail(cleanEmail).isPresent()) {
-            return null;
+    public void unlockUser(UUID userId) {
+        log.info("Mở khóa tài khoản user id={}", userId);
+        User user = findUserOrThrow(userId);
+
+        // Chỉ mở khóa nếu tài khoản đã có mật khẩu (tức ACTIVE), nếu chưa từng kích hoạt thì về PENDING_ACTIVATION
+        if (user.getPasswordHash() != null && !user.getPasswordHash().isBlank()) {
+            user.setStatus(UserStatus.ACTIVE);
+        } else {
+            user.setStatus(UserStatus.PENDING_ACTIVATION);
         }
-        User newUser = User.builder()
-                .email(cleanEmail)
-                .username(cleanEmail.split("@")[0] + "_" + employeeCode.toLowerCase().replace("-", "_"))
-                .fullName(fullName)
-                .passwordHash(passwordEncoder.encode("Cyclosa@123"))
-                .employeeId(employeeId)
-                .status(UserStatus.ACTIVE)
-                .version(0)
-                .build();
-        newUser = userRepository.save(newUser);
-        log.info("Auto-created User id={} for Employee code={}", newUser.getId(), employeeCode);
-        return newUser.getId();
+        userRepository.save(user);
+        log.info("Đã mở khóa tài khoản user id={}", userId);
+    }
+
+    private User findUserOrThrow(UUID userId) {
+        return userRepository.findByIdAndDeletedFalse(userId)
+                .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
     }
 }

@@ -1,90 +1,77 @@
 package com.cyclosa.auth.security;
 
-import com.cyclosa.common.exception.AppException;
-import io.jsonwebtoken.Claims;
+import com.cyclosa.auth.service.RedisTokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.lang.NonNull;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
-import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class JwtAuthFilter extends OncePerRequestFilter {
 
-    private final JwtUtil                        jwtUtil;
-    private final RedisTemplate<String, String>  redisTemplate;
-
-    private static final String BEARER_PREFIX    = "Bearer ";
-    private static final String BLACKLIST_PREFIX = "blacklist:";
+    private final JwtUtil jwtUtil;
+    private final RedisTokenService redisTokenService;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest  request,
-                                    HttpServletResponse response,
-                                    FilterChain         chain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            @NonNull HttpServletRequest request,
+            @NonNull HttpServletResponse response,
+            @NonNull FilterChain filterChain
+    ) throws ServletException, IOException {
 
-        String token = extractToken(request);
+        final String authHeader = request.getHeader("Authorization");
 
-        if (token == null) {
-            chain.doFilter(request, response);
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
+            return;
+        }
+
+        final String token = authHeader.substring(7);
+
+        // 1. Kiểm tra Token có trong Redis Blacklist không
+        if (redisTokenService.isAccessTokenBlacklisted(token)) {
+            log.warn("Access token đã bị đưa vào blacklist, từ chối request");
+            filterChain.doFilter(request, response);
             return;
         }
 
         try {
-            if (Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token))) {
-                log.warn("[JwtFilter] Token đã bị thu hồi (blacklisted)");
-                chain.doFilter(request, response);
-                return;
-            }
-
-            Claims claims = jwtUtil.validateAndExtract(token);
-
-            if ("refresh".equals(claims.get("type", String.class))) {
-                chain.doFilter(request, response);
-                return;
-            }
-
+            // 2. Trích xuất thông tin định danh
+            UUID userId = jwtUtil.extractUserId(token);
+            String email = jwtUtil.extractEmail(token);
             List<String> roles = jwtUtil.extractRoles(token);
-            List<SimpleGrantedAuthority> authorities = roles.stream()
-                    .map(r -> new SimpleGrantedAuthority("ROLE_" + r))
-                    .toList();
 
-            UsernamePasswordAuthenticationToken auth =
-                    new UsernamePasswordAuthenticationToken(
-                            claims.getSubject(),
-                            null,
-                            authorities
-                    );
-            auth.setDetails(claims.getId());
-            SecurityContextHolder.getContext().setAuthentication(auth);
+            if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+                List<SimpleGrantedAuthority> authorities = roles.stream()
+                        .map(r -> new SimpleGrantedAuthority(r.startsWith("ROLE_") ? r : "ROLE_" + r))
+                        .toList();
 
-        } catch (AppException ex) {
-            log.warn("[JwtFilter] Token lỗi: {}", ex.getMessage());
-        } catch (Exception ex) {
-            log.warn("[JwtFilter] Xử lý token thất bại: {}", ex.getMessage());
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(email, null, authorities);
+                authToken.setDetails(userId.toString());
+
+                SecurityContextHolder.getContext().setAuthentication(authToken);
+            }
+        } catch (Exception e) {
+            log.debug("Không thể xác thực token JWT: {}", e.getMessage());
         }
 
-        chain.doFilter(request, response);
-    }
-
-    private String extractToken(HttpServletRequest request) {
-        String header = request.getHeader("Authorization");
-        if (StringUtils.hasText(header) && header.startsWith(BEARER_PREFIX)) {
-            return header.substring(BEARER_PREFIX.length());
-        }
-        return null;
+        filterChain.doFilter(request, response);
     }
 }
+

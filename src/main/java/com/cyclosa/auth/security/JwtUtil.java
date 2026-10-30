@@ -7,23 +7,27 @@ import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.time.Duration;
 import java.util.*;
 
 @Slf4j
 @Component
 public class JwtUtil {
 
-    @Value("${app.jwt.secret}")
+    @Value("${app.jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}")
     private String secret;
 
+    @Getter
     @Value("${app.jwt.access-token-expiry:86400000}")
     private long accessTokenExpiry;
 
+    @Getter
     @Value("${app.jwt.refresh-token-expiry:604800000}")
     private long refreshTokenExpiry;
 
@@ -39,9 +43,8 @@ public class JwtUtil {
         return buildToken(userId, email, Map.of("type", "refresh"), refreshTokenExpiry);
     }
 
-    private String buildToken(UUID userId, String email,
-                              Map<String, Object> extraClaims, long expiry) {
-        Date now    = new Date();
+    private String buildToken(UUID userId, String email, Map<String, Object> extraClaims, long expiry) {
+        Date now = new Date();
         Date expire = new Date(now.getTime() + expiry);
 
         return Jwts.builder()
@@ -50,56 +53,76 @@ public class JwtUtil {
                 .claims(extraClaims)
                 .issuedAt(now)
                 .expiration(expire)
-                .signWith(getKey())
+                .signWith(getSigningKey())
                 .compact();
     }
 
-    public String extractEmail(String token) {
-        return parseClaims(token).getSubject();
+    public Claims extractAllClaims(String token) {
+        try {
+            return Jwts.parser()
+                    .verifyWith(getSigningKey())
+                    .build()
+                    .parseSignedClaims(token)
+                    .getPayload();
+        } catch (ExpiredJwtException e) {
+            log.warn("JWT token đã hết hạn: {}", e.getMessage());
+            throw AppException.unauthorized("Token đã hết hạn");
+        } catch (JwtException | IllegalArgumentException e) {
+            log.warn("JWT token không hợp lệ: {}", e.getMessage());
+            throw AppException.unauthorized("Token không hợp lệ");
+        }
     }
 
     public UUID extractUserId(String token) {
-        return UUID.fromString(parseClaims(token).getId());
+        Claims claims = extractAllClaims(token);
+        String idStr = claims.getId();
+        if (idStr == null) {
+            throw AppException.unauthorized("Token thiếu ID người dùng");
+        }
+        return UUID.fromString(idStr);
+    }
+
+    public String extractEmail(String token) {
+        return extractAllClaims(token).getSubject();
     }
 
     @SuppressWarnings("unchecked")
     public List<String> extractRoles(String token) {
-        Claims claims = parseClaims(token);
-        List<String> roles = claims.get("roles", List.class);
-        if (roles != null && !roles.isEmpty()) {
-            return roles;
+        Claims claims = extractAllClaims(token);
+        Object rolesObj = claims.get("roles");
+        if (rolesObj instanceof List<?>) {
+            return (List<String>) rolesObj;
         }
-        String singleRole = claims.get("role", String.class);
-        return singleRole != null ? List.of(singleRole) : List.of();
+        Object singleRole = claims.get("role");
+        if (singleRole != null) {
+            return List.of(singleRole.toString());
+        }
+        return List.of("EMPLOYEE");
     }
 
-    public Date extractExpiration(String token) {
-        return parseClaims(token).getExpiration();
-    }
-
-    public boolean isRefreshToken(String token) {
-        return "refresh".equals(parseClaims(token).get("type", String.class));
-    }
-
-    public Claims validateAndExtract(String token) {
+    public boolean validateToken(String token) {
         try {
-            return parseClaims(token);
-        } catch (ExpiredJwtException e) {
-            throw AppException.tokenExpired();
-        } catch (JwtException e) {
-            throw AppException.tokenInvalid();
+            extractAllClaims(token);
+            return true;
+        } catch (Exception e) {
+            return false;
         }
     }
 
-    private Claims parseClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(getKey())
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+    public Duration getRemainingExpiration(String token) {
+        try {
+            Claims claims = extractAllClaims(token);
+            Date expiration = claims.getExpiration();
+            long diff = expiration.getTime() - System.currentTimeMillis();
+            return Duration.ofMillis(Math.max(diff, 0));
+        } catch (Exception e) {
+            return Duration.ZERO;
+        }
     }
 
-    private SecretKey getKey() {
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode(secret));
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = Decoders.BASE64.decode(secret);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 }
+

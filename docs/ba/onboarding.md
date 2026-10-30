@@ -2,15 +2,17 @@
 
 > **Module Code:** `onboarding`  
 > **Package:** `com.cyclosa.onboarding`  
-> **Phiên bản:** 1.0  
-> **Tuân thủ quy chuẩn:** [docs/BACKEND_STANDARDS.md](file:///f:/Project/CYCLOSA/cyclosa_be/docs/BACKEND_STANDARDS.md)  
-> **Tài liệu liên quan:** [docs/ba/tuyen-dung-recruitment.md](file:///f:/Project/CYCLOSA/cyclosa_be/docs/ba/tuyen-dung-recruitment.md), [docs/ba/ho-so-nhan-su.md](file:///f:/Project/CYCLOSA/cyclosa_be/docs/ba/ho-so-nhan-su.md)
+> **Phiên bản:** 2.0 (Chuẩn hóa Backend Standards & Automation)  
+> **Căn cứ nghiệp vụ & Thiết kế:**  
+> - **Chuyển tiếp Vòng đời Tuyển dụng - Tiếp nhận:** Tự động khởi tạo tiến trình Onboarding khi ứng viên trúng tuyển (`Convert to Employee`).  
+> - **Tiêu chuẩn Hóa Quy trình Đầu Việc (Checklist Template):** Cấu hình danh mục việc cần làm theo từng phòng ban và vị trí việc làm.  
+> - **Tích hợp Liên Module & Tự động Kích hoạt:** Kiểm tra chéo cấp phát tài sản (`asset`), tài khoản IT (`account_provisioning`), số hóa hồ sơ pháp lý (`employee_documents`) và tự động chuyển nhân viên từ `PROBATION` sang `ACTIVE`.
 
 ---
 
-## 1. Tổng quan & Vai trò Nghiệp vụ
+## 1. Tôn chỉ Nghiệp vụ & Nguyên tắc Thiết kế (Core Principles)
 
-Trong hệ sinh thái CYCLOSA HRM, **Hội nhập Nhân sự (Onboarding)** đóng vai trò mắt xích chuyển tiếp chiến lược giữa khâu Tuyển dụng trúng tuyển và Giai đoạn làm việc chính thức của nhân sự:
+Trong hệ sinh thái **CYCLOSA HRM**, **Hội nhập Nhân sự (Onboarding)** đóng vai trò mắt xích chiến lược giữa giai đoạn Tuyển dụng và Làm việc chính thức của nhân sự:
 
 ```
 [ Tuyển dụng (Recruitment) ]
@@ -29,287 +31,265 @@ Trong hệ sinh thái CYCLOSA HRM, **Hội nhập Nhân sự (Onboarding)** đó
 [ Kích hoạt tự động: ACTIVE ] ──► Chấm công, HĐLĐ & Tính lương
 ```
 
-### Mục tiêu cốt lõi:
-1. **Chuẩn hóa quy trình tiếp nhận:** Tránh tình trạng nhân viên mới ngày đầu đi làm thiếu máy tính, chưa có email nội bộ, hoặc chưa nộp đủ giấy tờ tùy thân.
-2. **Template hóa theo phòng ban & vị trí:** Cho phép cấu hình mẫu danh mục việc cần làm (Checklist Template) đặc thù cho từng khối (Kỹ thuật phần mềm, Kinh doanh, Khối văn phòng...).
-3. **Tự động hóa vòng đời nhân sự:** Khi hoàn tất 100% các hạng mục Onboarding bắt buộc, hệ thống tự động kích hoạt trạng thái nhân viên từ `PROBATION` sang `ACTIVE`.
+### 1.1. Chuẩn hóa Thiết kế Không dùng Interface + Impl thừa thãi (Concrete Service Pattern)
+Theo chuẩn kiến trúc tại `docs/BACKEND_STANDARDS.md`:
+- Toàn bộ service của module được viết trực tiếp dưới dạng **Concrete Service**:
+  - `OnboardingService.java`: Service trung tâm duy nhất xử lý khởi tạo tiến trình, thực hiện đầu việc, cấp phát tài khoản, điều phối lịch đào tạo và nghiệm thu kích hoạt nhân viên.
+- **Tuyệt đối không tạo thư mục `impl/`** hay interface 1-1 hình thức.
+
+### 1.2. Đóng gói Kiến trúc Modular Monolith & Giao tiếp Liên Module
+1. **Lấy dữ liệu hạ tầng qua Public Service của module lân cận:**
+   - `EmployeeService`: `getEmployeeByIdInternal`, `updateEmploymentStatus`, `getEmployeeSummaries`.
+   - `OrganizationalUnitService` & `PositionService`: nạp thông tin tóm tắt đơn vị và chức danh (`getUnitSummaries`, `getPositionSummaries`).
+   - `AssetService`: lấy danh sách trang thiết bị đã được bàn giao cho nhân viên mới (`getEmployeeAssets`).
+2. **Không inject Repository của module khác**, không truy cập trực tiếp Entity module khác.
+3. **Batch Enrichment chống N+1 Query:** Khi trả về danh sách tiến trình (`PageData<OnboardingProcessResponse>`), gom `Set<UUID>` và gọi hàm batch 1 lần để map vào `EmployeeSummary`, `PositionSummary`, `OrgUnitSummary`.
+
+### 1.3. Tự Động Hóa Kích Hoạt Nhân Viên (Clear-to-Active Automation)
+- Khi 100% các hạng mục bắt buộc (`is_required = true`) trong tiến trình Onboarding được đánh dấu hoàn thành:
+  - Hệ thống cho phép HR thực hiện nghiệm thu (`completeProcess`).
+  - Tự động gọi `employeeService.updateEmploymentStatus(employeeId, EmploymentStatus.ACTIVE)` chuyển nhân viên sang làm việc chính thức.
+- **Ràng buộc tiến trình độc quyền:** Mỗi nhân viên chỉ được phép có **tối đa một tiến trình Onboarding đang hoạt động** (`5202 ONBOARDING_ALREADY_IN_PROGRESS`).
+
+### 1.4. Thẩm Định Hồ Sơ & Cấp Phát Tài Khoản IT (Cross-Validation Guard)
+- **Hạng mục `ACCOUNT`:** Không thể đánh dấu hoàn thành nếu hệ thống chưa ghi nhận tài khoản IT tương ứng ở trạng thái `PROVISIONED` (`5207 ACCOUNT_NOT_PROVISIONED_YET`).
+- **Hạng mục `DOCUMENT`:** Tài liệu giấy tờ nhân thân tải lên (CCCD, bằng cấp, chứng chỉ) phải được HR thẩm định (`is_verified = true`) trước khi chốt hồ sơ.
 
 ---
 
-## 2. Quy trình Nghiệp vụ Chi tiết (Business Flows)
-
-### 2.1. Quản lý Mẫu Checklist Hội nhập (`Checklist Template`)
-- HR thiết lập các mẫu Checklist tương ứng với từng chức danh (`applicable_position_id`) hoặc phòng ban (`applicable_department_id`).
-- Mỗi Template chứa danh sách các mục (`OnboardingChecklistTemplateItem`) được đánh chỉ số sắp xếp (`order_index`) và cờ bắt buộc (`is_required`).
-- Các hạng mục được chia thành 5 danh mục nghiệp vụ:
-  * `DOCUMENT`: Nộp CCCD/Hộ chiếu, Bằng tốt nghiệp, Giấy khám sức khỏe, Bản cam kết bảo mật...
-  * `ACCOUNT`: Cấp tài khoản Google Workspace, Slack, Jira, VPN, CYCLOSA ERP...
-  * `ASSET`: Cấp phát Laptop, Màn hình rời, Chuột, Bàn phím, Thẻ nhân viên...
-  * `ORIENTATION`: Tham gia lớp đào tạo hội nhập nhân viên mới, Giới thiệu văn hóa công ty...
-  * `OTHER`: Bàn giao nội bộ, Gặp mặt Leader & Buddy định hướng...
-
-### 2.2. Khởi tạo Tiến trình Hội nhập (`Onboarding Process`)
-- Khi nhân viên mới được tiếp nhận, HR tạo một tiến trình `OnboardingProcess` bằng cách chọn Template tương ứng.
-- **Ràng buộc nghiệp vụ:**
-  - Mỗi nhân viên chỉ được phép có **tối đa một** tiến trình Onboarding đang ở trạng thái `IN_PROGRESS`.
-  - Hệ thống tự động nhân bản (clone) toàn bộ các item từ Template sang `OnboardingProcessItem` của nhân viên đó.
-
-### 2.3. Theo dõi & Thực thi các hạng mục (Item Execution)
-- Khi hoàn thành từng hạng mục, người phụ trách (hoặc HR) gọi API `completeProcessItem`.
-- **Ràng buộc kiểm tra chéo (Cross-Validation Rules):**
-  - **Hạng mục `ACCOUNT`:** Không thể đánh dấu hoàn thành nếu trên hệ thống chưa có ít nhất một tài khoản nào được ghi nhận ở trạng thái `PROVISIONED`.
-  - **Hạng mục `DOCUMENT`:** Kiểm tra và liên kết với giấy tờ đã được nhân sự upload và xác thực.
-- Cho phép bỏ qua (`SKIPPED`) đối với những hạng mục không bắt buộc (`is_required = false`).
-
-### 2.4. Nghiệm thu & Hoàn tất Tiến trình (Process Completion)
-- HR nhấn hoàn tất tiến trình Onboarding.
-- Hệ thống kiểm tra: **Tất cả các item có `is_required = true` bắt buộc phải ở trạng thái `COMPLETED`**. Nếu còn sót mục nào, hệ thống từ chối hoàn tất (`ONBOARDING_REQUIRED_ITEMS_INCOMPLETE`).
-- Khi thỏa mãn:
-  - Cập nhật tiến trình sang `COMPLETED`, ghi nhận `completed_at`.
-  - **Tự động gọi `EmployeeService.updateEmploymentStatus(employeeId, ACTIVE)`** để kích hoạt nhân sự chính thức hoạt động trên toàn hệ thống CYCLOSA.
-
----
-
-## 3. Máy trạng thái (State Machines)
-
-### 3.1. Trạng thái Tiến trình Onboarding (`OnboardingStatus`)
+## 2. Mô hình Thực thể & CSDL Chi tiết (Database Schema)
 
 ```mermaid
-stateDiagram-v2
-    [*] --> IN_PROGRESS : Khởi tạo tiến trình (createProcess)
-    IN_PROGRESS --> COMPLETED : Hoàn thành 100% item bắt buộc (completeProcess)
-    IN_PROGRESS --> CANCELLED : Hủy tiến trình (cancelProcess)
-    COMPLETED --> [*]
-    CANCELLED --> [*]
+erDiagram
+    COMPANIES ||--o{ ONBOARDING_CHECKLIST_TEMPLATES : "sở hữu"
+    ONBOARDING_CHECKLIST_TEMPLATES ||--o{ ONBOARDING_CHECKLIST_TEMPLATE_ITEMS : "chứa"
+    EMPLOYEES ||--o{ ONBOARDING_PROCESSES : "trải qua"
+    ONBOARDING_PROCESSES ||--o{ ONBOARDING_PROCESS_ITEMS : "thực thi"
+    ONBOARDING_PROCESSES ||--o{ ACCOUNT_PROVISIONING : "yêu cầu"
+    ONBOARDING_PROCESSES ||--o{ ORIENTATION_SESSIONS : "tham gia"
+    EMPLOYEES ||--o{ EMPLOYEE_DOCUMENTS : "nộp"
+
+    ONBOARDING_CHECKLIST_TEMPLATES {
+        UUID id PK
+        UUID company_id FK
+        VARCHAR template_name
+        TEXT description
+        UUID applicable_department_id FK
+        UUID applicable_position_id FK
+        BOOLEAN is_default
+        TIMESTAMP deleted_at
+    }
+
+    ONBOARDING_CHECKLIST_TEMPLATE_ITEMS {
+        UUID id PK
+        UUID template_id FK
+        VARCHAR title
+        VARCHAR category
+        INT order_index
+        BOOLEAN is_required
+    }
+
+    ONBOARDING_PROCESSES {
+        UUID id PK
+        UUID company_id FK
+        UUID employee_id FK
+        UUID checklist_template_id FK
+        VARCHAR status
+        DATE start_date
+        DATE target_completion_date
+        TIMESTAMP completed_at
+        TEXT notes
+        TIMESTAMP deleted_at
+    }
+
+    ONBOARDING_PROCESS_ITEMS {
+        UUID id PK
+        UUID onboarding_process_id FK
+        UUID template_item_id FK
+        VARCHAR title
+        VARCHAR category
+        INT order_index
+        BOOLEAN is_required
+        VARCHAR status
+        UUID completed_by_employee_id FK
+        TIMESTAMP completed_at
+        TEXT note
+    }
+
+    ACCOUNT_PROVISIONING {
+        UUID id PK
+        UUID company_id FK
+        UUID onboarding_process_id FK
+        UUID employee_id FK
+        VARCHAR system_name
+        VARCHAR account_username
+        VARCHAR status
+        UUID provisioned_by_employee_id FK
+        TIMESTAMP provisioned_at
+        TIMESTAMP revoked_at
+    }
+
+    ORIENTATION_SESSIONS {
+        UUID id PK
+        UUID company_id FK
+        UUID onboarding_process_id FK
+        VARCHAR session_name
+        TEXT description
+        VARCHAR location
+        TIMESTAMP scheduled_at
+        UUID trainer_employee_id FK
+        VARCHAR status
+    }
+
+    EMPLOYEE_DOCUMENTS {
+        UUID id PK
+        UUID company_id FK
+        UUID employee_id FK
+        VARCHAR document_type
+        VARCHAR document_name
+        VARCHAR file_url
+        BIGINT file_size
+        BOOLEAN is_verified
+        UUID verified_by_employee_id FK
+        TIMESTAMP verified_at
+        TIMESTAMP deleted_at
+    }
 ```
 
-### 3.2. Trạng thái Hạng mục (`OnboardingItemStatus`)
+### 2.1. Bảng `onboarding_processes` — Tiến Trình Hội Nhập
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PK, NOT NULL` | Định danh duy nhất tiến trình Onboarding. |
+| `company_id` | `UUID` | `NOT NULL, INDEX` | Công ty sở hữu tiến trình. |
+| `employee_id` | `UUID` | `NOT NULL, INDEX` | Nhân viên mới tiếp nhận (FK `employees`). |
+| `checklist_template_id`| `UUID` | `NOT NULL, FK` | Mẫu Checklist áp dụng. |
+| `status` | `VARCHAR(30)` | `NOT NULL` | Trạng thái: `IN_PROGRESS`, `COMPLETED`, `CANCELLED`. |
+| `start_date` | `DATE` | `NOT NULL` | Ngày bắt đầu tiến trình hội nhập. |
+| `target_completion_date`| `DATE`| `NULLABLE` | Hạn chót dự kiến hoàn thành. |
+| `completed_at` | `TIMESTAMP` | `NULLABLE` | Thời điểm nghiệm thu hoàn thành 100%. |
 
+---
+
+### 2.2. Bảng `onboarding_process_items` — Chi Tiết Hạng Mục Đầu Việc
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa Nghiệp Vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PK, NOT NULL` | Định danh hạng mục đầu việc. |
+| `onboarding_process_id`| `UUID` | `NOT NULL, FK` | Tiến trình trực thuộc. |
+| `title` | `VARCHAR(250)` | `NOT NULL` | Tiêu đề công việc cần làm. |
+| `category` | `VARCHAR(30)` | `NOT NULL` | Phân loại: `DOCUMENT`, `ACCOUNT`, `ASSET`, `ORIENTATION`, `OTHER`. |
+| `order_index` | `INT` | `NOT NULL` | Thứ tự ưu tiên thực hiện. |
+| `is_required` | `BOOLEAN` | `NOT NULL` | Cờ bắt buộc phải hoàn tất trước khi nghiệm thu. |
+| `status` | `VARCHAR(30)` | `NOT NULL` | Trạng thái: `PENDING`, `COMPLETED`, `SKIPPED`. |
+| `completed_by_employee_id` | `UUID` | `NULLABLE` | Nhân sự (HR/IT/Manager) xác nhận hoàn thành. |
+| `completed_at` | `TIMESTAMP` | `NULLABLE` | Thời điểm xác nhận hoàn tất. |
+
+---
+
+## 3. Các Luồng Nghiệp vụ Trọng tâm (Business Workflows)
+
+### 3.1. Luồng Khởi Tạo Tiến Trình & Nhân Bản Checklist (F1: Initialize Process)
 ```mermaid
-stateDiagram-v2
-    [*] --> PENDING : Nhân bản từ Template
-    PENDING --> COMPLETED : Người phụ trách xác nhận hoàn thành
-    PENDING --> SKIPPED : Bỏ qua (Chỉ áp dụng với is_required = false)
-    COMPLETED --> [*]
-    SKIPPED --> [*]
-```
+sequenceDiagram
+    autonumber
+    actor HR as HR Admin
+    participant Ctrl as OnboardingProcessController
+    participant Svc as OnboardingService
+    participant Emp as EmployeeService
+    participant DB as Database (onboarding_processes)
 
-### 3.3. Trạng thái Cấp phát Tài khoản IT (`ProvisioningStatus`)
-
-```mermaid
-stateDiagram-v2
-    [*] --> PENDING : Yêu cầu cấp tài khoản
-    PENDING --> PROVISIONED : IT cấu hình & bàn giao tài khoản thành công
-    PENDING --> FAILED : Lỗi cấp phát hoặc bị từ chối
-    PROVISIONED --> [*]
-    FAILED --> [*]
+    HR->>Ctrl: POST /api/v1/onboarding/processes (employeeId, templateId)
+    Ctrl->>Svc: createProcess(request)
+    Svc->>DB: Kiểm tra xem nhân viên đã có tiến trình IN_PROGRESS chưa
+    alt Đã có tiến trình đang diễn ra
+        Svc-->>Ctrl: Lỗi 5202 ONBOARDING_ALREADY_IN_PROGRESS
+        Ctrl-->>HR: HTTP 409 Conflict
+    else Hợp lệ
+        Svc->>DB: Đọc danh sách Template Items từ templateId
+        Svc->>DB: Lưu OnboardingProcess mới
+        Svc->>DB: Clone toàn bộ Template Items sang onboarding_process_items
+        Svc->>Emp: getEmployeeSummaries({employeeId})
+        Svc-->>Ctrl: Trả về OnboardingProcessDetailResponse
+        Ctrl-->>HR: HTTP 201 Created
+    end
 ```
 
 ---
 
-## 4. Chi tiết các Thực thể Dữ liệu (Entities & Database Design)
-
-Module Onboarding gồm 7 Entity kế thừa `BaseEntity` (đầy đủ `id` (UUID), `created_at`, `updated_at`, `deleted_at`, Soft-Delete và Audit):
-
-### 4.1. `OnboardingChecklistTemplate` (Bảng `onboarding_checklist_templates`)
-*Mẫu danh mục hội nhập chuẩn của doanh nghiệp.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `id` | `UUID` | No | Khóa chính |
-| `company_id` | `UUID` | Yes | ID công ty (Multi-tenancy; `null` là template mẫu dùng chung toàn tập đoàn) |
-| `name` | `VARCHAR(200)` | No | Tên mẫu template (ví dụ: *Quy trình đón tiếp Kỹ sư phần mềm*) |
-| `applicable_position_id` | `UUID` | Yes | ID chức danh áp dụng (nếu cấu hình riêng theo vị trí) |
-| `applicable_department_id` | `UUID` | Yes | ID phòng ban áp dụng (nếu cấu hình riêng theo đơn vị) |
-| `description` | `TEXT` | Yes | Mô tả mục tiêu, hướng dẫn của template |
-| `is_active` | `BOOLEAN` | No | Trạng thái hiệu lực (mặc định: `true`) |
-| `items` | `List<...Item>` | - | Quan hệ `@OneToMany` tới các hạng mục chi tiết |
-
-### 4.2. `OnboardingChecklistTemplateItem` (Bảng `onboarding_checklist_template_items`)
-*Các đầu việc cấu thành nên một Template.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `template_id` | `UUID` | No | Khóa ngoại `@ManyToOne` tham chiếu `OnboardingChecklistTemplate` |
-| `title` | `VARCHAR(250)` | No | Tiêu đề công việc (ví dụ: *Nộp bản sao CCCD công chứng*) |
-| `description` | `TEXT` | Yes | Hướng dẫn chi tiết cách thức thực hiện |
-| `category` | `VARCHAR(30)` | No | Enum: `DOCUMENT`, `ACCOUNT`, `ASSET`, `ORIENTATION`, `OTHER` |
-| `order_index` | `INT` | No | Thứ tự hiển thị và thực hiện (tăng dần) |
-| `is_required` | `BOOLEAN` | No | Bắt buộc phải hoàn tất trước khi kích hoạt nhân viên |
-
-### 4.3. `OnboardingProcess` (Bảng `onboarding_processes`)
-*Tiến trình hội nhập thực tế của một nhân viên cụ thể.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `company_id` | `UUID` | No | Thuộc công ty/pháp nhân nào |
-| `employee_id` | `UUID` | No | Nhân viên đang tham gia Onboarding |
-| `checklist_template_id` | `UUID` | No | Template gốc được sử dụng |
-| `start_date` | `DATE` | No | Ngày chính thức bắt đầu tiếp nhận |
-| `status` | `VARCHAR(30)` | No | Enum: `IN_PROGRESS`, `COMPLETED`, `CANCELLED` |
-| `completed_at` | `TIMESTAMP` | Yes | Thời điểm nghiệm thu hoàn thành 100% |
-| `notes` | `TEXT` | Yes | Ghi chú đánh giá chung |
-| `items` | `List<...Item>` | - | `@OneToMany` danh sách các đầu việc nhân bản của tiến trình này |
-
-### 4.4. `OnboardingProcessItem` (Bảng `onboarding_process_items`)
-*Đầu việc cụ thể được giao và theo dõi trong tiến trình của nhân sự.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `onboarding_process_id` | `UUID` | No | `@ManyToOne` thuộc về tiến trình Onboarding nào |
-| `template_item_id` | `UUID` | Yes | ID hạng mục gốc trong Template (để truy vết) |
-| `title` | `VARCHAR(250)` | No | Tiêu đề công việc |
-| `category` | `VARCHAR(30)` | No | Phân loại hạng mục |
-| `order_index` | `INT` | No | Thứ tự ưu tiên |
-| `is_required` | `BOOLEAN` | No | Cờ bắt buộc |
-| `status` | `VARCHAR(30)` | No | Enum: `PENDING`, `COMPLETED`, `SKIPPED` |
-| `completed_by_employee_id` | `UUID` | Yes | ID nhân viên (HR/IT/Manager) xác nhận hoàn tất |
-| `completed_at` | `TIMESTAMP` | Yes | Thời điểm hoàn thành |
-| `note` | `TEXT` | Yes | Ghi chú khi thực hiện |
-
-### 4.5. `AccountProvisioning` (Bảng `account_provisioning`)
-*Theo dõi cấp phát tài khoản công nghệ thông tin cho nhân sự mới.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `company_id` | `UUID` | No | ID công ty |
-| `onboarding_process_id` | `UUID` | Yes | Liên kết với tiến trình Onboarding |
-| `employee_id` | `UUID` | No | Nhân sự được cấp tài khoản |
-| `system_name` | `VARCHAR(100)` | No | Tên hệ thống (ví dụ: *Google Workspace, VPN, Gitlab*) |
-| `account_username` | `VARCHAR(150)` | No | Username / Email được cấp |
-| `status` | `VARCHAR(30)` | No | Enum: `PENDING`, `PROVISIONED`, `FAILED` |
-| `provisioned_by_employee_id` | `UUID` | Yes | Chuyên viên IT thực hiện cấp phát |
-| `provisioned_at` | `TIMESTAMP` | Yes | Thời điểm bàn giao |
-| `revoked_at` | `TIMESTAMP` | Yes | Thời điểm thu hồi (khi nghỉ việc) |
-
-### 4.6. `OrientationSession` (Bảng `orientation_sessions`)
-*Quản lý các buổi đào tạo định hướng hội nhập.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `company_id` | `UUID` | No | ID công ty |
-| `onboarding_process_id` | `UUID` | Yes | Liên kết tiến trình |
-| `session_name` | `VARCHAR(200)` | No | Tên lớp (ví dụ: *Văn hóa doanh nghiệp & Quy định bảo mật*) |
-| `description` | `TEXT` | Yes | Nội dung truyền tải |
-| `location` | `VARCHAR(255)` | Yes | Địa điểm phòng học hoặc link họp trực tuyến (Google Meet/Teams) |
-| `scheduled_at` | `TIMESTAMP` | No | Thời gian diễn ra buổi học |
-| `trainer_employee_id` | `UUID` | Yes | Giảng viên nội bộ / Người đào tạo phụ trách |
-| `status` | `VARCHAR(30)` | No | Enum: `SCHEDULED`, `COMPLETED`, `CANCELLED` |
-
-### 4.7. `EmployeeDocument` (Bảng `employee_documents`)
-*Quản lý kho hồ sơ giấy tờ số hóa của nhân sự.*
-
-| Thuộc tính | Kiểu dữ liệu | Nullable | Mô tả nghiệp vụ |
-| :--- | :--- | :---: | :--- |
-| `company_id` | `UUID` | No | ID công ty |
-| `employee_id` | `UUID` | No | Nhân viên sở hữu tài liệu |
-| `document_type` | `VARCHAR(30)` | No | Enum: `ID_CARD`, `DIPLOMA`, `HEALTH_CERT`, `CONTRACT`, `OTHER` |
-| `document_name` | `VARCHAR(255)` | No | Tên tài liệu (ví dụ: *CCCD 2 mặt, Bằng Thạc sĩ CNTT*) |
-| `file_url` | `VARCHAR(500)` | No | Đường dẫn file trên Object Storage (S3/MinIO) |
-| `file_size` | `BIGINT` | Yes | Dung lượng file (bytes) |
-| `is_verified` | `BOOLEAN` | No | Đã được HR kiểm tra và xác thực tính pháp lý chưa |
-| `verified_by_employee_id` | `UUID` | Yes | Chuyên viên HR thẩm định giấy tờ |
-| `verified_at` | `TIMESTAMP` | Yes | Thời điểm xác thực |
+### 3.2. Luồng Nghiệm Thu & Tự Động Kích Hoạt Nhân Sự (F2: Complete & Active)
+1. HR hoặc Người phụ trách gọi: `PUT /api/v1/onboarding/processes/{id}/complete`.
+2. Hệ thống kiểm tra:
+   - Toàn bộ các hạng mục có `is_required = true` phải ở trạng thái `COMPLETED` (`5208 REQUIRED_ITEMS_NOT_COMPLETED`).
+   - Các tài khoản IT bắt buộc phải ở trạng thái `PROVISIONED`.
+3. Nếu hợp lệ:
+   - Cập nhật tiến trình `status = COMPLETED` và lưu `completed_at = NOW()`.
+   - Tự động gọi `employeeService.updateEmploymentStatus(employeeId, ACTIVE)` kích hoạt nhân viên.
+   - Bắn thông báo chúc mừng gia nhập tổ chức tới nhân viên và trưởng phòng ban.
 
 ---
 
-## 5. Cấu trúc Source Code & Giải thích chi tiết các File
+## 4. Danh mục RESTful API Chi tiết
 
-Toàn bộ mã nguồn module được đóng gói độc lập trong package `com.cyclosa.onboarding` theo kiến trúc **Modular Monolith**:
+Base URI: `/api/v1/onboarding`
 
-```
-com.cyclosa.onboarding/
-├── controller/
-│   ├── OnboardingChecklistController.java    # API quản lý Mẫu Checklist Template
-│   ├── OnboardingProcessController.java      # API quản lý Tiến trình Onboarding & thực thi Task
-│   ├── OrientationSessionController.java     # API quản lý Lịch đào tạo hội nhập
-│   └── EmployeeDocumentController.java       # API số hóa & Thẩm định tài liệu hồ sơ
-├── service/
-│   └── OnboardingService.java                # Trọng tâm xử lý logic nghiệp vụ toàn bộ module
-├── repository/
-│   ├── OnboardingChecklistTemplateRepository.java
-│   ├── OnboardingChecklistTemplateItemRepository.java
-│   ├── OnboardingProcessRepository.java
-│   ├── OnboardingProcessItemRepository.java
-│   ├── AccountProvisioningRepository.java
-│   ├── OrientationSessionRepository.java
-│   └── EmployeeDocumentRepository.java
-├── entity/
-│   ├── OnboardingChecklistTemplate.java
-│   ├── OnboardingChecklistTemplateItem.java
-│   ├── OnboardingProcess.java
-│   ├── OnboardingProcessItem.java
-│   ├── AccountProvisioning.java
-│   ├── OrientationSession.java
-│   └── EmployeeDocument.java
-├── enums/
-│   ├── OnboardingStatus.java
-│   ├── OnboardingItemStatus.java
-│   ├── OnboardingItemCategory.java
-│   ├── ProvisioningStatus.java
-│   ├── SessionStatus.java
-│   └── EmployeeDocumentType.java
-├── mapper/
-│   └── OnboardingMapper.java                 # MapStruct chuyển đổi giữa Entity và DTO
-├── dto/
-│   ├── request/                              # Các payload gửi lên từ Client
-│   ├── response/                             # Cấu trúc trả về chuẩn RESTful (kèm Summary DTO)
-│   └── filter/                               # DTO lọc & tìm kiếm kế thừa BaseFilterRequest
-└── exception/
-    └── OnboardingErrorCode.java              # Mã lỗi nghiệp vụ đa hình (implement ErrorCode)
-```
-
-### 5.1. Tầng Service ([OnboardingService.java](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/onboarding/service/OnboardingService.java))
-Đây là file trung tâm của module, hiện thực các nguyên tắc kỹ thuật nghiêm ngặt:
-- **Tuân thủ Modular Monolith (Mục 1.1 & 1.2 BACKEND_STANDARDS):**
-  * Không bao giờ inject `EmployeeRepository` hay `PositionRepository`.
-  * Giao tiếp với các module khác thông qua Public Service:
-    - [EmployeeService](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/employee/service/EmployeeService.java): Lấy chi tiết nhân sự (`getEmployeeByIdInternal`), cập nhật trạng thái làm việc (`updateEmploymentStatus`), lấy danh sách tóm tắt (`getEmployeeSummaries`).
-    - [OrganizationalUnitService](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/organization/service/OrganizationalUnitService.java): Lấy tóm tắt phòng ban (`getUnitSummaries`).
-    - [PositionService](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/organization/service/PositionService.java): Lấy tóm tắt chức danh (`getPositionSummaries`).
-    - [AssetService](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/asset/service/AssetService.java): Lấy danh sách tài sản/thiết bị đã được cấp phát cho nhân viên mới (`getEmployeeAssets`).
-- **Chống N+1 Query triệt để (Mục 7 BACKEND_STANDARDS):**
-  * Khi trả về danh sách tiến trình (`PageData<OnboardingProcessResponse>`), gom toàn bộ `Set<UUID>` của nhân viên, phòng ban, chức danh và gọi hàm batch để map vào các `Nested Summary Object` (`EmployeeSummary`, `PositionSummary`, `OrgUnitSummary`).
-- **Tính toán tiến độ hội nhập thời gian thực:**
-  * Hàm `calculateProgress(...)` đếm tổng số item, số item đã hoàn thành để tính tỷ lệ `%` tiến độ và hiển thị lên UI Dashboard cho HR và Quản lý.
-
-### 5.2. Tầng Controller
-- [OnboardingChecklistController.java](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/onboarding/controller/OnboardingChecklistController.java):
-  * Đường dẫn: `/api/v1/onboarding/templates`
-  * Quản lý CRUD Mẫu Checklist Template và cấu hình đầu việc con.
-- [OnboardingProcessController.java](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/onboarding/controller/OnboardingProcessController.java):
-  * Đường dẫn: `/api/v1/onboarding/processes`
-  * Khởi tạo tiến trình, thực hiện từng item, theo dõi tiến độ, cấp phát tài khoản IT và nghiệm thu kích hoạt nhân sự.
-- [OrientationSessionController.java](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/onboarding/controller/OrientationSessionController.java):
-  * Đường dẫn: `/api/v1/onboarding/sessions`
-  * Quản lý lịch các lớp đào tạo văn hóa hội nhập.
-- [EmployeeDocumentController.java](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/onboarding/controller/EmployeeDocumentController.java):
-  * Đường dẫn: `/api/v1/onboarding/documents`
-  * Upload hồ sơ số hóa và thẩm định giấy tờ nhân sự.
+| HTTP Method | Endpoint URI | Phân Quyền (@PreAuthorize) | DTO Request / Response | Chức Năng Nghiệp Vụ |
+| :---: | :--- | :--- | :--- | :--- |
+| `POST` | `/templates` | `@perm.has('onboarding.template.create')` | `CreateTemplateRequest` $\rightarrow$ `ApiResponse<TemplateResponse>` | Tạo mới mẫu Checklist hội nhập. |
+| `GET` | `/templates` | `@perm.has('onboarding.template.view')` | `TemplateFilter` $\rightarrow$ `ApiResponse<PageData<TemplateResponse>>` | Danh sách mẫu Checklist (phân trang + lọc). |
+| `GET` | `/templates/{id}` | `@perm.has('onboarding.template.view')` | Path `id` $\rightarrow$ `ApiResponse<TemplateDetailResponse>` | Chi tiết mẫu Checklist kèm danh sách items. |
+| `PUT` | `/templates/{id}` | `@perm.has('onboarding.template.manage')`| `UpdateTemplateRequest` $\rightarrow$ `ApiResponse<TemplateResponse>` | Cập nhật thông tin mẫu Checklist. |
+| `DELETE` | `/templates/{id}` | `@perm.has('onboarding.template.manage')`| Path `id` $\rightarrow$ `ApiResponse<Void>` | Xóa mềm mẫu Checklist. |
+| `POST` | `/templates/{id}/items` | `@perm.has('onboarding.template.manage')`| `CreateTemplateItemRequest` $\rightarrow$ `ApiResponse<Void>` | Thêm hạng mục đầu việc vào Template. |
+| `POST` | `/processes` | `@perm.has('onboarding.process.create')` | `CreateProcessRequest` $\rightarrow$ `ApiResponse<ProcessResponse>` | Khởi tạo tiến trình Onboarding cho nhân sự mới. |
+| `GET` | `/processes` | `@perm.has('onboarding.process.view')` | `ProcessFilter` $\rightarrow$ `ApiResponse<PageData<ProcessResponse>>` | Danh sách tiến trình Onboarding (lọc, phân trang). |
+| `GET` | `/processes/{id}` | `@perm.has('onboarding.process.view')` | Path `id` $\rightarrow$ `ApiResponse<ProcessDetailResponse>` | Chi tiết tiến trình (tiến độ, items, tài sản, tài khoản). |
+| `PUT` | `/processes/items/{itemId}/complete` | `@perm.has('onboarding.process.manage')`| `CompleteItemRequest` $\rightarrow$ `ApiResponse<Void>` | Đánh dấu hoàn thành một hạng mục đầu việc. |
+| `PUT` | `/processes/{id}/complete` | `@perm.has('onboarding.process.manage')`| Path `id` $\rightarrow$ `ApiResponse<Void>` | Nghiệm thu hoàn tất Onboarding (Kích hoạt `ACTIVE`). |
+| `PUT` | `/processes/{id}/cancel` | `@perm.has('onboarding.process.manage')`| Path `id` $\rightarrow$ `ApiResponse<Void>` | Hủy tiến trình Onboarding. |
+| `POST` | `/processes/{id}/accounts` | `@perm.has('onboarding.account.manage')`| `CreateAccountRequest` $\rightarrow$ `ApiResponse<AccountResponse>` | Đăng ký cấp phát tài khoản IT cho nhân viên mới. |
+| `PUT` | `/processes/accounts/{id}/status` | `@perm.has('onboarding.account.manage')`| `UpdateAccountStatusRequest` $\rightarrow$ `ApiResponse<Void>` | Cập nhật trạng thái cấp phát tài khoản IT. |
+| `POST` | `/sessions` | `@perm.has('onboarding.session.create')` | `CreateSessionRequest` $\rightarrow$ `ApiResponse<SessionResponse>` | Lên lịch buổi đào tạo hội nhập văn hóa. |
+| `GET` | `/sessions` | `@perm.has('onboarding.session.view')` | `SessionFilter` $\rightarrow$ `ApiResponse<PageData<SessionResponse>>` | Danh sách các buổi đào tạo định hướng. |
+| `PUT` | `/sessions/{id}` | `@perm.has('onboarding.session.manage')` | `UpdateSessionRequest` $\rightarrow$ `ApiResponse<SessionResponse>` | Cập nhật thông tin/trạng thái buổi đào tạo. |
+| `POST` | `/documents/employees/{employeeId}` | `@perm.has('onboarding.document.upload')`| Multipart `file` $\rightarrow$ `ApiResponse<DocumentResponse>` | Tải lên tài liệu hồ sơ nhân sự số hóa. |
+| `GET` | `/documents/employees/{employeeId}` | `@perm.has('onboarding.document.view')` | Path `employeeId` $\rightarrow$ `ApiResponse<List<DocumentResponse>>` | Xem danh mục tài liệu số hóa của nhân viên. |
+| `PUT` | `/documents/{id}/verify` | `@perm.has('onboarding.document.verify')`| Path `id` $\rightarrow$ `ApiResponse<Void>` | Thẩm định & xác thực tính pháp lý của hồ sơ. |
 
 ---
 
-## 6. Danh Mục API RESTful Chuẩn Hóa
+## 5. Danh mục Mã lỗi Module Onboarding (`OnboardingErrorCode`)
 
-| HTTP Method | Endpoint URI | Chức năng nghiệp vụ | Mã Quyền RBAC |
-| :---: | :--- | :--- | :--- |
-| `POST` | `/api/v1/onboarding/templates` | Tạo mới mẫu Checklist hội nhập | `onboarding.template.create` |
-| `GET` | `/api/v1/onboarding/templates` | Danh sách mẫu Checklist (phân trang + lọc) | `onboarding.template.view` |
-| `GET` | `/api/v1/onboarding/templates/{id}` | Chi tiết mẫu Checklist kèm danh sách items | `onboarding.template.view` |
-| `PUT` | `/api/v1/onboarding/templates/{id}` | Cập nhật thông tin mẫu Checklist | `onboarding.template.manage` |
-| `DELETE` | `/api/v1/onboarding/templates/{id}` | Xóa mềm mẫu Checklist | `onboarding.template.manage` |
-| `POST` | `/api/v1/onboarding/templates/{id}/items` | Thêm hạng mục đầu việc vào Template | `onboarding.template.manage` |
-| `POST` | `/api/v1/onboarding/processes` | Khởi tạo tiến trình Onboarding cho nhân sự mới | `onboarding.process.create` |
-| `GET` | `/api/v1/onboarding/processes` | Danh sách tiến trình Onboarding (lọc, phân trang) | `onboarding.process.view` |
-| `GET` | `/api/v1/onboarding/processes/{id}` | Xem chi tiết tiến trình (tiến độ, items, tài sản, tài khoản) | `onboarding.process.view` |
-| `PUT` | `/api/v1/onboarding/processes/items/{itemId}/complete` | Đánh dấu hoàn thành một hạng mục đầu việc | `onboarding.process.manage` |
-| `PUT` | `/api/v1/onboarding/processes/{id}/complete` | Nghiệm thu hoàn tất Onboarding (Kích hoạt `ACTIVE`) | `onboarding.process.manage` |
-| `PUT` | `/api/v1/onboarding/processes/{id}/cancel` | Hủy tiến trình Onboarding | `onboarding.process.manage` |
-| `POST` | `/api/v1/onboarding/processes/{id}/accounts` | Đăng ký cấp phát tài khoản IT | `onboarding.account.manage` |
-| `PUT` | `/api/v1/onboarding/processes/accounts/{id}/status` | Cập nhật trạng thái cấp phát tài khoản IT | `onboarding.account.manage` |
-| `POST` | `/api/v1/onboarding/sessions` | Lên lịch buổi đào tạo hội nhập | `onboarding.session.create` |
-| `GET` | `/api/v1/onboarding/sessions` | Danh sách các buổi đào tạo định hướng | `onboarding.session.view` |
-| `PUT` | `/api/v1/onboarding/sessions/{id}` | Cập nhật trạng thái buổi đào tạo hội nhập | `onboarding.session.manage` |
-| `POST` | `/api/v1/onboarding/documents/employees/{employeeId}` | Tải lên tài liệu hồ sơ nhân sự số hóa | `onboarding.document.upload` |
-| `GET` | `/api/v1/onboarding/documents/employees/{employeeId}` | Xem danh mục tài liệu của nhân viên | `onboarding.document.view` |
-| `PUT` | `/api/v1/onboarding/documents/{id}/verify` | Thẩm định & xác thực tính pháp lý của hồ sơ | `onboarding.document.verify` |
+| Mã Lỗi (Enum) | Mã Số | HTTP Status | Thông Điệp Tiếng Việt | Nguyên Nhân & Ngữ Cảnh Kích Hoạt |
+| :--- | :---: | :---: | :--- | :--- |
+| `ONBOARDING_PROCESS_NOT_FOUND` | **5201** | `404 Not Found` | Không tìm thấy tiến trình onboarding | `process_id` không tồn tại trong hệ thống. |
+| `ONBOARDING_ALREADY_IN_PROGRESS` | **5202** | `409 Conflict` | Nhân viên đã có quy trình onboarding đang diễn ra | Nhân viên đã có 1 tiến trình ở trạng thái `IN_PROGRESS`. |
+| `CHECKLIST_TEMPLATE_NOT_FOUND` | **5203** | `404 Not Found` | Không tìm thấy mẫu danh sách onboarding | `template_id` không tồn tại trong kho mẫu. |
+| `PROCESS_ITEM_NOT_FOUND` | **5204** | `404 Not Found` | Không tìm thấy hạng mục công việc onboarding | `item_id` không nằm trong tiến trình Onboarding. |
+| `ONBOARDING_PROCESS_CLOSED` | **5205** | `422 Unprocessable` | Quy trình onboarding đã kết thúc hoặc bị hủy, không thể chỉnh sửa | Cập nhật task trên tiến trình đã `COMPLETED` hoặc `CANCELLED`. |
+| `ITEM_ALREADY_COMPLETED` | **5206** | `422 Unprocessable` | Hạng mục công việc đã được hoàn thành trước đó | Thao tác complete lại trên item đã `COMPLETED`. |
+| `ACCOUNT_NOT_PROVISIONED_YET` | **5207** | `422 Unprocessable` | Cần cấp phát tài khoản tương ứng ở trạng thái đã cấp (PROVISIONED) trước khi hoàn thành | Hoàn thành task Account khi IT chưa cấp tài khoản. |
+| `REQUIRED_ITEMS_NOT_COMPLETED` | **5208** | `422 Unprocessable` | Các hạng mục bắt buộc chưa hoàn thành đầy đủ | Nghiệm thu tiến trình khi còn item bắt buộc `PENDING`. |
+| `ACCOUNT_PROVISIONING_NOT_FOUND`| **5209** | `404 Not Found` | Không tìm thấy thông tin cấp phát tài khoản | `account_id` không tồn tại trong hệ thống. |
+| `ORIENTATION_SESSION_NOT_FOUND` | **5210** | `404 Not Found` | Không tìm thấy buổi đào tạo định hướng | `session_id` không tồn tại trong hệ thống. |
+| `EMPLOYEE_DOCUMENT_NOT_FOUND` | **5211** | `404 Not Found` | Không tìm thấy tài liệu hồ sơ nhân viên | `document_id` không tồn tại trong CSDL. |
+| `TEMPLATE_ITEM_NOT_FOUND` | **5212** | `404 Not Found` | Không tìm thấy hạng mục trong mẫu checklist | `template_item_id` không tồn tại trong mẫu. |
+| `ONBOARDING_CANNOT_CANCEL` | **5213** | `400 Bad Request` | Quy trình onboarding đã hoàn thành, không thể hủy | Cố gắng gọi API cancel trên tiến trình đã nghiệm thu. |
+
+---
+
+## 6. Phân bổ Quyền Hạn & Ma trận Vai trò (RBAC Matrix)
+
+| Mã Quyền (Permission) | Mô Tả Hành Động | Super Admin | HR Admin | IT Support | Dept Manager | Employee |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `onboarding.template.view` | Xem danh sách & chi tiết mẫu Checklist | **FULL** | **FULL** | ⛔ | **VIEW ONLY** | ⛔ |
+| `onboarding.template.create`| Tạo mới mẫu Checklist hội nhập | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |
+| `onboarding.template.manage`| Cập nhật, xóa mẫu Checklist và thêm item | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |
+| `onboarding.process.view` | Theo dõi tiến độ hội nhập của nhân sự mới | **FULL** | **FULL** | **VIEW** | **DEPT ONLY** | **SELF ONLY** |
+| `onboarding.process.create` | Khởi tạo tiến trình Onboarding cho nhân viên | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |
+| `onboarding.process.manage` | Đánh dấu hoàn thành việc, nghiệm thu kích hoạt | **FULL** | **FULL** | ⛔ | **Duyệt việc** | ⛔ |
+| `onboarding.account.manage` | Đăng ký & cập nhật trạng thái cấp tài khoản IT | **FULL** | **FULL** | **FULL** | ⛔ | ⛔ |
+| `onboarding.session.view` | Xem lịch các buổi đào tạo định hướng | **FULL** | **FULL** | ⛔ | **FULL** | **SELF ONLY** |
+| `onboarding.session.create` | Lên lịch lớp học định hướng văn hóa | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |
+| `onboarding.session.manage` | Cập nhật trạng thái và điểm danh buổi học | **FULL** | **FULL** | ⛔ | **Giảng viên** | ⛔ |
+| `onboarding.document.upload`| Tải lên tài liệu hồ sơ cá nhân | **FULL** | **FULL** | ⛔ | ⛔ | **SELF ONLY** |
+| `onboarding.document.view` | Xem danh mục tài liệu hồ sơ số hóa | **FULL** | **FULL** | ⛔ | **DEPT ONLY** | **SELF ONLY** |
+| `onboarding.document.verify`| Thẩm định & xác thực tính pháp lý của hồ sơ | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |

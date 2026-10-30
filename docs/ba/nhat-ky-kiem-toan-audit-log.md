@@ -1,141 +1,144 @@
-# CYCLOSA — Nghiệp Vụ Nhật Ký Kiểm Toán (Audit Log & Audit Trail)
+# Tài liệu Nghiệp vụ Module: Nhật ký Kiểm toán & Truy vết Hệ thống (Audit Log & Audit Trail)
 
-Tài liệu này mô tả chi tiết yêu cầu nghiệp vụ, kiến trúc kỹ thuật và giải thích vai trò của từng thành phần trong module `com.cyclosa.audit` thuộc hệ thống CYCLOSA HRM.
-
----
-
-## 1. Tổng Quan Nghiệp Vụ (Business Overview)
-
-### 1.1. Mục đích & Tầm quan trọng
-Trong hệ thống quản trị nhân sự doanh nghiệp (HRM), việc lưu vết toàn bộ các thao tác dữ liệu nhạy cảm là yêu cầu **bắt buộc** nhằm:
-* **Kiểm toán nội bộ & Tuân thủ (Compliance & Audit):** Đáp ứng các tiêu chuẩn kiểm toán doanh nghiệp (ISO 27001, SOX), luật lao động và bảo vệ dữ liệu cá nhân.
-* **Truy vết sự cố & Chống gian lận (Fraud Detection):** Phát hiện các hành vi sửa lương, sửa ngày công, tự cấp quyền, xóa hợp đồng hoặc can thiệp trái phép vào kết quả phê duyệt.
-* **Minh bạch hóa lịch sử (Audit Trail):** Xem lại toàn bộ dòng lịch sử của một bản ghi nghiệp vụ (ai tạo, ai sửa, ai duyệt, vào thời điểm nào, từ địa chỉ IP nào, giá trị cũ/mới là gì).
-
-### 1.2. Các Nguyên Tắc Nghiệp Vụ Bắt Buộc (Core Business Rules)
-1. **Tính Bất Biến (Immutable / Append-Only):**
-   * Bảng `audit_logs` **chỉ cho phép `INSERT` và `SELECT`**.
-   * **Tuyệt đối cấm `UPDATE` và `DELETE`**. Không một ai (kể cả Super Admin hay Database Administrator) được phép chỉnh sửa hay xóa log kiểm toán thông qua ứng dụng.
-2. **Không làm gián đoạn nghiệp vụ chính (Non-blocking & Fault-Tolerant):**
-   * Việc ghi nhật ký kiểm toán phải chạy bất đồng bộ (`@Async`) hoặc trong transaction độc lập (`REQUIRES_NEW`).
-   * Nếu có lỗi trong quá trình lưu log (ví dụ: lỗi kết nối mạng, vượt quá dung lượng chuỗi JSON), **nghiệp vụ chính của người dùng vẫn phải thành công bình thường**, không được gây lỗi hoặc rollback transaction chính.
-3. **Phân quyền truy cập khắt khe (Read-Only RBAC):**
-   * Chỉ có vai trò **Super Admin** và **Kiểm toán viên (Auditor / Compliance)** mới có quyền truy vấn màn hình nhật ký kiểm toán (`audit.view`).
-   * Người dùng thông thường và các cấp quản lý không được xem log toàn hệ thống.
+> **Module Code:** `audit`  
+> **Package:** `com.cyclosa.audit`  
+> **Phiên bản:** 2.0 (Chuẩn hóa Backend Standards & Enterprise Compliance)  
+> **Căn cứ pháp lý & Tiêu chuẩn:**  
+> - **Tiêu chuẩn Quốc tế ISO/IEC 27001 & SOC 2:** Kiểm soát an toàn thông tin, toàn vẹn hệ thống và lưu vết truy cập dữ liệu nhạy cảm.  
+> - **Nghị định 13/2023/NĐ-CP:** Bảo vệ dữ liệu cá nhân (Personal Data Protection) — bắt buộc lưu vết mọi thao tác truy xuất, chỉnh sửa, xóa bỏ thông tin nhân sự.  
+> - **Bộ luật Lao động 2019:** Minh bạch hóa các quyết định hành chính (kỷ luật lao động, nâng lương, điều chuyển, chấm dứt hợp đồng).
 
 ---
 
-## 2. Kiến Trúc Kỹ Thuật & Luồng Xử Lý
+## 1. Tôn chỉ Nghiệp vụ & Nguyên tắc Thiết kế (Core Principles)
+
+Trong hệ thống quản trị nhân sự doanh nghiệp CYCLOSA HRM, module **Audit Log** đóng vai trò là "chiếc hộp đen" ghi nhận mọi biến động dữ liệu nhạy cảm, phục vụ thanh kiểm tra nội bộ, phát hiện gian lận và chứng minh tính hợp pháp của các quyết định nhân sự.
+
+```
+┌─────────────────────────────────┐
+│     Business Modules (Caller)   │
+│  - Payroll, Contract, Employee  │
+│  - Leave, Discipline, Roles...  │
+└────────────────┬────────────────┘
+                 │
+                 ├── 1. @Auditable Annotation (AOP Aspect)
+                 ├── 2. AuditLogEvent (Spring Event Bus)
+                 └── 3. AuditLogService.log(...) (Direct Call)
+                 │
+┌────────────────▼────────────────┐       ┌─────────────────────────┐
+│    Module com.cyclosa.audit     │ ────> │   PostgreSQL Database   │
+│  - Asynchronous Execution       │       │   - audit_logs (append) │
+│  - Propagation.REQUIRES_NEW     │       │   - Immutable Log Store │
+└─────────────────────────────────┘       └─────────────────────────┘
+```
+
+### 1.1. Tính Bất Biến Tuyệt Đối (Immutable / Append-Only)
+- Bảng cơ sở dữ liệu `audit_logs` **chỉ cho phép thao tác `INSERT` và `SELECT`**.
+- **Tuyệt đối cấm mọi hành vi `UPDATE` và `DELETE`**: Không một người dùng nào trong hệ thống (kể cả Super Admin, System Architect hay Database Administrator) được phép sửa hoặc xóa lịch sử log thông qua ứng dụng.
+- Dữ liệu lưu vết là chứng cứ pháp lý cao nhất khi xảy ra tranh chấp lao động hoặc khiếu nại nội bộ.
+
+### 1.2. Khả Năng Chịu Lỗi & Không Chặn Luồng Chính (Fault-Tolerant & Non-blocking)
+- Toàn bộ tác vụ lưu vết kiểm toán được thực thi bất đồng bộ (`@Async`) hoặc chạy trong một Transaction vật lý độc lập tách biệt:
+  ```java
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  ```
+- **Quy tắc Nuốt Lỗi An Toàn (Fail-Safe Principle):** Nếu việc ghi log gặp sự cố ngoài ý muốn (lỗi mạng DB, quá tải chuỗi JSON...), **nghiệp vụ chính của người dùng vẫn phải hoàn tất thành công bình thường**, tuyệt đối không để lỗi log làm rollback giao dịch nghiệp vụ cốt lõi.
+
+### 1.3. Đóng Gói Kiến Trúc Modular Monolith & Chống N+1 Query
+- Module `com.cyclosa.audit` hoạt động độc lập, không truy cập trực tiếp bảng `users` hay `employees`.
+- Khi client truy vấn danh sách log kiểm toán, Service thu thập toàn bộ tập hợp `userIds` trong trang kết quả và thực hiện **Batch Enrichment** qua `userService.getUserSummaries(userIds)` để nạp thông tin người thực hiện (`UserSummary: username, fullName, email, avatarUrl`) chỉ với 1 query duy nhất.
+
+### 1.4. Lưu Vết Chi Tiết Trước / Sau (Diff Tracking JSON)
+- Cung cấp hai trường `old_value` và `new_value` dạng chuỗi JSON snapshot.
+- Cho phép giao diện quản trị Frontend dễ dàng kết xuất bảng đối chiếu màu (Side-by-side Diff View) trực quan cho kiểm toán viên.
+
+---
+
+## 2. Mô hình Thực thể & CSDL Chi tiết (Database Schema)
+
+```mermaid
+erDiagram
+    USERS ||--o{ AUDIT_LOGS : "performs"
+    
+    AUDIT_LOGS {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR action
+        VARCHAR entity_type
+        UUID entity_id
+        TEXT old_value
+        TEXT new_value
+        VARCHAR ip_address
+        VARCHAR user_agent
+        TIMESTAMP created_at
+    }
+```
+
+### 2.1. Bảng `audit_logs` — Nhật Ký Kiểm Toán Toàn Hệ Thống
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa Nghiệp Vụ & Kỹ Thuật |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PK, NOT NULL` | Định danh duy nhất của bản ghi nhật ký kiểm toán. |
+| `user_id` | `UUID` | `NULLABLE, INDEX` | ID tài khoản người dùng thực hiện thao tác (null nếu là tác vụ ngầm hệ thống). |
+| `action` | `VARCHAR(50)` | `NOT NULL, INDEX` | Hành động chuẩn hóa: `CREATE`, `UPDATE`, `DELETE`, `APPROVE`, `REJECT`, `OVERRIDE`, `EXPORT`,... |
+| `entity_type` | `VARCHAR(100)`| `NOT NULL, INDEX` | Tên loại thực thể nghiệp vụ: `CONTRACT`, `PAYROLL_RECORD`, `DISCIPLINE`, `EMPLOYEE`,... |
+| `entity_id` | `UUID` | `NULLABLE, INDEX` | Khóa chính ID của đối tượng nghiệp vụ được thao tác. |
+| `old_value` | `TEXT` | `NULLABLE` | Chuỗi JSON snapshot dữ liệu trước khi thay đổi (Diff tracking). |
+| `new_value` | `TEXT` | `NULLABLE` | Chuỗi JSON snapshot dữ liệu sau khi thay đổi (Diff tracking). |
+| `ip_address` | `VARCHAR(45)` | `NULLABLE` | Địa chỉ IP của máy khách gửi yêu cầu (hỗ trợ cả IPv4 và IPv6). |
+| `user_agent` | `VARCHAR(500)`| `NULLABLE` | Thông tin trình duyệt, hệ điều hành và thiết bị của người thực hiện. |
+| `created_at` | `TIMESTAMP` | `NOT NULL, INDEX` | Thời điểm ghi nhận thao tác (mặc định sắp xếp giảm dần `DESC`). |
+
+* **Quy chuẩn Đánh Chỉ Mục (Index Optimization):**
+  - Index đơn trên `created_at DESC`: Tối ưu hóa truy vấn xem log mới nhất theo phân trang.
+  - Index đơn trên `user_id`: Tối ưu hóa lọc lịch sử thao tác của 1 nhân sự cụ thể.
+  - Index kép trên `(entity_type, entity_id)`: Tối ưu hóa truy vấn dòng lịch sử của 1 bản ghi nghiệp vụ (Entity Audit Trail).
+
+---
+
+## 3. Các Luồng Nghiệp vụ Trọng tâm & Hướng dẫn Tích hợp (Business Workflows)
 
 ```mermaid
 flowchart TD
-    subgraph Client [Client / Trình duyệt]
-        Req[Gửi Request: Duyệt đơn, Sửa lương, Phân quyền...]
+    subgraph Client [Tác Nhân / Trình Duyệt]
+        Req[Client gửi Request: Sửa lương, Duyệt phép, Xóa vai trò...]
     end
 
-    subgraph CoreBusiness [Nghiệp vụ chính]
+    subgraph BusinessLayer [Tầng Nghiệp Vụ Cốt Lõi]
         Ctrl[Business Controller]
         Svc[Business Service]
-        DB[(PostgreSQL)]
+        DBMain[(PostgreSQL: Bảng Nghiệp Vụ)]
     end
 
-    subgraph AuditModule [Module com.cyclosa.audit]
+    subgraph AuditEngine [Hạ Tầng com.cyclosa.audit]
         AOP[AuditLogAspect / @Auditable]
-        Evt[AuditLogEventListener / AuditLogEvent]
-        ASvc[AuditLogServiceImpl]
-        ARepo[AuditLogRepository]
-        ALog[(Bảng audit_logs)]
+        EvtListener[AuditLogEventListener]
+        AuditSvc[AuditLogServiceImpl]
+        AuditRepo[AuditLogRepository]
+        DBAudit[(Bảng audit_logs)]
     end
 
     Req --> Ctrl
     Ctrl --> Svc
-    Svc --> DB
+    Svc --> DBMain
 
-    %% Cách 1: Qua AOP Aspect
-    Ctrl -.->|Intercept @Auditable| AOP
-    AOP -.->|Async| ASvc
+    %% Luồng 1
+    Ctrl -.->|1. Intercept @Auditable| AOP
+    AOP -.->|Async| AuditSvc
 
-    %% Cách 2: Qua Event
-    Svc -.->|publishEvent| Evt
-    Evt -.->|Async| ASvc
+    %% Luồng 2
+    Svc -.->|2. publishEvent(AuditLogEvent)| EvtListener
+    EvtListener -.->|Async| AuditSvc
 
-    %% Cách 3: Gọi trực tiếp
-    Svc -.->|auditLogService.log()| ASvc
+    %% Luồng 3
+    Svc -.->|3. auditLogService.log(...)| AuditSvc
 
-    ASvc -->|REQUIRES_NEW| ARepo
-    ARepo --> ALog
+    AuditSvc -->|REQUIRES_NEW| AuditRepo
+    AuditRepo --> DBAudit
 ```
 
-### Điểm nhấn kiến trúc:
-1. **Batch Enrichment chống N+1 Query:** Khi truy vấn danh sách log trả về cho Client, Service thu thập toàn bộ `userId` xuất hiện trong trang kết quả, sau đó gọi 1 query duy nhất `userService.getUserSummaries(userIds)` để nạp thông tin người thực hiện (`UserSummary: username, fullName, email, avatarUrl`).
-2. **Lưu vết chi tiết Trước / Sau (Diff Tracking):** Hỗ trợ lưu trữ dữ liệu dưới dạng JSON ở hai cột `old_value` và `new_value`, cho phép giao diện Frontend vẽ bảng so sánh thay đổi chi tiết từng trường.
-
----
-
-## 3. Danh Sách & Giải Thích Chi Tiết Các File Trong Module
-
-Toàn bộ mã nguồn module nằm trong package `com.cyclosa.audit`:
-
-```text
-cyclosa_be/src/main/java/com/cyclosa/audit/
-├── aop/
-│   ├── Auditable.java
-│   └── AuditLogAspect.java
-├── controller/
-│   └── AuditLogController.java
-├── dto/
-│   ├── request/
-│   │   ├── AuditLogCommand.java
-│   │   └── AuditLogFilter.java
-│   └── response/
-│       ├── AuditLogDetailResponse.java
-│       └── AuditLogResponse.java
-├── entity/
-│   └── AuditLog.java
-├── enums/
-│   └── AuditAction.java
-├── event/
-│   └── AuditLogEvent.java
-├── listener/
-│   └── AuditLogEventListener.java
-├── mapper/
-│   └── AuditLogMapper.java
-├── repository/
-│   └── AuditLogRepository.java
-└── service/
-    ├── AuditLogService.java
-    └── impl/
-        └── AuditLogServiceImpl.java
-```
-
-### Bảng giải thích chi tiết từng file:
-
-| STT | Tên File & Đường dẫn | Phân loại | Nhiệm vụ & Vai trò kỹ thuật |
-| :---: | :--- | :--- | :--- |
-| 1 | [`AuditLog.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/entity/AuditLog.java) | **Entity** | Ánh xạ bảng cơ sở dữ liệu `audit_logs`. Chứa các trường: `userId`, `action`, `entityType`, `entityId`, `oldValue`, `newValue`, `ipAddress`, `userAgent`, `createdAt`. Được đánh index trên `created_at`, `user_id` và `(entity_type, entity_id)` để tối ưu tốc độ tra cứu. |
-| 2 | [`AuditAction.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/enums/AuditAction.java) | **Enum** | Danh mục chuẩn các hành động nghiệp vụ cần lưu vết: `CREATE`, `UPDATE`, `DELETE`, `APPROVE`, `REJECT`, `CANCEL`, `LOGIN`, `LOGOUT`, `PASSWORD_CHANGE`, `LOCK_USER`, `UNLOCK_USER`, `ASSIGN_ROLES`, `OVERRIDE`, `EXPORT`, `IMPORT`, `SYSTEM`. |
-| 3 | [`AuditLogRepository.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/repository/AuditLogRepository.java) | **Repository** | Cung cấp query động `search(...)` hỗ trợ lọc kết hợp: từ khóa (`keyword`), người thực hiện (`userId`), hành động (`action`), loại thực thể (`entityType`), ID thực thể (`entityId`) và khoảng thời gian (`fromDate` - `toDate`). Hỗ trợ hàm tìm lịch sử theo thực thể: `findByEntityTypeAndEntityIdOrderByCreatedAtDesc`. |
-| 4 | [`AuditLogCommand.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/request/AuditLogCommand.java) | **DTO Request** | Đối tượng đóng gói tham số truyền vào nội bộ khi các Service khác cần chủ động ghi log kiểm toán. |
-| 5 | [`AuditLogFilter.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/request/AuditLogFilter.java) | **DTO Request** | Kế thừa [`BaseFilterRequest.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/common/dto/request/BaseFilterRequest.java). Nhận tham số tìm kiếm và phân trang từ Client (`page`, `size`, `sortBy`, `direction`, `keyword`, `action`, `entityType`, `fromDate`, `toDate`). |
-| 6 | [`AuditLogResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/response/AuditLogResponse.java) | **DTO Response** | DTO trả về cho API danh sách. Áp dụng chuẩn **Nested Summary Object** (chứa [`UserSummary`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/common/dto/summary/UserSummary.java)) để UI hiển thị họ tên, avatar của người thực hiện mà không cần gọi thêm API phụ. |
-| 7 | [`AuditLogDetailResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/response/AuditLogDetailResponse.java) | **DTO Response** | DTO trả về cho API xem chi tiết. Bổ sung thêm chuỗi JSON `oldValue`, `newValue` để so sánh trước/sau và chuỗi `userAgent` nhận diện thiết bị. |
-| 8 | [`AuditLogEvent.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/event/AuditLogEvent.java) | **Domain Event** | Lớp sự kiện dùng cho cơ chế Event-Driven. Các module khác có thể phát sự kiện này qua Spring Event Bus (`eventPublisher.publishEvent(...)`) để ghi log hoàn toàn độc lập. |
-| 9 | [`AuditLogEventListener.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/listener/AuditLogEventListener.java) | **Event Listener** | Lắng nghe `AuditLogEvent` trong background thread (`@Async`) và chuyển tiếp sang `AuditLogService` để lưu vào DB. |
-| 10 | [`AuditLogMapper.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/mapper/AuditLogMapper.java) | **Mapper** | MapStruct chuyển đổi giữa `AuditLogCommand`, `AuditLogEvent` sang Entity `AuditLog`, và từ `AuditLog` sang `AuditLogResponse`, `AuditLogDetailResponse`. |
-| 11 | [`Auditable.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/aop/Auditable.java) | **Annotation** | Custom annotation đánh dấu lên method (Controller/Service) cần ghi log tự động. Tham số gồm: `action` và `entityType`. |
-| 12 | [`AuditLogAspect.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/aop/AuditLogAspect.java) | **AOP Aspect** | Bắt các method có gắn `@Auditable`. Tự động bóc tách: `userId` (từ `SecurityContext`), `IP` và `User-Agent` (từ `HttpServletRequest`), `entityId` (từ tham số method hoặc kết quả trả về) và gọi `AuditLogService` lưu vết. |
-| 13 | [`AuditLogService.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/service/AuditLogService.java) | **Service Interface** | Định nghĩa hợp đồng công khai cho module: các hàm `log(...)` đa dạng tham số, `getLogs(filter)`, `getLogById(id)`, `getLogsByEntity(entityType, entityId, pageable)`. |
-| 14 | [`AuditLogServiceImpl.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/service/impl/AuditLogServiceImpl.java) | **Service Impl** | Cài đặt logic nghiệp vụ. Sử dụng `@Async` và `@Transactional(propagation = Propagation.REQUIRES_NEW)` cho hàm `log`. Sử dụng `userService.getUserSummaries(...)` để nạp thông tin User dạng batch (chống N+1 query). |
-| 15 | [`AuditLogController.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/controller/AuditLogController.java) | **Controller** | Cung cấp 3 API REST tra cứu nhật ký kiểm toán cho Quản trị viên/Kiểm toán viên. Được bảo vệ bởi `@PreAuthorize("@perm.has('audit.view')")` và `@RequirePermission("audit.view")`. |
-
----
-
-## 4. Hướng Dẫn Sử Dụng Trong Dự Án (Developer Guide)
-
-Các lập trình viên khi phát triển các module khác (như `leave`, `contract`, `payroll`, `role`...) có thể chọn 1 trong 3 cách sau để ghi Audit Log:
-
-### Cách 1: Sử dụng Annotation `@Auditable` (Nhanh & Tự động)
-Phù hợp với các API tạo, xóa hoặc cập nhật trạng thái đơn giản:
+### 3.1. Kênh 1: Sử dụng Annotation `@Auditable` (AOP Tự Động)
+Phù hợp cho các API tạo mới, cập nhật trạng thái đơn giản hoặc xóa dữ liệu:
 ```java
 @RestController
 @RequestMapping("/api/v1/roles")
@@ -150,37 +153,12 @@ public class RoleController {
     }
 }
 ```
+* **Cơ chế:** `AuditLogAspect` tự động bắt `userId` từ `SecurityContext`, trích xuất `ipAddress` và `userAgent` từ `HttpServletRequest` mà lập trình viên không cần viết mã thủ công.
 
-### Cách 2: Gọi trực tiếp `AuditLogService` (Ghi rõ giá trị Trước / Sau)
-Phù hợp với các logic nhạy cảm cần lưu dữ liệu diff (so sánh trước/sau khi sửa):
-```java
-@Service
-@RequiredArgsConstructor
-public class PayrollServiceImpl implements PayrollService {
+---
 
-    private final AuditLogService auditLogService;
-
-    @Transactional
-    public void overrideSalary(UUID employeeId, BigDecimal oldSalary, BigDecimal newSalary) {
-        // 1. Thực hiện nghiệp vụ sửa lương
-        // ...
-
-        // 2. Ghi nhật ký kiểm toán
-        UUID currentUserId = SecurityUtils.getCurrentUserId();
-        auditLogService.log(
-            currentUserId,
-            "OVERRIDE",
-            "EMPLOYEE_SALARY",
-            employeeId,
-            String.format("{\"salary\": %s}", oldSalary),
-            String.format("{\"salary\": %s}", newSalary)
-        );
-    }
-}
-```
-
-### Cách 3: Bắn Domain Event `AuditLogEvent` (Decoupled Event-Driven)
-Phù hợp khi muốn giảm tối đa phụ thuộc mã nguồn:
+### 3.2. Kênh 2: Bắn Domain Event `AuditLogEvent` (Event-Driven Decoupled)
+Phù hợp khi muốn giảm thiểu tối đa sự phụ thuộc mã nguồn trực tiếp giữa các module:
 ```java
 eventPublisher.publishEvent(AuditLogEvent.builder()
     .userId(currentUserId)
@@ -195,10 +173,86 @@ eventPublisher.publishEvent(AuditLogEvent.builder()
 
 ---
 
-## 5. Danh Sách API Endpoints & Phân Quyền
+### 3.3. Kênh 3: Gọi trực tiếp `AuditLogService` (Diff So sánh Chi tiết Trước / Sau)
+Phù hợp cho các nghiệp vụ tài chính, sửa lương, can thiệp hợp đồng nhạy cảm:
+```java
+@Service
+@RequiredArgsConstructor
+public class PayrollServiceImpl implements PayrollService {
 
-| STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) |
-| :---: | :---: | :--- | :--- | :---: |
-| 1 | `GET` | `/api/v1/audit-logs` | Tra cứu danh sách nhật ký kiểm toán (phân trang, lọc theo keyword, user, action, entity, ngày) | `audit.view` |
-| 2 | `GET` | `/api/v1/audit-logs/{id}` | Xem chi tiết 1 bản ghi log (gồm diff `old_value`, `new_value`, thiết bị `userAgent`) | `audit.view` |
-| 3 | `GET` | `/api/v1/audit-logs/entity/{entityType}/{entityId}` | Lấy toàn bộ lịch sử thay đổi của một bản ghi nghiệp vụ cụ thể | `audit.view` |
+    private final AuditLogService auditLogService;
+
+    @Transactional
+    public void overrideSalary(UUID employeeId, BigDecimal oldSalary, BigDecimal newSalary) {
+        // Thực hiện logic sửa lương...
+        
+        // Ghi nhật ký kiểm toán với JSON Diff
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+        auditLogService.log(
+            currentUserId,
+            "OVERRIDE",
+            "EMPLOYEE_SALARY",
+            employeeId,
+            String.format("{\"salary\": %s}", oldSalary),
+            String.format("{\"salary\": %s}", newSalary)
+        );
+    }
+}
+```
+
+---
+
+### 3.4. Bảng Tổng Hợp Các File Thành Phần Trong Module
+
+| STT | Tên File & Đường Dẫn | Phân Loại | Vai Trò & Chức Năng Kỹ Thuật |
+| :---: | :--- | :--- | :--- |
+| 1 | [`AuditLog.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/entity/AuditLog.java) | **Entity** | Ánh xạ bảng `audit_logs`, chứa đầy đủ thông tin lưu vết và audit trail. |
+| 2 | [`AuditAction.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/enums/AuditAction.java) | **Enum** | Danh mục chuẩn các hành động: `CREATE`, `UPDATE`, `DELETE`, `APPROVE`, `REJECT`, `OVERRIDE`, `EXPORT`,... |
+| 3 | [`AuditLogRepository.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/repository/AuditLogRepository.java) | **Repository** | Cung cấp truy vấn động đa tiêu chí và hàm truy vấn theo thực thể: `findByEntityTypeAndEntityIdOrderByCreatedAtDesc`. |
+| 4 | [`AuditLogCommand.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/request/AuditLogCommand.java) | **DTO Request** | Đóng gói tham số đầu vào khi ghi log qua Service nội bộ. |
+| 5 | [`AuditLogFilter.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/request/AuditLogFilter.java) | **DTO Request** | Kế thừa `BaseFilterRequest`, nhận tiêu chí lọc (`page`, `size`, `action`, `entityType`, `fromDate`, `toDate`). |
+| 6 | [`AuditLogResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/response/AuditLogResponse.java) | **DTO Response** | Trả về danh sách log, áp dụng chuẩn Nested `UserSummary` nạp thông tin người thao tác dạng batch. |
+| 7 | [`AuditLogDetailResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/dto/response/AuditLogDetailResponse.java) | **DTO Response** | Trả về chi tiết 1 bản ghi log, kèm `oldValue`, `newValue` và `userAgent`. |
+| 8 | [`AuditLogEvent.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/event/AuditLogEvent.java) | **Domain Event** | Đối tượng sự kiện chuyển phát qua Spring ApplicationEventPublisher. |
+| 9 | [`AuditLogEventListener.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/listener/AuditLogEventListener.java) | **Listener** | Lắng nghe `AuditLogEvent` trong background thread (`@Async`) và ghi DB. |
+| 10 | [`AuditLogMapper.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/mapper/AuditLogMapper.java) | **Mapper** | MapStruct chuyển đổi giữa Command/Event sang Entity và Entity sang Response. |
+| 11 | [`Auditable.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/aop/Auditable.java) | **Annotation** | Đánh dấu lên method controller/service cần tự động bắt log. |
+| 12 | [`AuditLogAspect.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/aop/AuditLogAspect.java) | **AOP Aspect** | Can thiệp phương thức có `@Auditable` để thu thập context và ghi log. |
+| 13 | [`AuditLogService.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/service/AuditLogService.java) | **Service Contract** | Khai báo các phương thức nghiệp vụ lưu vết và tra cứu nhật ký kiểm toán. |
+| 14 | [`AuditLogServiceImpl.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/service/impl/AuditLogServiceImpl.java) | **Service Impl** | Thực thi logic với `REQUIRES_NEW`, try-catch an toàn và nạp batch `UserSummary`. |
+| 15 | [`AuditLogController.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/audit/controller/AuditLogController.java) | **Controller** | Cung cấp RESTful API tra cứu nhật ký cho Kiểm toán viên và Super Admin. |
+
+---
+
+## 4. Danh mục RESTful API Chi tiết
+
+Base URI: `/api/v1/audit-logs`
+
+| HTTP Method | Endpoint URI | Phân Quyền (@PreAuthorize) | DTO Request / Response | Chức Năng Nghiệp Vụ |
+| :---: | :--- | :--- | :--- | :--- |
+| `GET` | `/` | `@perm.has('audit.view')` | `AuditLogFilter` $\rightarrow$ `ApiResponse<PageData<AuditLogResponse>>` | Tra cứu danh sách nhật ký kiểm toán (phân trang, lọc theo keyword, user, action, entity, ngày). |
+| `GET` | `/{id}` | `@perm.has('audit.view')` | Path `id` $\rightarrow$ `ApiResponse<AuditLogDetailResponse>` | Xem chi tiết 1 bản ghi log (gồm diff `old_value`, `new_value`, thiết bị `userAgent`). |
+| `GET` | `/entity/{entityType}/{entityId}` | `@perm.has('audit.view')` | Path `entityType, entityId` $\rightarrow$ `ApiResponse<PageData<AuditLogResponse>>` | Lấy toàn bộ dòng lịch sử thay đổi của một bản ghi nghiệp vụ cụ thể (Audit Trail). |
+
+---
+
+## 5. Danh mục Mã lỗi & Cơ chế Chịu lỗi (Error Handling)
+
+### 5.1. Bảng Xử Lý Lỗi API
+| Mã Lỗi (Code) | HTTP Status | Thông Điệp Tiếng Việt | Nguyên Nhân & Ngữ Cảnh Kích Hoạt |
+| :--- | :---: | :--- | :--- |
+| `AUDIT_LOG_NOT_FOUND` | `404 Not Found` | Không tìm thấy bản ghi nhật ký kiểm toán được chỉ định | `id` bản ghi log không tồn tại trong bảng `audit_logs`. |
+| `FORBIDDEN_AUDIT_ACCESS` | `403 Forbidden` | Bạn không có quyền truy cập nhật ký kiểm toán của hệ thống | Người dùng không sở hữu quyền `audit.view`. |
+
+### 5.2. Cơ Chế Fail-Safe Khi Ghi Log (Nuốt Lỗi An Toàn)
+- Trong `AuditLogServiceImpl`, phương thức `log(...)` được bọc khối `try - catch (Exception e)` toàn diện và ghi log cảnh báo (`log.warn(...)` / `log.error(...)`).
+- Không cho phép ngoại lệ ghi log lan truyền làm gián đoạn transaction của người dùng.
+
+---
+
+## 6. Phân bổ Quyền Hạn & Ma trận Vai trò (RBAC Matrix)
+
+| Mã Quyền (Permission) | Mô Tả Hành Động | Super Admin | Auditor / Compliance | HR Admin | Dept Manager | Employee |
+| :--- | :--- | :---: | :---: | :---: | :---: | :---: |
+| `audit.view` | Truy vấn danh sách, xem chi tiết và dòng lịch sử audit trail toàn hệ thống | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |
+| `audit.export` | Xuất báo cáo dữ liệu nhật ký kiểm toán phục vụ thanh kiểm tra định kỳ | **FULL** | **FULL** | ⛔ | ⛔ | ⛔ |

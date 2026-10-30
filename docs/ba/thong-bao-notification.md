@@ -1,43 +1,107 @@
-# CYCLOSA — Nghiệp Vụ Thông Báo (Notification Module)
+# Tài liệu Nghiệp vụ Module: Thông Báo Nội Bộ (In-app Notification Center)
 
-Tài liệu này mô tả chi tiết yêu cầu nghiệp vụ, kiến trúc kỹ thuật và giải thích vai trò của từng thành phần trong module `com.cyclosa.notification` thuộc hệ thống CYCLOSA HRM.
-
----
-
-## 1. Tổng Quan Nghiệp Vụ (Business Overview)
-
-### 1.1. Mục đích & Vai trò
-Module Thông báo đóng vai trò là **trung tâm tin tức nội bộ (In-app Notification Center)** của hệ thống CYCLOSA HRM. Module này giúp kết nối luồng công việc giữa nhân viên và các cấp quản lý bằng cách gửi các nhắc nhở, cảnh báo và cập nhật kịp thời ngay trên giao diện web:
-* **Giao việc & Duyệt đơn:** Báo cho cấp quản lý khi có yêu cầu mới cần phê duyệt (nghỉ phép, tạm ứng lương, làm thêm giờ...).
-* **Phản hồi kết quả:** Báo ngay cho nhân viên khi đơn từ của họ được duyệt hoặc bị từ chối kèm lý do.
-* **Cảnh báo thời hạn:** Nhắc nhở hợp đồng lao động sắp hết hạn, đến hạn trả tài sản thiết bị, hạn giải trình chấm công...
-* **Thông cáo hệ thống:** Nhận các thông báo quan trọng từ Ban Quản trị / HR Admin.
-
-### 1.2. Các Nguyên Tắc Nghiệp Vụ Cốt Lõi (Core Business Rules)
-1. **Mô hình hoạt động Non-Realtime (Pull-based REST API):**
-   * Không duy trì kết nối WebSocket / Socket.IO treo liên tục nhằm tiết kiệm tài nguyên máy chủ.
-   * Giao diện người dùng (Web Frontend) lấy danh sách thông báo và số lượng chưa đọc (`unread-count`) thông qua REST API chuẩn khi người dùng tải trang, mở hộp thư quả chuông hoặc theo chu kỳ polling nhẹ (30s - 60s).
-2. **Quản lý trạng thái Đọc / Chưa đọc (Read Status Tracking):**
-   * Mọi thông báo mới tạo mặc định có `is_read = false` và `read_at = null`.
-   * Khi người dùng click xem hoặc nhấn "Đánh dấu đã đọc", hệ thống cập nhật `is_read = true` và ghi nhận thời điểm `read_at = NOW()`.
-   * Cung cấp tính năng "Đánh dấu tất cả là đã đọc" (`read-all`) giúp người dùng dọn sạch hộp thư chỉ bằng một cú click.
-3. **Bảo mật & Quyền riêng tư tuyệt đối:**
-   * Thông báo gắn liền với từng `user_id`.
-   * **Một người dùng tuyệt đối không thể đọc, xem hoặc xóa thông báo của người khác** (kiểm tra chặt chẽ `notification.userId == currentUserId`).
-4. **Hỗ trợ Deep Link (Action URL):**
-   * Mỗi thông báo có thể mang theo một đường dẫn điều hướng (`actionUrl`, ví dụ: `/workflows/pending`, `/leaves/123`, `/contracts/456`). Khi người dùng nhấn vào thông báo trên quả chuông, ứng dụng tự động mở đúng trang chi tiết của nghiệp vụ đó.
+> **Module Code:** `notification`  
+> **Package:** `com.cyclosa.notification`  
+> **Phiên bản:** 2.0 (Chuẩn hóa Backend Standards & Enterprise Event-Driven)  
+> **Căn cứ nghiệp vụ & Thiết kế:**  
+> - **Trung Tâm Tin Tức Nội Bộ (In-app Notification Center):** Gửi nhắc nhở, cảnh báo hạn chót và thông báo phê duyệt tới đúng đối tượng.  
+> - **Kiến Trúc Tách Rời (Event-Driven Decoupling):** Lắng nghe các Spring Events phát ra từ các module nghiệp vụ (`WorkflowCompletedEvent`, `WorkflowStepAssignedEvent`, `ContractExpiringEvent`).  
+> - **Mô Hình Pull-based REST API Tiết Kiệm Tài Nguyên:** Không duy trì WebSocket connection treo liên tục, Client tra cứu qua REST API khi nạp trang hoặc mở quả chuông.
 
 ---
 
-## 2. Kiến Trúc Kỹ Thuật & Luồng Hoạt Động
+## 1. Tôn chỉ Nghiệp vụ & Nguyên tắc Thiết kế (Core Principles)
+
+Trong hệ sinh thái **CYCLOSA HRM**, Module **Notification** đóng vai trò là kênh giao tiếp nội bộ thông suốt giữa hệ thống, quản lý và nhân viên:
+
+```
+┌─────────────────────────────────┐
+│     Business Modules (Caller)   │
+│  - Workflow, Contract, Leave    │
+│  - Payroll, Discipline, Asset   │
+└────────────────┬────────────────┘
+                 │
+                 ├── 1. Spring Domain Event (ApplicationEventPublisher)
+                 └── 2. NotificationService.send(...) (Direct Call)
+                 │
+┌────────────────▼────────────────┐       ┌─────────────────────────┐
+│  Module com.cyclosa.notification│ ────> │   PostgreSQL Database   │
+│  - Pull-based Polling (REST)    │       │   - notifications       │
+│  - Unread Count & Deep Linking  │       │   - Privacy Enforcement │
+└─────────────────────────────────┘       └─────────────────────────┘
+```
+
+### 1.1. Chuẩn hóa Thiết kế Không dùng Interface + Impl thừa thãi (Concrete Service Pattern)
+Theo chuẩn kiến trúc tại `docs/BACKEND_STANDARDS.md`:
+- Toàn bộ service của module được viết trực tiếp dưới dạng **Concrete Service**:
+  - `NotificationService.java`: Service trung tâm duy nhất quản lý gửi thông báo, đếm số chưa đọc, đánh dấu đã đọc (`markAsRead`, `markAllAsRead`) và xóa thông báo.
+  - `WorkflowNotificationEventListener.java`: Listener lắng nghe sự kiện duyệt đơn từ Workflow Engine.
+- **Tuyệt đối không tạo thư mục `impl/`** hay interface 1-1 hình thức.
+
+### 1.2. Đóng gói Kiến trúc Modular Monolith & Giao Tiếp Event-Driven
+1. **Lắng nghe sự kiện không làm nghẽn luồng chính:**
+   - Các module khác khi hoàn tất nghiệp vụ chỉ cần bắn `ApplicationEvent` (ví dụ: `WorkflowStepAssignedEvent`).
+   - Notification Listener xử lý tạo bản ghi thông báo trong giao dịch độc lập, không làm chậm tốc độ phản hồi của request chính.
+2. **Không inject chéo Entity:** Chỉ lưu trữ `user_id` người nhận, không truy cập bảng `users` hay `employees`.
+
+### 1.3. Mô Hình Hoạt Động Pull-Based & Zero Socket Overhead
+- Không duy trì kết nối WebSocket / Socket.IO treo liên tục nhằm tối ưu hóa tài nguyên server và tương thích tốt với môi trường hạ tầng container/load-balancer.
+- Giao diện Web Client lấy số đếm quả chuông qua API nhẹ `GET /unread-count` khi người dùng tải trang hoặc theo chu kỳ polling định kỳ.
+
+### 1.4. Bảo Mật Riêng Tư Tuyệt Đối & Điều Hướng Nhanh (Deep Linking)
+- **Quyền riêng tư:** Một người dùng tuyệt đối không thể đọc, xem hoặc xóa thông báo của người khác (`4902 NOTIFICATION_ACCESS_DENIED`).
+- **Deep Link (`action_url`):** Mỗi thông báo đính kèm đường dẫn trực tiếp (ví dụ: `/workflows/pending`, `/contracts/123`). Người dùng click quả chuông sẽ được chuyển ngay đến màn hình xử lý công việc.
+
+---
+
+## 2. Mô hình Thực thể & CSDL Chi tiết (Database Schema)
+
+```mermaid
+erDiagram
+    USERS ||--o{ NOTIFICATIONS : "receives"
+
+    NOTIFICATIONS {
+        UUID id PK
+        UUID user_id FK
+        VARCHAR title
+        TEXT content
+        VARCHAR notification_type
+        VARCHAR action_url
+        BOOLEAN is_read
+        TIMESTAMP read_at
+        TIMESTAMP created_at
+    }
+```
+
+### 2.1. Bảng `notifications` — Nhật Ký Thông Báo Người Dùng
+
+| Tên Cột | Kiểu Dữ Liệu | Ràng Buộc | Ý Nghĩa Nghiệp Vụ & Kỹ Thuật |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PK, NOT NULL` | Định danh duy nhất của thông báo. |
+| `user_id` | `UUID` | `NOT NULL, INDEX` | Tài khoản người dùng nhận thông báo (FK `users`). |
+| `title` | `VARCHAR(200)` | `NOT NULL` | Tiêu đề tóm tắt hiển thị trên quả chuông. |
+| `content` | `TEXT` | `NOT NULL` | Nội dung chi tiết của thông báo. |
+| `notification_type` | `VARCHAR(50)` | `NOT NULL, INDEX` | Phân loại: `WORKFLOW`, `CONTRACT`, `PAYROLL`, `ANNOUNCEMENT`, `SYSTEM`. |
+| `action_url` | `VARCHAR(500)` | `NULLABLE` | Đường dẫn Deep Link chuyển hướng người dùng khi click. |
+| `is_read` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | Cờ trạng thái: `false` (chưa đọc), `true` (đã đọc). |
+| `read_at` | `TIMESTAMP` | `NULLABLE` | Thời điểm người dùng click xem/đánh dấu đã đọc. |
+| `created_at` | `TIMESTAMP` | `NOT NULL, INDEX` | Thời điểm sinh thông báo (sắp xếp mặc định `DESC`). |
+
+* **Index Tối Ưu:** Đánh chỉ mục kép trên `(user_id, is_read)` giúp truy vấn `COUNT(*)` số lượng chưa đọc đạt tốc độ sub-millisecond.
+
+---
+
+## 3. Các Luồng Nghiệp vụ Trọng tâm (Business Workflows)
+
+### 3.1. Luồng Tự Động Sinh Thông Báo & Tra Cứu Quả Chuông (Sequence)
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Approver as Quản Lý (Người Duyệt)
     participant UI as Giao diện Web (FE)
-    participant NotifCtrl as NotificationController
-    participant NotifSvc as NotificationServiceImpl
+    participant Ctrl as NotificationController
+    participant Svc as NotificationService
     participant EventListener as WorkflowNotificationEventListener
     participant Workflow as WorkflowEngineService
     participant DB as PostgreSQL (notifications)
@@ -45,127 +109,66 @@ sequenceDiagram
     Note over Workflow, EventListener: 1. Luồng tự động sinh thông báo qua Spring Event
     Workflow->>Workflow: Phê duyệt chuyển bước thành công
     Workflow->>EventListener: Bắn sự kiện WorkflowStepAssignedEvent
-    EventListener->>NotifSvc: send(userId, title, content, type, actionUrl)
-    NotifSvc->>DB: Lưu bản ghi Notification (is_read = false)
+    EventListener->>Svc: send(userId, title, content, type, actionUrl)
+    Svc->>DB: Lưu bản ghi Notification (is_read = false)
 
     Note over Approver, DB: 2. Luồng Client lấy thông báo & huy hiệu
     Approver->>UI: Đăng nhập vào trang Dashboard
-    UI->>NotifCtrl: GET /api/v1/notifications/unread-count
-    NotifCtrl->>NotifSvc: getUnreadCount(currentUserId)
-    NotifSvc->>DB: COUNT(*) WHERE user_id = ? AND is_read = false
+    UI->>Ctrl: GET /api/v1/notifications/unread-count
+    Ctrl->>Svc: getUnreadCount(currentUserId)
+    Svc->>DB: COUNT(*) WHERE user_id = ? AND is_read = false
     DB-->>UI: Trả về số đếm (vd: 3 thông báo mới trên quả chuông)
 
     Approver->>UI: Bấm vào quả chuông thông báo
-    UI->>NotifCtrl: GET /api/v1/notifications?page=0&size=10
-    NotifCtrl->>NotifSvc: getNotifications(currentUserId, filter)
-    NotifSvc->>DB: SELECT * WHERE user_id = ? ORDER BY created_at DESC
-    DB-->>UI: Trả về danh sách thông báo kèm actionUrl
-
-    Approver->>UI: Nhấn đọc thông báo
-    UI->>NotifCtrl: PUT /api/v1/notifications/{id}/read
-    NotifCtrl->>NotifSvc: markAsRead(id, currentUserId)
-    NotifSvc->>DB: UPDATE notifications SET is_read = true, read_at = NOW()
+    UI->>Ctrl: GET /api/v1/notifications?page=0&size=10
+    Ctrl->>Svc: getNotifications(currentUserId, filter)
+    Svc->>DB: SELECT * WHERE user_id = ? ORDER BY created_at DESC
+    DB-->>UI: Hiển thị danh sách thông báo kèm actionUrl
 ```
 
 ---
 
-## 3. Danh Sách & Giải Thích Chi Tiết Các File Trong Module
-
-Toàn bộ mã nguồn module nằm trong package `com.cyclosa.notification`:
-
-```text
-cyclosa_be/src/main/java/com/cyclosa/notification/
-├── controller/
-│   └── NotificationController.java
-├── dto/
-│   ├── request/
-│   │   ├── CreateNotificationRequest.java
-│   │   └── NotificationFilter.java
-│   └── response/
-│       ├── NotificationResponse.java
-│       └── UnreadCountResponse.java
-├── entity/
-│   └── Notification.java
-├── enums/
-│   └── NotificationType.java
-├── exception/
-│   └── NotificationErrorCode.java
-├── listener/
-│   └── WorkflowNotificationEventListener.java
-├── mapper/
-│   └── NotificationMapper.java
-├── repository/
-│   └── NotificationRepository.java
-└── service/
-    ├── NotificationService.java
-    └── impl/
-        └── NotificationServiceImpl.java
-```
-
-### Bảng giải thích chi tiết từng file:
-
-| STT | Tên File & Đường dẫn | Phân loại | Nhiệm vụ & Vai trò kỹ thuật |
-| :---: | :--- | :--- | :--- |
-| 1 | [`Notification.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/entity/Notification.java) | **Entity** | Ánh xạ bảng cơ sở dữ liệu `notifications`. Kế thừa [`BaseEntity.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/common/entity/BaseEntity.java) để có sẵn `id`, `createdAt`, `updatedAt`, `deletedAt` (Soft Delete qua `@SQLDelete` và `@SQLRestriction`). Đánh index trên `(user_id, is_read)` và `(user_id, created_at)` để tối ưu hóa tối đa tốc độ truy vấn danh sách và đếm số lượng chưa đọc. |
-| 2 | [`NotificationType.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/enums/NotificationType.java) | **Enum** | Danh mục phân loại nguồn thông báo: `WORKFLOW` (phê duyệt quy trình), `LEAVE` (nghỉ phép), `ATTENDANCE` (chấm công), `CONTRACT` (hợp đồng), `PAYROLL` (lương), `ASSET` (tài sản), `SYSTEM` (hệ thống). Giúp Frontend hiển thị icon và màu sắc phù hợp cho từng loại tin. |
-| 3 | [`NotificationErrorCode.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/exception/NotificationErrorCode.java) | **ErrorCode** | Quản lý danh mục mã lỗi riêng của module theo kiến trúc đa hình (dải mã 4901 - 4929): `NOTIFICATION_NOT_FOUND (4901)`, `NOTIFICATION_ACCESS_DENIED (4902)`, `RECIPIENT_USER_NOT_FOUND (4903)`. |
-| 4 | [`CreateNotificationRequest.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/dto/request/CreateNotificationRequest.java) | **DTO Request** | DTO truyền dữ liệu gửi thông báo mới. Chứa validation đầy đủ: `@NotNull userId`, `@NotBlank title` (tối đa 200 ký tự), `@NotBlank content`, `type`, `actionUrl`, `relatedEntityType`, `relatedEntityId`. |
-| 5 | [`NotificationFilter.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/dto/request/NotificationFilter.java) | **DTO Request** | Kế thừa [`BaseFilterRequest.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/common/dto/request/BaseFilterRequest.java) theo đúng tiêu chuẩn Mục 7.1. Cung cấp tham số tìm kiếm từ khóa (`keyword`), lọc theo trạng thái đọc (`isRead`), lọc theo loại (`type`) và phân trang (`page`, `size`, `sortBy`, `direction`). |
-| 6 | [`NotificationResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/dto/response/NotificationResponse.java) | **DTO Response** | DTO trả về thông tin chi tiết của thông báo cho Client hiển thị trên giao diện danh sách hộp thư. |
-| 7 | [`UnreadCountResponse.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/dto/response/UnreadCountResponse.java) | **DTO Response** | DTO gọn nhẹ chỉ chứa trường `unreadCount: long`, phục vụ riêng cho API lấy số lượng chưa đọc gắn lên huy hiệu quả chuông. |
-| 8 | [`NotificationMapper.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/mapper/NotificationMapper.java) | **Mapper** | MapStruct chuyển đổi giữa `CreateNotificationRequest` sang Entity `Notification` (mặc định gán `isRead = false`), và từ Entity sang `NotificationResponse`. Sử dụng chuẩn `MappingConstants.ComponentModel.SPRING`. |
-| 9 | [`NotificationRepository.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/repository/NotificationRepository.java) | **Repository** | Chứa các truy vấn JPA tối ưu: `search(...)` kết hợp lọc keyword và trạng thái; `countByUserIdAndIsReadFalse(userId)` đếm siêu nhanh; query `@Modifying` cập nhật `is_read = true, read_at = NOW()` hàng loạt cho user. |
-| 10 | [`NotificationService.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/service/NotificationService.java) | **Service Interface** | Hợp đồng nghiệp vụ công khai: các hàm `send(...)`, `getNotifications(userId, filter)`, `getUnreadCount(userId)`, `markAsRead(notificationId, userId)`, `markAllAsRead(userId)`, `deleteNotification(notificationId, userId)`. Thiết kế hoàn toàn độc lập, nhận `userId` trực tiếp (Stateless Pattern). |
-| 11 | [`NotificationServiceImpl.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/service/impl/NotificationServiceImpl.java) | **Service Impl** | Cài đặt logic nghiệp vụ. Nằm trong thư mục `service/impl/` theo Mục 2 của tiêu chuẩn dự án. Chỉ inject [`UserService`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/auth/service/UserService.java) công khai để kiểm tra tồn tại của User (không inject UserRepository trái phép). Kiểm tra quyền sở hữu bản ghi trước khi cho phép đọc hoặc xóa. |
-| 12 | [`WorkflowNotificationEventListener.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/listener/WorkflowNotificationEventListener.java) | **Event Listener** | Cầu nối tự động giữa Module Workflow và Notification. Lắng nghe [`WorkflowStepAssignedEvent`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/workflow/event/WorkflowStepAssignedEvent.java) (báo người duyệt khi có đơn mới) và [`WorkflowCompletedEvent`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/workflow/event/WorkflowCompletedEvent.java) (báo nhân viên kết quả duyệt đơn). Sử dụng `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` đảm bảo chỉ gửi thông báo khi giao dịch duyệt đơn đã commit thành công. |
-| 13 | [`NotificationController.java`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/controller/NotificationController.java) | **Controller** | Cung cấp toàn bộ REST API hộp thư thông báo. Được bảo vệ bởi `@PreAuthorize("@perm.has('notification.view')")` và `@RequirePermission("notification.view")`. Tự động lấy `currentUserId` từ `SecurityUtils` và truyền xuống Service, bọc phản hồi trong `ApiResponse<T>`. |
+### 3.2. Luồng Đánh Dấu Đã Đọc & Điều Hướng
+1. Khi người dùng click vào 1 thông báo trên giao diện:
+   - Frontend kích hoạt: `PUT /api/v1/notifications/{id}/read`.
+   - Hệ thống cập nhật `is_read = true`, `read_at = NOW()`.
+   - Frontend điều hướng người dùng tới `action_url` được gắn kèm.
+2. Khi người dùng click nút "Đánh dấu tất cả là đã đọc":
+   - Frontend gọi: `PUT /api/v1/notifications/read-all`.
+   - Hệ thống thực thi: `UPDATE notifications SET is_read = true, read_at = NOW() WHERE user_id = ? AND is_read = false`.
+   - Huy hiệu số đỏ trên quả chuông lập tức trở về `0`.
 
 ---
 
-## 4. Hướng Dẫn Tích Hợp Cho Lập Trình Viên (Developer Guide)
+## 4. Danh mục RESTful API Chi tiết
 
-Khi phát triển các module nghiệp vụ khác (như `Leave`, `Contract`, `Attendance`, `Asset`...), lập trình viên có thể tạo thông báo gửi đến người dùng theo các cách sau:
+Base URI: `/api/v1/notifications`
 
-### Cách 1: Gọi trực tiếp `NotificationService` (Khuyên dùng)
-Inject `NotificationService` vào Service của bạn và gọi hàm `send(...)`:
-
-```java
-@Service
-@RequiredArgsConstructor
-public class LeaveServiceImpl implements LeaveService {
-
-    private final NotificationService notificationService;
-
-    @Transactional
-    public void approveLeaveRequest(UUID leaveId, UUID employeeUserId) {
-        // 1. Cập nhật trạng thái duyệt đơn...
-
-        // 2. Gửi thông báo cho nhân viên
-        notificationService.send(
-            employeeUserId,
-            "Đơn nghỉ phép đã được phê duyệt",
-            "Đơn xin nghỉ phép từ ngày 25/09 đến 27/09 của bạn đã được quản lý phê duyệt.",
-            NotificationType.LEAVE,
-            "/leaves/" + leaveId,
-            "LEAVE_REQUEST",
-            leaveId
-        );
-    }
-}
-```
-
-### Cách 2: Tự động qua Spring Event (Khi nghiệp vụ đã có Event)
-Nếu module của bạn đã phát ra Spring Event khi hoàn thành (ví dụ: `ContractExpiringEvent`, `AssetAssignedEvent`), bạn chỉ cần viết một Event Listener tương tự như [`WorkflowNotificationEventListener`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/notification/listener/WorkflowNotificationEventListener.java) để đón sự kiện và gọi `notificationService.send(...)`.
+| HTTP Method | Endpoint URI | Phân Quyền (@PreAuthorize) | DTO Request / Response | Chức Năng Nghiệp Vụ |
+| :---: | :--- | :--- | :--- | :--- |
+| `GET` | `/` | `isAuthenticated()` | `NotificationFilter` $\rightarrow$ `ApiResponse<PageData<NotificationResponse>>` | Tra cứu danh sách thông báo cá nhân (phân trang, lọc chưa đọc). |
+| `GET` | `/unread-count` | `isAuthenticated()` | None $\rightarrow$ `ApiResponse<UnreadCountResponse>` | Đếm số lượng thông báo chưa đọc cho huy hiệu quả chuông. |
+| `GET` | `/{id}` | `isAuthenticated()` | Path `id` $\rightarrow$ `ApiResponse<NotificationResponse>` | Xem chi tiết 1 thông báo cụ thể. |
+| `PUT` | `/{id}/read` | `isAuthenticated()` | Path `id` $\rightarrow$ `ApiResponse<Void>` | Đánh dấu 1 thông báo là đã đọc. |
+| `PUT` | `/read-all` | `isAuthenticated()` | None $\rightarrow$ `ApiResponse<Void>` | Đánh dấu toàn bộ thông báo của bản thân là đã đọc. |
+| `DELETE`| `/{id}` | `isAuthenticated()` | Path `id` $\rightarrow$ `ApiResponse<Void>` | Xóa thông báo khỏi hộp thư cá nhân. |
+| `POST` | `/send-system` | `@perm.has('notification.broadcast')` | `BroadcastNotificationRequest` $\rightarrow$ `ApiResponse<Void>` | Quản trị viên phát thông báo hệ thống toàn thể công ty. |
 
 ---
 
-## 5. Danh Sách API Endpoints & Phân Quyền
+## 5. Danh mục Mã lỗi Module Notification (`NotificationErrorCode`)
 
-| STT | HTTP Method | Endpoint URI | Mô tả Chức năng | Mã Quyền (Permission) |
-| :---: | :---: | :--- | :--- | :---: |
-| 1 | `GET` | `/api/v1/notifications` hoặc `/my` | Lấy danh sách thông báo của người dùng hiện tại (hỗ trợ tìm kiếm từ khóa, phân trang, lọc theo loại và trạng thái đã đọc) | `notification.view` |
-| 2 | `GET` | `/api/v1/notifications/unread-count` | Lấy số lượng thông báo chưa đọc (dùng hiển thị số đỏ trên huy hiệu quả chuông) | `notification.view` |
-| 3 | `PUT` | `/api/v1/notifications/{id}/read` | Đánh dấu 1 thông báo cụ thể là đã đọc | `notification.view` |
-| 4 | `PUT` | `/api/v1/notifications/read-all` | Đánh dấu toàn bộ thông báo của người dùng là đã đọc | `notification.view` |
-| 5 | `DELETE` | `/api/v1/notifications/{id}` | Xóa thông báo khỏi hộp thư | `notification.view` |
-| 6 | `POST` | `/api/v1/notifications/send` | Gửi thông báo trực tiếp tới người dùng (dành cho Admin hoặc hệ thống nội bộ) | `notification.manage` |
+| Mã Lỗi (Enum) | Mã Số | HTTP Status | Thông Điệp Tiếng Việt | Nguyên Nhân & Ngữ Cảnh Kích Hoạt |
+| :--- | :---: | :---: | :--- | :--- |
+| `NOTIFICATION_NOT_FOUND` | **4901** | `404 Not Found` | Không tìm thấy thông báo | `id` thông báo không tồn tại trong hệ thống. |
+| `NOTIFICATION_ACCESS_DENIED` | **4902** | `403 Forbidden` | Bạn không có quyền thao tác trên thông báo này | Người dùng cố tình đọc, đánh dấu hoặc xóa thông báo của người khác. |
+| `RECIPIENT_USER_NOT_FOUND` | **4903** | `404 Not Found` | Không tìm thấy tài khoản người nhận thông báo | Gửi thông báo tới `user_id` không tồn tại trong hệ thống. |
+
+---
+
+## 6. Phân bổ Quyền Hạn & Ma trận Vai trò (RBAC Matrix)
+
+| Mã Quyền (Permission) | Mô Tả Hành Động | Super Admin | HR Admin | Dept Manager | Employee |
+| :--- | :--- | :---: | :---: | :---: | :---: |
+| `isAuthenticated()` | Xem, đếm, đọc và xóa thông báo cá nhân của chính mình | **SELF (Hộp thư)** | **SELF (Hộp thư)** | **SELF (Hộp thư)** | **SELF (Hộp thư)** |
+| `notification.broadcast`| Bắn thông báo thông cáo chung toàn công ty / toàn hệ thống | **FULL** | **COMPANY** | ⛔ | ⛔ |

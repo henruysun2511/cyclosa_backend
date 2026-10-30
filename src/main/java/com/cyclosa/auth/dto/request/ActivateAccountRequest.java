@@ -2,29 +2,29 @@ package com.cyclosa.auth.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-@Data
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yêu cầu kích hoạt tài khoản và thiết lập mật khẩu lần đầu của nhân viên")
+@Schema(description = "Yêu cầu kích hoạt tài khoản qua mã token 48h và đặt mật khẩu lần đầu")
 public class ActivateAccountRequest {
 
-    @NotBlank(message = "Mã kích hoạt không được để trống")
-    @Schema(description = "Mã token kích hoạt nhận được qua email", example = "550e8400-e29b-41d4-a716-446655440000")
+    @NotBlank(message = "Mã token kích hoạt không được để trống")
+    @Schema(description = "Mã kích hoạt nhận được qua email (có hiệu lực 48 giờ)", example = "3fa85f64-5717-4562-b3fc-2c963f66afa6")
     private String token;
 
     @NotBlank(message = "Mật khẩu mới không được để trống")
-    @Size(min = 8, max = 100, message = "Mật khẩu tối thiểu 8 ký tự, tối đa 100 ký tự")
-    @Schema(description = "Mật khẩu mới của nhân viên", example = "Password@123")
-    private String password;
-
-    @NotBlank(message = "Xác nhận mật khẩu không được để trống")
-    @Schema(description = "Nhập lại mật khẩu mới", example = "Password@123")
-    private String confirmPassword;
+    @Size(min = 8, max = 100, message = "Mật khẩu phải có độ dài từ 8 đến 100 ký tự")
+    @Pattern(
+            regexp = "^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]+$",
+            message = "Mật khẩu phải chứa ít nhất 1 chữ hoa, 1 chữ thường, 1 chữ số và 1 ký tự đặc biệt"
+    )
+    @Schema(description = "Mật khẩu lần đầu thiết lập (bắt buộc đủ độ mạnh bảo mật)", example = "Password@2026")
+    private String newPassword;
 }
+

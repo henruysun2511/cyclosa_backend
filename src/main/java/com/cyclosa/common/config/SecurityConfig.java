@@ -1,13 +1,16 @@
 package com.cyclosa.common.config;
 
 import com.cyclosa.auth.security.JwtAuthFilter;
-import com.cyclosa.auth.security.OAuth2FailureHandler;
-import com.cyclosa.auth.security.OAuth2SuccessHandler;
+import com.cyclosa.common.exception.CommonErrorCode;
+import com.cyclosa.common.response.ApiResponse;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,12 +25,6 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import java.util.Arrays;
 import java.util.List;
 
-import com.cyclosa.common.exception.CommonErrorCode;
-import com.cyclosa.common.response.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.MediaType;
-
 @Configuration(proxyBeanMethods = false)
 @EnableWebSecurity
 @EnableMethodSecurity
@@ -35,8 +32,6 @@ import org.springframework.http.MediaType;
 public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
-    private final OAuth2SuccessHandler oauth2SuccessHandler;
-    private final OAuth2FailureHandler oauth2FailureHandler;
     private final ObjectMapper objectMapper = new ObjectMapper().findAndRegisterModules();
 
     @Value("${app.cors.allowed-origins:http://localhost:3000,http://localhost:5173}")
@@ -46,14 +41,14 @@ public class SecurityConfig {
             "/api/v1/auth/login",
             "/api/v1/auth/activate",
             "/api/v1/auth/refresh",
-            "/api/v1/auth/register",
             "/api/v1/auth/forgot-password",
             "/api/v1/auth/reset-password",
-            "/api/v1/auth/oauth2/google",
+            "/api/v1/auth/oauth2/**",
+            "/api/v1/products/**",
             "/swagger-ui/**",
             "/swagger-ui.html",
             "/v3/api-docs/**",
-            "/actuator/health"
+            "/actuator/**"
     };
 
     @Bean
@@ -90,9 +85,6 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                     .anyRequest().authenticated()
             )
-            .oauth2Login(oauth2 -> oauth2
-                    .successHandler(oauth2SuccessHandler)
-                    .failureHandler(oauth2FailureHandler))
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

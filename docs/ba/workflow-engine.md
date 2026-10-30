@@ -3,7 +3,7 @@
 > **Vị trí tài liệu:** `cyclosa_be/docs/ba/workflow-engine.md`  
 > **Module Code:** `workflow` | **Package Backend:** `com.cyclosa.workflow`  
 > **Phiên bản tài liệu:** 2.0 (Bản đặc tả nghiệp vụ chuyên sâu)  
-> **Căn cứ thiết kế:** [ba/HRM-Database.md](file:///f:/Project/CYCLOSA/ba/HRM-Database.md) (Mục 18), [ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md](file:///f:/Project/CYCLOSA/ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md) (Mục 18), [ba/HRM-API-Validation-Rules.md](file:///f:/Project/CYCLOSA/ba/HRM-API-Validation-Rules.md) (Mục 18), [ba/HRM-Quy-Trinh.md](file:///f:/Project/CYCLOSA/ba/HRM-Quy-Trinh.md).
+> **Căn cứ thiết kế:** [ba/database.md](file:///f:/Project/CYCLOSA/ba/database.md) (Workflow Kernel), [ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md](file:///f:/Project/CYCLOSA/ba/HRM-Mo-Ta-Nghiep-Vu-Chi-Tiet.md) (Mục 18), [ba/api-list.md](file:///f:/Project/CYCLOSA/ba/api-list.md), [ba/HRM-Quy-Trinh.md](file:///f:/Project/CYCLOSA/ba/HRM-Quy-Trinh.md).
 
 ---
 

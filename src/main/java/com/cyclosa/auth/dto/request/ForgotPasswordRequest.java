@@ -12,11 +12,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Schema(description = "Yêu cầu gửi email khôi phục mật khẩu")
+@Schema(description = "Yêu cầu gửi mã OTP khôi phục mật khẩu qua email")
 public class ForgotPasswordRequest {
 
     @NotBlank(message = "Email không được để trống")
     @Email(message = "Email không đúng định dạng")
-    @Schema(description = "Email tài khoản cần khôi phục mật khẩu", example = "user@company.com")
+    @Schema(description = "Email tài khoản cần khôi phục mật khẩu", example = "user@cyclosa.com")
     private String email;
 }
