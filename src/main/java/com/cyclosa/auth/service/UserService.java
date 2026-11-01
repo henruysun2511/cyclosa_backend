@@ -1,6 +1,14 @@
 package com.cyclosa.auth.service;
 
+import com.cyclosa.auth.dto.request.BulkCreateUserItem;
+import com.cyclosa.auth.dto.request.BulkCreateUserRequest;
 import com.cyclosa.auth.dto.request.CreateUserRequest;
+import com.cyclosa.auth.dto.response.BulkCreateUserResponse;
+import com.cyclosa.auth.dto.response.BulkUserErrorItem;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import com.cyclosa.auth.dto.request.UserFilterRequest;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.entity.User;
@@ -148,6 +156,102 @@ public class UserService {
         }
         userRepository.save(user);
         log.info("Đã mở khóa tài khoản user id={}", userId);
+    }
+
+    /**
+     * Tạo hàng loạt tài khoản người dùng từ file Excel / danh sách
+     */
+    @Transactional
+    public BulkCreateUserResponse bulkCreateUsers(BulkCreateUserRequest request) {
+        List<BulkCreateUserItem> items = request.getUsers();
+        log.info("Xử lý tạo hàng loạt tài khoản người dùng, tổng số yêu cầu: {}", items.size());
+
+        List<UserResponse> createdUsers = new ArrayList<>();
+        List<BulkUserErrorItem> errors = new ArrayList<>();
+        Set<String> processedEmails = new HashSet<>();
+
+        for (BulkCreateUserItem item : items) {
+            if (item.getEmail() == null || item.getEmail().trim().isBlank()) {
+                errors.add(BulkUserErrorItem.builder()
+                        .email(item.getEmail())
+                        .username(item.getUsername())
+                        .reason("Email không được để trống")
+                        .build());
+                continue;
+            }
+
+            String email = item.getEmail().trim().toLowerCase();
+
+            // Kiểm tra trùng lặp trong chính danh sách gửi lên
+            if (!processedEmails.add(email)) {
+                errors.add(BulkUserErrorItem.builder()
+                        .email(email)
+                        .username(item.getUsername())
+                        .reason("Email bị trùng lặp trong danh sách gửi lên")
+                        .build());
+                continue;
+            }
+
+            // Kiểm tra trùng lặp email với CSDL
+            if (userRepository.existsByEmailAndDeletedFalse(email)) {
+                errors.add(BulkUserErrorItem.builder()
+                        .email(email)
+                        .username(item.getUsername())
+                        .reason("Email đã tồn tại trong hệ thống")
+                        .build());
+                continue;
+            }
+
+            // Xác định username
+            String username;
+            if (item.getUsername() != null && !item.getUsername().trim().isBlank()) {
+                username = item.getUsername().trim().toLowerCase();
+                if (userRepository.existsByUsernameAndDeletedFalse(username)) {
+                    username = username + "_" + (System.currentTimeMillis() % 10000);
+                }
+            } else {
+                username = email.split("@")[0].toLowerCase();
+                if (userRepository.existsByUsernameAndDeletedFalse(username)) {
+                    username = username + "_" + (System.currentTimeMillis() % 10000);
+                }
+            }
+
+            try {
+                User user = User.builder()
+                        .username(username)
+                        .email(email)
+                        .status(UserStatus.PENDING_ACTIVATION)
+                        .deleted(false)
+                        .build();
+                User saved = userRepository.save(user);
+
+                // Sinh token kích hoạt 48h lưu vào Redis
+                String activationToken = UUID.randomUUID().toString();
+                redisTokenService.saveActivationToken(activationToken, saved.getId(), ACTIVATION_TOKEN_TTL);
+
+                // Gửi email kích hoạt bất đồng bộ
+                mailService.sendActivationEmail(saved.getEmail(), activationToken, ACTIVATION_TOKEN_TTL);
+
+                createdUsers.add(userMapper.toResponse(saved));
+            } catch (Exception e) {
+                log.error("Lỗi khi tạo tài khoản cho email {}: {}", email, e.getMessage());
+                errors.add(BulkUserErrorItem.builder()
+                        .email(email)
+                        .username(username)
+                        .reason("Lỗi hệ thống khi lưu tài khoản")
+                        .build());
+            }
+        }
+
+        log.info("Hoàn tất tạo hàng loạt: thành công={}, bỏ qua={}", createdUsers.size(), errors.size());
+
+        return BulkCreateUserResponse.builder()
+                .totalRequested(items.size())
+                .totalCreated(createdUsers.size())
+                .totalSkipped(errors.size())
+                .createdUsers(createdUsers)
+                .errors(errors)
+                .build();
     }
 
     private User findUserOrThrow(UUID userId) {

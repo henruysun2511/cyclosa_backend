@@ -1,7 +1,9 @@
 package com.cyclosa.auth.controller;
 
+import com.cyclosa.auth.dto.request.BulkCreateUserRequest;
 import com.cyclosa.auth.dto.request.CreateUserRequest;
 import com.cyclosa.auth.dto.request.UserFilterRequest;
+import com.cyclosa.auth.dto.response.BulkCreateUserResponse;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.service.UserService;
 import com.cyclosa.common.response.ApiResponse;
@@ -34,6 +36,15 @@ public class UserController {
         return ApiResponse.created(response);
     }
 
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Tạo hàng loạt tài khoản nhân viên",
+               description = "Nhận danh sách tài khoản từ file Excel/CSV, tạo các tài khoản hợp lệ ở trạng thái PENDING_ACTIVATION và gửi link kích hoạt 48h")
+    public ApiResponse<BulkCreateUserResponse> bulkCreateUsers(@Valid @RequestBody BulkCreateUserRequest request) {
+        BulkCreateUserResponse response = userService.bulkCreateUsers(request);
+        return ApiResponse.created(response);
+    }
+
     @GetMapping
     @Operation(summary = "Lấy danh sách tài khoản người dùng",
                description = "Tìm kiếm theo từ khóa, lọc theo trạng thái (PENDING_ACTIVATION, ACTIVE, LOCKED) và phân trang")
@@ -63,7 +74,8 @@ public class UserController {
     }
 
     @PostMapping("/{userId}/unlock")
-    @Operation(summary = "Mở khóa tài khoản người dùng")
+    @Operation(summary = "Mở khóa tài khoản người dùng",
+               description = "Khôi phục tài khoản về trạng thái ACTIVE (hoặc PENDING_ACTIVATION nếu chưa kích hoạt)")
     public ApiResponse<Void> unlockUser(
             @Parameter(description = "ID người dùng", required = true)
             @PathVariable UUID userId) {
@@ -71,4 +83,3 @@ public class UserController {
         return ApiResponse.ok(null);
     }
 }
-
