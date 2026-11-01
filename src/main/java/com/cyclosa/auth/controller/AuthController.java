@@ -15,70 +15,62 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "0. Xác thực (Authentication)", description = "Các API xác thực, kích hoạt tài khoản 48h, làm mới phiên, quên mật khẩu OTP và đổi mật khẩu")
+@Tag(name = "Authentication", description = "Các API xác thực, kích hoạt tài khoản 48h, làm mới phiên, quên mật khẩu OTP và đổi mật khẩu")
 public class AuthController {
 
     private final AuthService authService;
 
     @PostMapping("/login")
-    @Operation(summary = "Đăng nhập bằng Email và Mật khẩu",
-               description = "Kiểm tra tài khoản, trả về cặp Access Token và Refresh Token, cập nhật last_login_at")
+    @Operation(summary = "Đăng nhập bằng Email và Mật khẩu", description = "Kiểm tra tài khoản, trả về cặp Access Token và Refresh Token, cập nhật last_login_at")
     public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthTokenResponse response = authService.login(request);
         return ApiResponse.ok(response);
     }
 
     @PostMapping("/activate")
-    @Operation(summary = "Kích hoạt tài khoản nhân viên",
-               description = "Nhập mã token nhận qua email (48 giờ) và thiết lập mật khẩu lần đầu. Tự động đăng nhập.")
+    @Operation(summary = "Kích hoạt tài khoản nhân viên", description = "Nhập mã token nhận qua email (48 giờ) và thiết lập mật khẩu lần đầu. Tự động đăng nhập.")
     public ApiResponse<AuthTokenResponse> activateAccount(@Valid @RequestBody ActivateAccountRequest request) {
         AuthTokenResponse response = authService.activateAccount(request);
         return ApiResponse.ok(response);
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Làm mới Access Token",
-               description = "Cấp Access Token mới từ Refresh Token hợp lệ (đối chiếu dữ liệu Redis)")
+    @Operation(summary = "Làm mới Access Token", description = "Cấp Access Token mới từ Refresh Token hợp lệ (đối chiếu dữ liệu Redis)")
     public ApiResponse<AuthTokenResponse> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         AuthTokenResponse response = authService.refreshToken(request);
         return ApiResponse.ok(response);
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Đăng xuất tài khoản",
-               description = "Đưa Access Token vào Redis Blacklist và xóa Refresh Token để hủy phiên làm việc")
+    @Operation(summary = "Đăng xuất tài khoản", description = "Đưa Access Token vào Redis Blacklist và xóa Refresh Token để hủy phiên làm việc")
     public ApiResponse<Void> logout(@RequestHeader(value = "Authorization", required = false) String bearerToken) {
         authService.logout(bearerToken);
         return ApiResponse.ok(null);
     }
 
     @PostMapping("/oauth2/google")
-    @Operation(summary = "Đăng nhập bằng Google ID Token",
-               description = "Xác minh Google Token, liên kết tài khoản OAuth và tự động tạo User nếu chưa tồn tại")
+    @Operation(summary = "Đăng nhập bằng Google ID Token", description = "Xác minh Google Token, liên kết tài khoản OAuth và tự động tạo User nếu chưa tồn tại")
     public ApiResponse<AuthTokenResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
         AuthTokenResponse response = authService.loginWithGoogle(request);
         return ApiResponse.ok(response);
     }
 
     @GetMapping("/me")
-    @Operation(summary = "Lấy thông tin tài khoản đang đăng nhập",
-               description = "Trả về thông tin User, email, trạng thái và vai trò hiện tại")
+    @Operation(summary = "Lấy thông tin tài khoản đang đăng nhập", description = "Trả về thông tin User, email, trạng thái và vai trò hiện tại")
     public ApiResponse<UserProfileResponse> getCurrentUser() {
         UserProfileResponse response = authService.getCurrentUser();
         return ApiResponse.ok(response);
     }
 
     @PostMapping("/forgot-password")
-    @Operation(summary = "Yêu cầu mã OTP khôi phục mật khẩu",
-               description = "Gửi mã OTP 6 chữ số có hiệu lực 15 phút tới email của người dùng")
+    @Operation(summary = "Yêu cầu mã OTP khôi phục mật khẩu", description = "Gửi mã OTP 6 chữ số có hiệu lực 15 phút tới email của người dùng")
     public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
         authService.forgotPassword(request);
         return ApiResponse.ok(null);
     }
 
     @PostMapping("/reset-password")
-    @Operation(summary = "Đặt lại mật khẩu mới bằng mã OTP",
-               description = "Xác thực mã OTP 6 chữ số và cập nhật mật khẩu mới. Hủy toàn bộ phiên làm việc cũ.")
+    @Operation(summary = "Đặt lại mật khẩu mới bằng mã OTP", description = "Xác thực mã OTP 6 chữ số và cập nhật mật khẩu mới. Hủy toàn bộ phiên làm việc cũ.")
     public ApiResponse<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
         authService.resetPassword(request);
         return ApiResponse.ok(null);
@@ -86,11 +78,9 @@ public class AuthController {
 
     @PutMapping("/change-password")
     @SecurityRequirement(name = "bearerAuth")
-    @Operation(summary = "Đổi mật khẩu người dùng đang đăng nhập",
-               description = "Yêu cầu nhập đúng mật khẩu hiện tại và thiết lập mật khẩu mới. Cưỡng chế đăng nhập lại.")
+    @Operation(summary = "Đổi mật khẩu người dùng đang đăng nhập", description = "Yêu cầu nhập đúng mật khẩu hiện tại và thiết lập mật khẩu mới. Cưỡng chế đăng nhập lại.")
     public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         authService.changePassword(request);
         return ApiResponse.ok(null);
     }
 }
-

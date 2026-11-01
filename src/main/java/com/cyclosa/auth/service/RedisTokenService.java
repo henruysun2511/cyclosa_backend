@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @Service
@@ -22,13 +23,44 @@ public class RedisTokenService {
 
     private final StringRedisTemplate redisTemplate;
 
+    // Graceful fallback cache khi Redis offline / không khả dụng ở local dev
+    private final ConcurrentHashMap<String, String> localFallbackCache = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Long> localExpiryCache = new ConcurrentHashMap<>();
+
+    private void putLocal(String key, String value, Duration ttl) {
+        localFallbackCache.put(key, value);
+        if (ttl != null) {
+            localExpiryCache.put(key, System.currentTimeMillis() + ttl.toMillis());
+        }
+    }
+
+    private String getLocal(String key) {
+        Long expiry = localExpiryCache.get(key);
+        if (expiry != null && System.currentTimeMillis() > expiry) {
+            localFallbackCache.remove(key);
+            localExpiryCache.remove(key);
+            return null;
+        }
+        return localFallbackCache.get(key);
+    }
+
+    private void removeLocal(String key) {
+        localFallbackCache.remove(key);
+        localExpiryCache.remove(key);
+    }
+
     /**
      * Lưu mã kích hoạt tài khoản nhân viên (TTL mặc định 48 giờ)
      */
     public void saveActivationToken(String token, UUID userId, Duration ttl) {
         String key = ACTIVATION_PREFIX + token;
-        redisTemplate.opsForValue().set(key, userId.toString(), ttl);
-        log.debug("Lưu activation token cho userId={} với TTL={}s", userId, ttl.getSeconds());
+        try {
+            redisTemplate.opsForValue().set(key, userId.toString(), ttl);
+            log.debug("Lưu activation token cho userId={} với TTL={}s", userId, ttl.getSeconds());
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, lưu activation token vào bộ nhớ tạm: {}", e.getMessage());
+            putLocal(key, userId.toString(), ttl);
+        }
     }
 
     /**
@@ -36,7 +68,15 @@ public class RedisTokenService {
      */
     public Optional<UUID> getUserIdByActivationToken(String token) {
         String key = ACTIVATION_PREFIX + token;
-        String val = redisTemplate.opsForValue().get(key);
+        String val = null;
+        try {
+            val = redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, đọc activation token từ bộ nhớ tạm");
+        }
+        if (val == null || val.isBlank()) {
+            val = getLocal(key);
+        }
         if (val == null || val.isBlank()) {
             return Optional.empty();
         }
@@ -53,7 +93,11 @@ public class RedisTokenService {
      */
     public void deleteActivationToken(String token) {
         String key = ACTIVATION_PREFIX + token;
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception ignored) {
+        }
+        removeLocal(key);
     }
 
     /**
@@ -61,8 +105,13 @@ public class RedisTokenService {
      */
     public void saveRefreshToken(UUID userId, String refreshToken, Duration ttl) {
         String key = REFRESH_PREFIX + userId;
-        redisTemplate.opsForValue().set(key, refreshToken, ttl);
-        log.debug("Lưu refresh token cho userId={} với TTL={}s", userId, ttl.getSeconds());
+        try {
+            redisTemplate.opsForValue().set(key, refreshToken, ttl);
+            log.debug("Lưu refresh token cho userId={} với TTL={}s", userId, ttl.getSeconds());
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, lưu refresh token vào bộ nhớ tạm cho userId={}: {}", userId, e.getMessage());
+            putLocal(key, refreshToken, ttl);
+        }
     }
 
     /**
@@ -70,7 +119,15 @@ public class RedisTokenService {
      */
     public boolean validateRefreshToken(UUID userId, String refreshToken) {
         String key = REFRESH_PREFIX + userId;
-        String stored = redisTemplate.opsForValue().get(key);
+        String stored = null;
+        try {
+            stored = redisTemplate.opsForValue().get(key);
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, đọc refresh token từ bộ nhớ tạm cho userId={}", userId);
+        }
+        if (stored == null) {
+            stored = getLocal(key);
+        }
         return stored != null && stored.equals(refreshToken);
     }
 
@@ -79,7 +136,11 @@ public class RedisTokenService {
      */
     public void deleteRefreshToken(UUID userId) {
         String key = REFRESH_PREFIX + userId;
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception ignored) {
+        }
+        removeLocal(key);
     }
 
     /**
@@ -90,8 +151,13 @@ public class RedisTokenService {
             return;
         }
         String key = BLACKLIST_PREFIX + accessToken;
-        redisTemplate.opsForValue().set(key, "revoked", remainingTtl);
-        log.debug("Đưa access token vào blacklist với TTL={}s", remainingTtl.getSeconds());
+        try {
+            redisTemplate.opsForValue().set(key, "revoked", remainingTtl);
+            log.debug("Đưa access token vào blacklist với TTL={}s", remainingTtl.getSeconds());
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, đưa access token vào bộ nhớ tạm blacklist: {}", e.getMessage());
+            putLocal(key, "revoked", remainingTtl);
+        }
     }
 
     /**
@@ -99,8 +165,14 @@ public class RedisTokenService {
      */
     public boolean isAccessTokenBlacklisted(String accessToken) {
         String key = BLACKLIST_PREFIX + accessToken;
-        Boolean hasKey = redisTemplate.hasKey(key);
-        return Boolean.TRUE.equals(hasKey);
+        try {
+            Boolean hasKey = redisTemplate.hasKey(key);
+            if (Boolean.TRUE.equals(hasKey)) {
+                return true;
+            }
+        } catch (Exception ignored) {
+        }
+        return getLocal(key) != null;
     }
 
     /**
@@ -108,8 +180,13 @@ public class RedisTokenService {
      */
     public void savePasswordResetOtp(String email, String otp, Duration ttl) {
         String key = OTP_PREFIX + email.toLowerCase().trim();
-        redisTemplate.opsForValue().set(key, otp, ttl);
-        log.debug("Lưu OTP reset password cho email={} với TTL={}s", email, ttl.getSeconds());
+        try {
+            redisTemplate.opsForValue().set(key, otp, ttl);
+            log.debug("Lưu OTP reset password cho email={} với TTL={}s", email, ttl.getSeconds());
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, lưu OTP vào bộ nhớ tạm: {}", e.getMessage());
+            putLocal(key, otp, ttl);
+        }
     }
 
     /**
@@ -117,7 +194,14 @@ public class RedisTokenService {
      */
     public Optional<String> getPasswordResetOtp(String email) {
         String key = OTP_PREFIX + email.toLowerCase().trim();
-        String val = redisTemplate.opsForValue().get(key);
+        String val = null;
+        try {
+            val = redisTemplate.opsForValue().get(key);
+        } catch (Exception ignored) {
+        }
+        if (val == null || val.isBlank()) {
+            val = getLocal(key);
+        }
         if (val == null || val.isBlank()) {
             return Optional.empty();
         }
@@ -129,7 +213,11 @@ public class RedisTokenService {
      */
     public void deletePasswordResetOtp(String email) {
         String key = OTP_PREFIX + email.toLowerCase().trim();
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception ignored) {
+        }
+        removeLocal(key);
     }
 
     /**
@@ -137,11 +225,19 @@ public class RedisTokenService {
      */
     public int incrementOtpAttempts(String email, Duration ttl) {
         String key = OTP_ATTEMPTS_PREFIX + email.toLowerCase().trim();
-        Long attempts = redisTemplate.opsForValue().increment(key);
-        if (attempts != null && attempts == 1) {
-            redisTemplate.expire(key, ttl);
+        try {
+            Long attempts = redisTemplate.opsForValue().increment(key);
+            if (attempts != null && attempts == 1) {
+                redisTemplate.expire(key, ttl);
+            }
+            return attempts != null ? attempts.intValue() : 1;
+        } catch (Exception e) {
+            log.warn("Redis không khả dụng, đếm số lần OTP sai trong bộ nhớ tạm");
+            String cur = getLocal(key);
+            int next = cur == null ? 1 : Integer.parseInt(cur) + 1;
+            putLocal(key, String.valueOf(next), ttl);
+            return next;
         }
-        return attempts != null ? attempts.intValue() : 1;
     }
 
     /**
@@ -149,7 +245,14 @@ public class RedisTokenService {
      */
     public int getOtpAttempts(String email) {
         String key = OTP_ATTEMPTS_PREFIX + email.toLowerCase().trim();
-        String val = redisTemplate.opsForValue().get(key);
+        String val = null;
+        try {
+            val = redisTemplate.opsForValue().get(key);
+        } catch (Exception ignored) {
+        }
+        if (val == null || val.isBlank()) {
+            val = getLocal(key);
+        }
         if (val == null || val.isBlank()) {
             return 0;
         }
@@ -165,6 +268,10 @@ public class RedisTokenService {
      */
     public void resetOtpAttempts(String email) {
         String key = OTP_ATTEMPTS_PREFIX + email.toLowerCase().trim();
-        redisTemplate.delete(key);
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception ignored) {
+        }
+        removeLocal(key);
     }
 }

@@ -13,6 +13,7 @@ import java.util.List;
 
 @Entity
 @Table(name = "users", indexes = {
+        @Index(name = "idx_users_username", columnList = "username", unique = true),
         @Index(name = "idx_users_email", columnList = "email"),
         @Index(name = "idx_users_status", columnList = "status"),
         @Index(name = "idx_users_deleted", columnList = "deleted")
@@ -25,6 +26,9 @@ import java.util.List;
 @SQLDelete(sql = "UPDATE users SET deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
 @SQLRestriction("deleted = false")
 public class User extends BaseEntity {
+
+    @Column(name = "username", nullable = false, unique = true, length = 100)
+    private String username;
 
     @Column(name = "email", nullable = false, unique = true, length = 255)
     private String email;
@@ -48,4 +52,3 @@ public class User extends BaseEntity {
     @Builder.Default
     private List<OAuthAccount> oauthAccounts = new ArrayList<>();
 }
-

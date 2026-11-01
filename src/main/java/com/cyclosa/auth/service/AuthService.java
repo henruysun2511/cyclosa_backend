@@ -14,6 +14,7 @@ import com.cyclosa.auth.repository.UserRepository;
 import com.cyclosa.auth.security.JwtUtil;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.util.SecurityUtils;
+import com.cyclosa.authorization.repository.UserRoleAssignmentRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -46,56 +47,57 @@ public class AuthService {
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
+    private final UserRoleAssignmentRepository userRoleAssignmentRepository;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**
-     * Đăng nhập bằng Email và Mật khẩu
+     * ÄÄƒng nháº­p báº±ng Email vÃ  Máº­t kháº©u
      */
     @Transactional
     public AuthTokenResponse login(LoginRequest request) {
-        log.info("Xác thực đăng nhập email: {}", request.getEmail());
+        log.info("Xác thực đăng nhập username: {}", request.getUsername());
 
-        // 1. Tìm người dùng theo email
-        User user = userRepository.findByEmailAndDeletedFalse(request.getEmail().trim().toLowerCase())
+        // 1. TÃ¬m ngÆ°á»i dÃ¹ng theo email
+        User user = userRepository.findByUsernameAndDeletedFalse(request.getUsername().trim().toLowerCase())
                 .orElseThrow(() -> new AppException(AuthErrorCode.INVALID_CREDENTIALS));
 
-        // 2. Kiểm tra trạng thái tài khoản
+        // 2. Kiá»ƒm tra tráº¡ng thÃ¡i tÃ i khoáº£n
         if (user.getStatus() == UserStatus.PENDING_ACTIVATION) {
-            log.warn("Tài khoản chưa được kích hoạt: {}", user.getEmail());
+            log.warn("TÃ i khoáº£n chÆ°a Ä‘Æ°á»£c kÃ­ch hoáº¡t: {}", user.getEmail());
             throw new AppException(AuthErrorCode.ACCOUNT_PENDING_ACTIVATION);
         }
         if (user.getStatus() == UserStatus.LOCKED) {
-            log.warn("Tài khoản đang bị khóa: {}", user.getEmail());
+            log.warn("TÃ i khoáº£n Ä‘ang bá»‹ khÃ³a: {}", user.getEmail());
             throw new AppException(AuthErrorCode.ACCOUNT_LOCKED);
         }
 
-        // 3. Đối chiếu mật khẩu bằng BCrypt
+        // 3. Äá»‘i chiáº¿u máº­t kháº©u báº±ng BCrypt
         if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            log.warn("Mật khẩu không chính xác cho email: {}", user.getEmail());
+            log.warn("Máº­t kháº©u khÃ´ng chÃ­nh xÃ¡c cho email: {}", user.getEmail());
             throw new AppException(AuthErrorCode.INVALID_CREDENTIALS);
         }
 
-        // 4. Cập nhật thời điểm đăng nhập gần nhất
+        // 4. Cáº­p nháº­t thá»i Ä‘iá»ƒm Ä‘Äƒng nháº­p gáº§n nháº¥t
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // 5. Cấp Access Token và Refresh Token
-        return issueAuthTokens(user, List.of("EMPLOYEE"));
+        // 5. Cáº¥p Access Token vÃ  Refresh Token
+        return issueAuthTokens(user, resolveUserRoles(user.getId()));
     }
 
     /**
-     * Kích hoạt tài khoản nhân viên qua mã token 48 giờ và đặt mật khẩu lần đầu
+     * KÃ­ch hoáº¡t tÃ i khoáº£n nhÃ¢n viÃªn qua mÃ£ token 48 giá» vÃ  Ä‘áº·t máº­t kháº©u láº§n Ä‘áº§u
      */
     @Transactional
     public AuthTokenResponse activateAccount(ActivateAccountRequest request) {
-        log.info("Xử lý kích hoạt tài khoản bằng token");
+        log.info("Xá»­ lÃ½ kÃ­ch hoáº¡t tÃ i khoáº£n báº±ng token");
 
-        // 1. Kiểm tra token trên Redis
+        // 1. Kiá»ƒm tra token trÃªn Redis
         UUID userId = redisTokenService.getUserIdByActivationToken(request.getToken().trim())
                 .orElseThrow(() -> new AppException(AuthErrorCode.ACTIVATION_TOKEN_INVALID));
 
-        // 2. Tìm User
+        // 2. TÃ¬m User
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
@@ -103,40 +105,40 @@ public class AuthService {
             throw new AppException(AuthErrorCode.ACCOUNT_LOCKED);
         }
 
-        // 3. Đặt mật khẩu và đổi trạng thái ACTIVE
+        // 3. Äáº·t máº­t kháº©u vÃ  Ä‘á»•i tráº¡ng thÃ¡i ACTIVE
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         user.setStatus(UserStatus.ACTIVE);
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        // 4. Xóa token kích hoạt trên Redis để chống tái sử dụng
+        // 4. XÃ³a token kÃ­ch hoáº¡t trÃªn Redis Ä‘á»ƒ chá»‘ng tÃ¡i sá»­ dá»¥ng
         redisTokenService.deleteActivationToken(request.getToken().trim());
-        log.info("Kích hoạt tài khoản thành công cho user: {}", user.getEmail());
+        log.info("KÃ­ch hoáº¡t tÃ i khoáº£n thÃ nh cÃ´ng cho user: {}", user.getEmail());
 
-        // 5. Tự động đăng nhập
-        return issueAuthTokens(user, List.of("EMPLOYEE"));
+        // 5. Tá»± Ä‘á»™ng Ä‘Äƒng nháº­p
+        return issueAuthTokens(user, resolveUserRoles(user.getId()));
     }
 
     /**
-     * Cấp Access Token mới từ Refresh Token hợp lệ
+     * Cáº¥p Access Token má»›i tá»« Refresh Token há»£p lá»‡
      */
     public AuthTokenResponse refreshToken(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken().trim();
 
-        // 1. Kiểm tra tính hợp lệ cơ bản của token
+        // 1. Kiá»ƒm tra tÃ­nh há»£p lá»‡ cÆ¡ báº£n cá»§a token
         if (!jwtUtil.validateToken(refreshToken)) {
             throw new AppException(AuthErrorCode.REFRESH_TOKEN_INVALID);
         }
 
         UUID userId = jwtUtil.extractUserId(refreshToken);
 
-        // 2. Đối chiếu với Redis
+        // 2. Äá»‘i chiáº¿u vá»›i Redis
         if (!redisTokenService.validateRefreshToken(userId, refreshToken)) {
-            log.warn("Refresh token không khớp hoặc đã bị thu hồi trong Redis cho userId={}", userId);
+            log.warn("Refresh token khÃ´ng khá»›p hoáº·c Ä‘Ã£ bá»‹ thu há»“i trong Redis cho userId={}", userId);
             throw new AppException(AuthErrorCode.REFRESH_TOKEN_INVALID);
         }
 
-        // 3. Tìm user
+        // 3. TÃ¬m user
         User user = userRepository.findByIdAndDeletedFalse(userId)
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
@@ -144,8 +146,8 @@ public class AuthService {
             throw new AppException(AuthErrorCode.ACCOUNT_LOCKED);
         }
 
-        // 4. Cấp lại Access Token mới
-        List<String> roles = List.of("EMPLOYEE");
+        // 4. Cáº¥p láº¡i Access Token má»›i
+        List<String> roles = resolveUserRoles(user.getId());
         String newAccessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), roles);
 
         return AuthTokenResponse.builder()
@@ -160,7 +162,7 @@ public class AuthService {
     }
 
     /**
-     * Đăng xuất: Đưa Access Token vào Redis Blacklist và xóa Refresh Token
+     * ÄÄƒng xuáº¥t: ÄÆ°a Access Token vÃ o Redis Blacklist vÃ  xÃ³a Refresh Token
      */
     public void logout(String bearerToken) {
         if (bearerToken == null || !bearerToken.startsWith("Bearer ")) {
@@ -172,26 +174,26 @@ public class AuthService {
             UUID userId = jwtUtil.extractUserId(token);
             Duration remainingTtl = jwtUtil.getRemainingExpiration(token);
 
-            // 1. Đưa Access Token vào Redis Blacklist
+            // 1. ÄÆ°a Access Token vÃ o Redis Blacklist
             redisTokenService.blacklistAccessToken(token, remainingTtl);
 
-            // 2. Xóa Refresh Token tương ứng
+            // 2. XÃ³a Refresh Token tÆ°Æ¡ng á»©ng
             redisTokenService.deleteRefreshToken(userId);
 
-            log.info("Đăng xuất thành công cho userId={}", userId);
+            log.info("ÄÄƒng xuáº¥t thÃ nh cÃ´ng cho userId={}", userId);
         } catch (Exception e) {
-            log.debug("Lỗi khi xử lý logout: {}", e.getMessage());
+            log.debug("Lá»—i khi xá»­ lÃ½ logout: {}", e.getMessage());
         }
     }
 
     /**
-     * Đăng nhập / Tự động liên kết bằng Google ID Token
+     * ÄÄƒng nháº­p / Tá»± Ä‘á»™ng liÃªn káº¿t báº±ng Google ID Token
      */
     @Transactional
     public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
-        log.info("Xác thực đăng nhập Google ID Token");
+        log.info("XÃ¡c thá»±c Ä‘Äƒng nháº­p Google ID Token");
 
-        // 1. Xác thực Google Token thông qua endpoint googleapis
+        // 1. XÃ¡c thá»±c Google Token thÃ´ng qua endpoint googleapis
         String googleEmail;
         String googleSub;
 
@@ -204,7 +206,7 @@ public class AuthService {
 
             HttpResponse<String> response = client.send(verifyRequest, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() != 200) {
-                log.warn("Google tokeninfo trả về mã lỗi: {}", response.statusCode());
+                log.warn("Google tokeninfo tráº£ vá» mÃ£ lá»—i: {}", response.statusCode());
                 throw new AppException(AuthErrorCode.GOOGLE_AUTH_FAILED);
             }
 
@@ -218,24 +220,25 @@ public class AuthService {
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
-            log.error("Không thể kết nối dịch vụ Google để xác minh token: {}", e.getMessage());
+            log.error("KhÃ´ng thá»ƒ káº¿t ná»‘i dá»‹ch vá»¥ Google Ä‘á»ƒ xÃ¡c minh token: {}", e.getMessage());
             throw new AppException(AuthErrorCode.GOOGLE_AUTH_FAILED);
         }
 
-        // 2. Tìm kiếm liên kết oauth_accounts
+        // 2. TÃ¬m kiáº¿m liÃªn káº¿t oauth_accounts
         Optional<OAuthAccount> oauthOpt = oauthAccountRepository.findByProviderAndProviderUserId(OAuthProvider.GOOGLE, googleSub);
 
         User user;
         if (oauthOpt.isPresent()) {
             user = oauthOpt.get().getUser();
         } else {
-            // Tìm theo email xem đã có tài khoản chưa
+            // TÃ¬m theo email xem Ä‘Ã£ cÃ³ tÃ i khoáº£n chÆ°a
             Optional<User> existingUserOpt = userRepository.findByEmailAndDeletedFalse(googleEmail.toLowerCase());
             if (existingUserOpt.isPresent()) {
                 user = existingUserOpt.get();
             } else {
-                // Tạo mới tài khoản ACTIVE vì đã xác minh qua Google
+                // Táº¡o má»›i tÃ i khoáº£n ACTIVE vÃ¬ Ä‘Ã£ xÃ¡c minh qua Google
                 user = User.builder()
+                        .username(googleEmail.split("@")[0].toLowerCase())
                         .email(googleEmail.toLowerCase())
                         .status(UserStatus.ACTIVE)
                         .deleted(false)
@@ -243,7 +246,7 @@ public class AuthService {
                 user = userRepository.save(user);
             }
 
-            // Tạo liên kết OAuthAccount
+            // Táº¡o liÃªn káº¿t OAuthAccount
             OAuthAccount newOAuth = OAuthAccount.builder()
                     .user(user)
                     .provider(OAuthProvider.GOOGLE)
@@ -259,11 +262,11 @@ public class AuthService {
         user.setLastLoginAt(LocalDateTime.now());
         userRepository.save(user);
 
-        return issueAuthTokens(user, List.of("EMPLOYEE"));
+        return issueAuthTokens(user, resolveUserRoles(user.getId()));
     }
 
     /**
-     * Lấy thông tin tài khoản đang đăng nhập hiện tại
+     * Láº¥y thÃ´ng tin tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p hiá»‡n táº¡i
      */
     public UserProfileResponse getCurrentUser() {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
@@ -271,73 +274,73 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
         UserProfileResponse profile = userMapper.toProfileResponse(user);
-        profile.setRoles(List.of("EMPLOYEE"));
+        profile.setRoles(resolveUserRoles(user.getId()));
         return profile;
     }
 
     /**
-     * Gửi mã OTP khôi phục mật khẩu qua email (thời hạn 15 phút)
+     * Gá»­i mÃ£ OTP khÃ´i phá»¥c máº­t kháº©u qua email (thá»i háº¡n 15 phÃºt)
      */
     public void forgotPassword(ForgotPasswordRequest request) {
         String email = request.getEmail().trim().toLowerCase();
-        log.info("Xử lý yêu cầu quên mật khẩu cho email: {}", email);
+        log.info("Xá»­ lÃ½ yÃªu cáº§u quÃªn máº­t kháº©u cho email: {}", email);
 
         userRepository.findByEmailAndDeletedFalse(email).ifPresent(user -> {
             if (user.getStatus() != UserStatus.ACTIVE) {
-                log.warn("Tài khoản {} không ở trạng thái ACTIVE (status={}), bỏ qua gửi OTP", email, user.getStatus());
+                log.warn("TÃ i khoáº£n {} khÃ´ng á»Ÿ tráº¡ng thÃ¡i ACTIVE (status={}), bá» qua gá»­i OTP", email, user.getStatus());
                 return;
             }
 
-            // Sinh mã OTP 6 chữ số an toàn
+            // Sinh mÃ£ OTP 6 chá»¯ sá»‘ an toÃ n
             String otp = String.format("%06d", secureRandom.nextInt(1_000_000));
             Duration ttl = Duration.ofMinutes(15);
 
-            // Lưu OTP vào Redis và reset attempts
+            // LÆ°u OTP vÃ o Redis vÃ  reset attempts
             redisTokenService.savePasswordResetOtp(email, otp, ttl);
             redisTokenService.resetOtpAttempts(email);
 
-            // Gửi email OTP
+            // Gá»­i email OTP
             mailService.sendPasswordResetOtpEmail(user.getEmail(), otp, ttl);
         });
 
-        // Luôn trả về thành công chống dò quét email (Email Enumeration Attack)
+        // LuÃ´n tráº£ vá» thÃ nh cÃ´ng chá»‘ng dÃ² quÃ©t email (Email Enumeration Attack)
     }
 
     /**
-     * Xác thực mã OTP và đặt lại mật khẩu mới
+     * XÃ¡c thá»±c mÃ£ OTP vÃ  Ä‘áº·t láº¡i máº­t kháº©u má»›i
      */
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         String email = request.getEmail().trim().toLowerCase();
-        log.info("Xử lý đặt lại mật khẩu bằng OTP cho email: {}", email);
+        log.info("Xá»­ lÃ½ Ä‘áº·t láº¡i máº­t kháº©u báº±ng OTP cho email: {}", email);
 
-        // 1. Kiểm tra xác nhận mật khẩu khớp nhau
+        // 1. Kiá»ƒm tra xÃ¡c nháº­n máº­t kháº©u khá»›p nhau
         if (!request.getNewPassword().equals(request.getConfirmPassword())) {
             throw new AppException(AuthErrorCode.PASSWORD_CONFIRM_MISMATCH);
         }
 
-        // 2. Chống Brute-force: Kiểm tra số lần nhập sai
+        // 2. Chá»‘ng Brute-force: Kiá»ƒm tra sá»‘ láº§n nháº­p sai
         int attempts = redisTokenService.getOtpAttempts(email);
         if (attempts >= 5) {
-            log.warn("Email {} đã vượt quá số lần nhập sai OTP (attempts={})", email, attempts);
+            log.warn("Email {} Ä‘Ã£ vÆ°á»£t quÃ¡ sá»‘ láº§n nháº­p sai OTP (attempts={})", email, attempts);
             throw new AppException(AuthErrorCode.OTP_MAX_ATTEMPTS_EXCEEDED);
         }
 
-        // 3. Lấy OTP từ Redis
+        // 3. Láº¥y OTP tá»« Redis
         String storedOtp = redisTokenService.getPasswordResetOtp(email)
                 .orElseThrow(() -> new AppException(AuthErrorCode.OTP_EXPIRED));
 
-        // 4. Đối chiếu OTP
+        // 4. Äá»‘i chiáº¿u OTP
         if (!storedOtp.equals(request.getOtp().trim())) {
             int newAttempts = redisTokenService.incrementOtpAttempts(email, Duration.ofMinutes(15));
-            log.warn("Nhập sai OTP cho email: {} (lần thứ {})", email, newAttempts);
+            log.warn("Nháº­p sai OTP cho email: {} (láº§n thá»© {})", email, newAttempts);
             if (newAttempts >= 5) {
                 throw new AppException(AuthErrorCode.OTP_MAX_ATTEMPTS_EXCEEDED);
             }
             throw new AppException(AuthErrorCode.OTP_INVALID);
         }
 
-        // 5. Tìm User
+        // 5. TÃ¬m User
         User user = userRepository.findByEmailAndDeletedFalse(email)
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
@@ -345,70 +348,70 @@ public class AuthService {
             throw new AppException(AuthErrorCode.ACCOUNT_LOCKED);
         }
 
-        // 6. Kiểm tra mật khẩu mới không trùng với mật khẩu hiện tại
+        // 6. Kiá»ƒm tra máº­t kháº©u má»›i khÃ´ng trÃ¹ng vá»›i máº­t kháº©u hiá»‡n táº¡i
         if (user.getPasswordHash() != null && passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
             throw new AppException(AuthErrorCode.PASSWORD_SAME_AS_OLD);
         }
 
-        // 7. Cập nhật mật khẩu mới
+        // 7. Cáº­p nháº­t máº­t kháº©u má»›i
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 8. Dọn dẹp Redis & Cưỡng chế đăng nhập lại
+        // 8. Dá»n dáº¹p Redis & CÆ°á»¡ng cháº¿ Ä‘Äƒng nháº­p láº¡i
         redisTokenService.deletePasswordResetOtp(email);
         redisTokenService.resetOtpAttempts(email);
         redisTokenService.deleteRefreshToken(user.getId());
 
-        log.info("Đặt lại mật khẩu thành công bằng OTP cho user={}", user.getId());
+        log.info("Äáº·t láº¡i máº­t kháº©u thÃ nh cÃ´ng báº±ng OTP cho user={}", user.getId());
     }
 
     /**
-     * Cập nhật / Đổi mật khẩu cá nhân cho người dùng đang đăng nhập
+     * Cáº­p nháº­t / Äá»•i máº­t kháº©u cÃ¡ nhÃ¢n cho ngÆ°á»i dÃ¹ng Ä‘ang Ä‘Äƒng nháº­p
      */
     @Transactional
     public void changePassword(ChangePasswordRequest request) {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
-        log.info("Xử lý đổi mật khẩu cho user ID: {}", currentUserId);
+        log.info("Xá»­ lÃ½ Ä‘á»•i máº­t kháº©u cho user ID: {}", currentUserId);
 
-        // 1. Kiểm tra xác nhận mật khẩu mới
+        // 1. Kiá»ƒm tra xÃ¡c nháº­n máº­t kháº©u má»›i
         if (!request.getNewPassword().equals(request.getConfirmNewPassword())) {
             throw new AppException(AuthErrorCode.PASSWORD_CONFIRM_MISMATCH);
         }
 
-        // 2. Tìm User
+        // 2. TÃ¬m User
         User user = userRepository.findByIdAndDeletedFalse(currentUserId)
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
-        // 3. Kiểm tra xem tài khoản đã có mật khẩu chưa
+        // 3. Kiá»ƒm tra xem tÃ i khoáº£n Ä‘Ã£ cÃ³ máº­t kháº©u chÆ°a
         if (user.getPasswordHash() == null) {
             throw new AppException(AuthErrorCode.NO_PASSWORD_SET);
         }
 
-        // 4. Kiểm tra mật khẩu hiện tại có đúng không
+        // 4. Kiá»ƒm tra máº­t kháº©u hiá»‡n táº¡i cÃ³ Ä‘Ãºng khÃ´ng
         if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new AppException(AuthErrorCode.CURRENT_PASSWORD_INCORRECT);
         }
 
-        // 5. Kiểm tra mật khẩu mới không được trùng mật khẩu cũ
+        // 5. Kiá»ƒm tra máº­t kháº©u má»›i khÃ´ng Ä‘Æ°á»£c trÃ¹ng máº­t kháº©u cÅ©
         if (passwordEncoder.matches(request.getNewPassword(), user.getPasswordHash())) {
             throw new AppException(AuthErrorCode.PASSWORD_SAME_AS_OLD);
         }
 
-        // 6. Băm và lưu mật khẩu mới
+        // 6. BÄƒm vÃ  lÆ°u máº­t kháº©u má»›i
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
         userRepository.save(user);
 
-        // 7. Cưỡng chế ngắt toàn bộ phiên làm việc cũ
+        // 7. CÆ°á»¡ng cháº¿ ngáº¯t toÃ n bá»™ phiÃªn lÃ m viá»‡c cÅ©
         redisTokenService.deleteRefreshToken(user.getId());
 
-        log.info("Đổi mật khẩu thành công cho user ID: {}", currentUserId);
+        log.info("Äá»•i máº­t kháº©u thÃ nh cÃ´ng cho user ID: {}", currentUserId);
     }
 
     private AuthTokenResponse issueAuthTokens(User user, List<String> roles) {
         String accessToken = jwtUtil.generateAccessToken(user.getId(), user.getEmail(), roles);
         String refreshToken = jwtUtil.generateRefreshToken(user.getId(), user.getEmail());
 
-        // Lưu Refresh Token trên Redis
+        // LÆ°u Refresh Token trÃªn Redis
         Duration refreshTtl = Duration.ofMillis(jwtUtil.getRefreshTokenExpiry());
         redisTokenService.saveRefreshToken(user.getId(), refreshToken, refreshTtl);
 
@@ -422,4 +425,16 @@ public class AuthService {
                 .roles(roles)
                 .build();
     }
+
+    private List<String> resolveUserRoles(UUID userId) {
+        List<String> roles = userRoleAssignmentRepository.findAllWithRoleByUserId(userId).stream()
+                .map(a -> a.getRole().getCode())
+                .distinct()
+                .toList();
+        if (roles.isEmpty()) {
+            return List.of("EMPLOYEE");
+        }
+        return roles;
+    }
 }
+

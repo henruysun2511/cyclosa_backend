@@ -50,7 +50,12 @@ public class UserService {
         }
 
         // 2. Tạo User ở trạng thái PENDING_ACTIVATION
+        String username = email.split("@")[0].toLowerCase();
+        if (userRepository.existsByUsernameAndDeletedFalse(username)) {
+            username = username + "_" + (System.currentTimeMillis() % 10000);
+        }
         User user = User.builder()
+                .username(username)
                 .email(email)
                 .status(UserStatus.PENDING_ACTIVATION)
                 .deleted(false)

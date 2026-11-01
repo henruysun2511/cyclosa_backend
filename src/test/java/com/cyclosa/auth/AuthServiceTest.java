@@ -72,6 +72,7 @@ class AuthServiceTest {
         userId = UUID.randomUUID();
 
         activeUser = User.builder()
+                .username("active_user")
                 .email("active@cyclosa.com")
                 .passwordHash("$2a$10$hashedpassword")
                 .status(UserStatus.ACTIVE)
@@ -80,6 +81,7 @@ class AuthServiceTest {
         activeUser.setId(userId);
 
         pendingUser = User.builder()
+                .username("pending_user")
                 .email("pending@cyclosa.com")
                 .status(UserStatus.PENDING_ACTIVATION)
                 .deleted(false)
@@ -87,6 +89,7 @@ class AuthServiceTest {
         pendingUser.setId(UUID.randomUUID());
 
         lockedUser = User.builder()
+                .username("locked_user")
                 .email("locked@cyclosa.com")
                 .passwordHash("$2a$10$hashedpassword")
                 .status(UserStatus.LOCKED)
@@ -100,11 +103,11 @@ class AuthServiceTest {
     void login_whenValidCredentials_shouldReturnTokens() {
         // Given
         LoginRequest request = LoginRequest.builder()
-                .email("active@cyclosa.com")
+                .username("active_user")
                 .password("Password@123")
                 .build();
 
-        when(userRepository.findByEmailAndDeletedFalse("active@cyclosa.com")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameAndDeletedFalse("active_user")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("Password@123", activeUser.getPasswordHash())).thenReturn(true);
         when(jwtUtil.generateAccessToken(eq(userId), eq("active@cyclosa.com"), any())).thenReturn("mock-access-token");
         when(jwtUtil.generateRefreshToken(eq(userId), eq("active@cyclosa.com"))).thenReturn("mock-refresh-token");
@@ -127,11 +130,11 @@ class AuthServiceTest {
     @DisplayName("Ném ngoại lệ khi đăng nhập tài khoản chưa kích hoạt (PENDING_ACTIVATION)")
     void login_whenPendingActivation_shouldThrowException() {
         LoginRequest request = LoginRequest.builder()
-                .email("pending@cyclosa.com")
+                .username("pending_user")
                 .password("Password@123")
                 .build();
 
-        when(userRepository.findByEmailAndDeletedFalse("pending@cyclosa.com")).thenReturn(Optional.of(pendingUser));
+        when(userRepository.findByUsernameAndDeletedFalse("pending_user")).thenReturn(Optional.of(pendingUser));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(AppException.class)
@@ -143,11 +146,11 @@ class AuthServiceTest {
     @DisplayName("Ném ngoại lệ khi đăng nhập tài khoản đang bị khóa (LOCKED)")
     void login_whenLocked_shouldThrowException() {
         LoginRequest request = LoginRequest.builder()
-                .email("locked@cyclosa.com")
+                .username("locked_user")
                 .password("Password@123")
                 .build();
 
-        when(userRepository.findByEmailAndDeletedFalse("locked@cyclosa.com")).thenReturn(Optional.of(lockedUser));
+        when(userRepository.findByUsernameAndDeletedFalse("locked_user")).thenReturn(Optional.of(lockedUser));
 
         assertThatThrownBy(() -> authService.login(request))
                 .isInstanceOf(AppException.class)
@@ -236,7 +239,7 @@ class AuthServiceTest {
         ForgotPasswordRequest request = ForgotPasswordRequest.builder()
                 .email("active@cyclosa.com")
                 .build();
-        when(userRepository.findByEmailAndDeletedFalse("active@cyclosa.com")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameAndDeletedFalse("active_user")).thenReturn(Optional.of(activeUser));
 
         // When
         authService.forgotPassword(request);
@@ -338,7 +341,7 @@ class AuthServiceTest {
 
         when(redisTokenService.getOtpAttempts("active@cyclosa.com")).thenReturn(0);
         when(redisTokenService.getPasswordResetOtp("active@cyclosa.com")).thenReturn(Optional.of("123456"));
-        when(userRepository.findByEmailAndDeletedFalse("active@cyclosa.com")).thenReturn(Optional.of(activeUser));
+        when(userRepository.findByUsernameAndDeletedFalse("active_user")).thenReturn(Optional.of(activeUser));
         when(passwordEncoder.matches("NewPass@123", activeUser.getPasswordHash())).thenReturn(false);
         when(passwordEncoder.encode("NewPass@123")).thenReturn("$2a$10$newhashedpassword");
 
