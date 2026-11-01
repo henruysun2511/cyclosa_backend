@@ -2,7 +2,6 @@ package com.cyclosa.auth.controller;
 
 import com.cyclosa.auth.dto.request.CreateUserRequest;
 import com.cyclosa.auth.dto.request.UserFilterRequest;
-import com.cyclosa.auth.dto.response.UserDetailResponse;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.service.UserService;
 import com.cyclosa.common.response.ApiResponse;
@@ -30,8 +29,8 @@ public class UserController {
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Tạo tài khoản nhân viên mới",
                description = "Khởi tạo tài khoản ở trạng thái PENDING_ACTIVATION, sinh mã 48 giờ và gửi link qua email")
-    public ApiResponse<UserDetailResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
-        UserDetailResponse response = userService.createUser(request);
+    public ApiResponse<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
+        UserResponse response = userService.createUser(request);
         return ApiResponse.created(response);
     }
 
@@ -40,15 +39,6 @@ public class UserController {
                description = "Tìm kiếm theo từ khóa, lọc theo trạng thái (PENDING_ACTIVATION, ACTIVE, LOCKED) và phân trang")
     public ApiResponse<PageData<UserResponse>> getUsers(@ParameterObject @Valid UserFilterRequest filter) {
         PageData<UserResponse> response = userService.getUsers(filter);
-        return ApiResponse.ok(response);
-    }
-
-    @GetMapping("/{userId}")
-    @Operation(summary = "Lấy thông tin chi tiết tài khoản theo ID")
-    public ApiResponse<UserDetailResponse> getUserById(
-            @Parameter(description = "ID người dùng", required = true)
-            @PathVariable UUID userId) {
-        UserDetailResponse response = userService.getUserById(userId);
         return ApiResponse.ok(response);
     }
 

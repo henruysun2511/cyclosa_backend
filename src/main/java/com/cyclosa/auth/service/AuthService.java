@@ -3,30 +3,21 @@ package com.cyclosa.auth.service;
 import com.cyclosa.auth.dto.request.*;
 import com.cyclosa.auth.dto.response.AuthTokenResponse;
 import com.cyclosa.auth.dto.response.UserProfileResponse;
-import com.cyclosa.auth.entity.OAuthAccount;
 import com.cyclosa.auth.entity.User;
-import com.cyclosa.auth.enums.OAuthProvider;
 import com.cyclosa.auth.enums.UserStatus;
 import com.cyclosa.auth.exception.AuthErrorCode;
 import com.cyclosa.auth.mapper.UserMapper;
-import com.cyclosa.auth.repository.OAuthAccountRepository;
 import com.cyclosa.auth.repository.UserRepository;
 import com.cyclosa.auth.security.JwtUtil;
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.util.SecurityUtils;
 import com.cyclosa.authorization.repository.UserRoleAssignmentRepository;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.LocalDateTime;
@@ -41,14 +32,12 @@ import java.util.UUID;
 public class AuthService {
 
     private final UserRepository userRepository;
-    private final OAuthAccountRepository oauthAccountRepository;
     private final RedisTokenService redisTokenService;
     private final MailService mailService;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserRoleAssignmentRepository userRoleAssignmentRepository;
-    private final ObjectMapper objectMapper = new ObjectMapper();
     private final SecureRandom secureRandom = new SecureRandom();
 
     /**
@@ -59,7 +48,10 @@ public class AuthService {
         log.info("Xác thực đăng nhập username: {}", request.getUsername());
 
         // 1. TÃ¬m ngÆ°á»i dÃ¹ng theo email
-        User user = userRepository.findByUsernameAndDeletedFalse(request.getUsername().trim().toLowerCase())
+        String identifier = request.getUsername().trim().toLowerCase();
+        User user = (identifier.contains("@")
+                ? userRepository.findByEmailAndDeletedFalse(identifier)
+                : userRepository.findByUsernameAndDeletedFalse(identifier))
                 .orElseThrow(() -> new AppException(AuthErrorCode.INVALID_CREDENTIALS));
 
         // 2. Kiá»ƒm tra tráº¡ng thÃ¡i tÃ i khoáº£n
@@ -186,88 +178,6 @@ public class AuthService {
         }
     }
 
-    /**
-     * ÄÄƒng nháº­p / Tá»± Ä‘á»™ng liÃªn káº¿t báº±ng Google ID Token
-     */
-    @Transactional
-    public AuthTokenResponse loginWithGoogle(GoogleLoginRequest request) {
-        log.info("XÃ¡c thá»±c Ä‘Äƒng nháº­p Google ID Token");
-
-        // 1. XÃ¡c thá»±c Google Token thÃ´ng qua endpoint googleapis
-        String googleEmail;
-        String googleSub;
-
-        try {
-            HttpClient client = HttpClient.newHttpClient();
-            HttpRequest verifyRequest = HttpRequest.newBuilder()
-                    .uri(URI.create("https://oauth2.googleapis.com/tokeninfo?id_token=" + request.getIdToken().trim()))
-                    .GET()
-                    .build();
-
-            HttpResponse<String> response = client.send(verifyRequest, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() != 200) {
-                log.warn("Google tokeninfo tráº£ vá» mÃ£ lá»—i: {}", response.statusCode());
-                throw new AppException(AuthErrorCode.GOOGLE_AUTH_FAILED);
-            }
-
-            JsonNode payload = objectMapper.readTree(response.body());
-            googleEmail = payload.path("email").asText();
-            googleSub = payload.path("sub").asText();
-
-            if (googleEmail == null || googleEmail.isBlank() || googleSub == null || googleSub.isBlank()) {
-                throw new AppException(AuthErrorCode.GOOGLE_AUTH_FAILED);
-            }
-        } catch (AppException e) {
-            throw e;
-        } catch (Exception e) {
-            log.error("KhÃ´ng thá»ƒ káº¿t ná»‘i dá»‹ch vá»¥ Google Ä‘á»ƒ xÃ¡c minh token: {}", e.getMessage());
-            throw new AppException(AuthErrorCode.GOOGLE_AUTH_FAILED);
-        }
-
-        // 2. TÃ¬m kiáº¿m liÃªn káº¿t oauth_accounts
-        Optional<OAuthAccount> oauthOpt = oauthAccountRepository.findByProviderAndProviderUserId(OAuthProvider.GOOGLE, googleSub);
-
-        User user;
-        if (oauthOpt.isPresent()) {
-            user = oauthOpt.get().getUser();
-        } else {
-            // TÃ¬m theo email xem Ä‘Ã£ cÃ³ tÃ i khoáº£n chÆ°a
-            Optional<User> existingUserOpt = userRepository.findByEmailAndDeletedFalse(googleEmail.toLowerCase());
-            if (existingUserOpt.isPresent()) {
-                user = existingUserOpt.get();
-            } else {
-                // Táº¡o má»›i tÃ i khoáº£n ACTIVE vÃ¬ Ä‘Ã£ xÃ¡c minh qua Google
-                user = User.builder()
-                        .username(googleEmail.split("@")[0].toLowerCase())
-                        .email(googleEmail.toLowerCase())
-                        .status(UserStatus.ACTIVE)
-                        .deleted(false)
-                        .build();
-                user = userRepository.save(user);
-            }
-
-            // Táº¡o liÃªn káº¿t OAuthAccount
-            OAuthAccount newOAuth = OAuthAccount.builder()
-                    .user(user)
-                    .provider(OAuthProvider.GOOGLE)
-                    .providerUserId(googleSub)
-                    .build();
-            oauthAccountRepository.save(newOAuth);
-        }
-
-        if (user.getStatus() == UserStatus.LOCKED) {
-            throw new AppException(AuthErrorCode.ACCOUNT_LOCKED);
-        }
-
-        user.setLastLoginAt(LocalDateTime.now());
-        userRepository.save(user);
-
-        return issueAuthTokens(user, resolveUserRoles(user.getId()));
-    }
-
-    /**
-     * Láº¥y thÃ´ng tin tÃ i khoáº£n Ä‘ang Ä‘Äƒng nháº­p hiá»‡n táº¡i
-     */
     public UserProfileResponse getCurrentUser() {
         UUID currentUserId = SecurityUtils.getCurrentUserId();
         User user = userRepository.findByIdAndDeletedFalse(currentUserId)
@@ -383,12 +293,7 @@ public class AuthService {
                 .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
 
         // 3. Kiá»ƒm tra xem tÃ i khoáº£n Ä‘Ã£ cÃ³ máº­t kháº©u chÆ°a
-        if (user.getPasswordHash() == null) {
-            throw new AppException(AuthErrorCode.NO_PASSWORD_SET);
-        }
-
-        // 4. Kiá»ƒm tra máº­t kháº©u hiá»‡n táº¡i cÃ³ Ä‘Ãºng khÃ´ng
-        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
             throw new AppException(AuthErrorCode.CURRENT_PASSWORD_INCORRECT);
         }
 

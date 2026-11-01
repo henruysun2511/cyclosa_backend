@@ -2,7 +2,6 @@ package com.cyclosa.auth.service;
 
 import com.cyclosa.auth.dto.request.CreateUserRequest;
 import com.cyclosa.auth.dto.request.UserFilterRequest;
-import com.cyclosa.auth.dto.response.UserDetailResponse;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.entity.User;
 import com.cyclosa.auth.enums.UserStatus;
@@ -40,7 +39,7 @@ public class UserService {
      * Quản trị viên khởi tạo tài khoản nhân viên mới (PENDING_ACTIVATION) và gửi mail 48h
      */
     @Transactional
-    public UserDetailResponse createUser(CreateUserRequest request) {
+    public UserResponse createUser(CreateUserRequest request) {
         String email = request.getEmail().trim().toLowerCase();
         log.info("Admin tạo tài khoản nhân viên mới: {}", email);
 
@@ -79,7 +78,7 @@ public class UserService {
         mailService.sendActivationEmail(saved.getEmail(), activationToken, ACTIVATION_TOKEN_TTL);
 
         log.info("Đã tạo tài khoản thành công cho user id={}", saved.getId());
-        return userMapper.toDetailResponse(saved);
+        return userMapper.toResponse(saved);
     }
 
     /**
@@ -94,14 +93,6 @@ public class UserService {
 
         Page<User> page = userRepository.findAll(spec, pageable);
         return PageData.of(page, userMapper::toResponse);
-    }
-
-    /**
-     * Lấy chi tiết thông tin một tài khoản theo ID
-     */
-    public UserDetailResponse getUserById(UUID userId) {
-        User user = findUserOrThrow(userId);
-        return userMapper.toDetailResponse(user);
     }
 
     /**

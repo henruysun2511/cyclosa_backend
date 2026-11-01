@@ -8,8 +8,6 @@ import org.hibernate.annotations.SQLDelete;
 import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 @Entity
 @Table(name = "users", indexes = {
@@ -47,8 +45,4 @@ public class User extends BaseEntity {
     @Column(name = "deleted", nullable = false)
     @Builder.Default
     private Boolean deleted = false;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @Builder.Default
-    private List<OAuthAccount> oauthAccounts = new ArrayList<>();
 }

@@ -2,7 +2,6 @@ package com.cyclosa.auth;
 
 import com.cyclosa.auth.dto.request.CreateUserRequest;
 import com.cyclosa.auth.dto.request.UserFilterRequest;
-import com.cyclosa.auth.dto.response.UserDetailResponse;
 import com.cyclosa.auth.dto.response.UserResponse;
 import com.cyclosa.auth.entity.User;
 import com.cyclosa.auth.enums.UserStatus;
@@ -57,21 +56,23 @@ class UserServiceTest {
 
     private UUID userId;
     private User sampleUser;
-    private UserDetailResponse sampleDetail;
+    private UserResponse sampleUserResponse;
 
     @BeforeEach
     void setUp() {
         userId = UUID.randomUUID();
 
         sampleUser = User.builder()
+                .username("nhanvien")
                 .email("nhanvien@cyclosa.com")
                 .status(UserStatus.PENDING_ACTIVATION)
                 .deleted(false)
                 .build();
         sampleUser.setId(userId);
 
-        sampleDetail = UserDetailResponse.builder()
+        sampleUserResponse = UserResponse.builder()
                 .id(userId)
+                .username("nhanvien")
                 .email("nhanvien@cyclosa.com")
                 .status(UserStatus.PENDING_ACTIVATION)
                 .build();
@@ -82,15 +83,17 @@ class UserServiceTest {
     void createUser_whenEmailNotExists_shouldSaveAndSendMail() {
         // Given
         CreateUserRequest request = CreateUserRequest.builder()
+                .username("nhanvien")
                 .email("nhanvien@cyclosa.com")
                 .build();
 
+        when(userRepository.existsByUsernameAndDeletedFalse("nhanvien")).thenReturn(false);
         when(userRepository.existsByEmailAndDeletedFalse("nhanvien@cyclosa.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenReturn(sampleUser);
-        when(userMapper.toDetailResponse(sampleUser)).thenReturn(sampleDetail);
+        when(userMapper.toResponse(sampleUser)).thenReturn(sampleUserResponse);
 
         // When
-        UserDetailResponse result = userService.createUser(request);
+        UserResponse result = userService.createUser(request);
 
         // Then
         assertThat(result).isNotNull();

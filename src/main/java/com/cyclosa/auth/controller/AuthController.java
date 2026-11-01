@@ -21,7 +21,7 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    @Operation(summary = "Đăng nhập bằng Email và Mật khẩu", description = "Kiểm tra tài khoản, trả về cặp Access Token và Refresh Token, cập nhật last_login_at")
+    @Operation(summary = "Đăng nhập bằng Tên đăng nhập hoặc Email và Mật khẩu", description = "Kiểm tra tài khoản theo username hoặc email, trả về cặp Access Token và Refresh Token, cập nhật last_login_at")
     public ApiResponse<AuthTokenResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthTokenResponse response = authService.login(request);
         return ApiResponse.ok(response);
@@ -46,13 +46,6 @@ public class AuthController {
     public ApiResponse<Void> logout(@RequestHeader(value = "Authorization", required = false) String bearerToken) {
         authService.logout(bearerToken);
         return ApiResponse.ok(null);
-    }
-
-    @PostMapping("/oauth2/google")
-    @Operation(summary = "Đăng nhập bằng Google ID Token", description = "Xác minh Google Token, liên kết tài khoản OAuth và tự động tạo User nếu chưa tồn tại")
-    public ApiResponse<AuthTokenResponse> loginWithGoogle(@Valid @RequestBody GoogleLoginRequest request) {
-        AuthTokenResponse response = authService.loginWithGoogle(request);
-        return ApiResponse.ok(response);
     }
 
     @GetMapping("/me")

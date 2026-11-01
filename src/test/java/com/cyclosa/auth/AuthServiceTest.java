@@ -6,7 +6,6 @@ import com.cyclosa.auth.entity.User;
 import com.cyclosa.auth.enums.UserStatus;
 import com.cyclosa.auth.exception.AuthErrorCode;
 import com.cyclosa.auth.mapper.UserMapper;
-import com.cyclosa.auth.repository.OAuthAccountRepository;
 import com.cyclosa.auth.repository.UserRepository;
 import com.cyclosa.auth.security.JwtUtil;
 import com.cyclosa.auth.service.AuthService;
@@ -40,9 +39,6 @@ class AuthServiceTest {
 
     @Mock
     private UserRepository userRepository;
-
-    @Mock
-    private OAuthAccountRepository oauthAccountRepository;
 
     @Mock
     private RedisTokenService redisTokenService;
