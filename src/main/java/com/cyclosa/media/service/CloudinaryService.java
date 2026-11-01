@@ -21,6 +21,7 @@ import java.util.Map;
 public class CloudinaryService {
 
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+    private static final String DEFAULT_FOLDER = "cyclosa/general";
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
             "image/jpeg",
             "image/png",
@@ -44,7 +45,7 @@ public class CloudinaryService {
             throw new AppException(MediaErrorCode.INVALID_FILE_TYPE);
         }
 
-        String targetFolder = (folder != null && !folder.isBlank()) ? folder.trim() : "cyclosa/avatars";
+        String targetFolder = (folder != null && !folder.isBlank()) ? folder.trim() : DEFAULT_FOLDER;
         log.info("Bắt đầu tải tệp tin [{}] lên Cloudinary folder: {}", file.getOriginalFilename(), targetFolder);
 
         try {

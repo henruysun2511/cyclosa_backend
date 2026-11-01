@@ -31,8 +31,8 @@ public class MediaController {
             @Parameter(description = "Tệp tin hình ảnh cần tải lên", required = true, content = @Content(mediaType = MediaType.MULTIPART_FORM_DATA_VALUE, schema = @Schema(type = "string", format = "binary")))
             @RequestParam("file") MultipartFile file,
 
-            @Parameter(description = "Thư mục đích trên Cloudinary", example = "cyclosa/avatars")
-            @RequestParam(value = "folder", required = false, defaultValue = "cyclosa/avatars") String folder
+            @Parameter(description = "Thư mục đích trên Cloudinary (ví dụ: cyclosa/avatars, cyclosa/products, cyclosa/documents)", example = "cyclosa/general")
+            @RequestParam(value = "folder", required = false, defaultValue = "cyclosa/general") String folder
     ) {
         CloudinaryMediaResponse response = cloudinaryService.uploadImage(file, folder);
         return ApiResponse.ok(response, "Tải tệp tin lên thành công");
