@@ -20,3 +20,4 @@ public class BulkUserErrorItem {
     @Schema(description = "Lý do không thể tạo", example = "Email đã tồn tại trong hệ thống")
     private String reason;
 }
+

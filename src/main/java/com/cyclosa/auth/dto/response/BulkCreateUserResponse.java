@@ -28,3 +28,4 @@ public class BulkCreateUserResponse {
     @Schema(description = "Danh sách các tài khoản bị bỏ qua kèm lý do")
     private List<BulkUserErrorItem> errors;
 }
+

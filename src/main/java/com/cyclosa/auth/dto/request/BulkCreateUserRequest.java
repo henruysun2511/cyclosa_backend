@@ -20,3 +20,4 @@ public class BulkCreateUserRequest {
     @Schema(description = "Danh sách các tài khoản cần tạo")
     private List<BulkCreateUserItem> users;
 }
+
