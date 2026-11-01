@@ -189,6 +189,33 @@ public class AuthService {
     }
 
     /**
+     * Cập nhật thông tin cá nhân (Profile) của người dùng đang đăng nhập
+     */
+    @Transactional
+    public UserProfileResponse updateCurrentUser(UpdateProfileRequest request) {
+        UUID currentUserId = SecurityUtils.getCurrentUserId();
+        log.info("Xử lý cập nhật thông tin cá nhân cho user ID: {}", currentUserId);
+
+        User user = userRepository.findByIdAndDeletedFalse(currentUserId)
+                .orElseThrow(() -> new AppException(AuthErrorCode.USER_NOT_FOUND));
+
+        String newUsername = request.getUsername().trim().toLowerCase();
+        if (!newUsername.equalsIgnoreCase(user.getUsername())) {
+            if (userRepository.existsByUsernameAndDeletedFalse(newUsername)) {
+                throw new AppException(AuthErrorCode.USERNAME_ALREADY_EXISTS);
+            }
+            user.setUsername(newUsername);
+        }
+
+        userRepository.save(user);
+        log.info("Cập nhật thông tin cá nhân thành công cho user ID: {}", currentUserId);
+
+        UserProfileResponse profile = userMapper.toProfileResponse(user);
+        profile.setRoles(resolveUserRoles(user.getId()));
+        return profile;
+    }
+
+    /**
      * Gá»­i mÃ£ OTP khÃ´i phá»¥c máº­t kháº©u qua email (thá»i háº¡n 15 phÃºt)
      */
     public void forgotPassword(ForgotPasswordRequest request) {

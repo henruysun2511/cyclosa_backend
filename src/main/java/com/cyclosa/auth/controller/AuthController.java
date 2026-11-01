@@ -55,6 +55,14 @@ public class AuthController {
         return ApiResponse.ok(response);
     }
 
+    @PutMapping("/me")
+    @SecurityRequirement(name = "bearerAuth")
+    @Operation(summary = "Cập nhật thông tin cá nhân", description = "Cập nhật thông tin cá nhân của người dùng đang đăng nhập")
+    public ApiResponse<UserProfileResponse> updateCurrentUser(@Valid @RequestBody UpdateProfileRequest request) {
+        UserProfileResponse response = authService.updateCurrentUser(request);
+        return ApiResponse.ok(response);
+    }
+
     @PostMapping("/forgot-password")
     @Operation(summary = "Yêu cầu mã OTP khôi phục mật khẩu", description = "Gửi mã OTP 6 chữ số có hiệu lực 15 phút tới email của người dùng")
     public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {

@@ -19,6 +19,9 @@ public class UserProfileResponse {
     @Schema(description = "ID người dùng")
     private UUID id;
 
+    @Schema(description = "Tên đăng nhập", example = "admin")
+    private String username;
+
     @Schema(description = "Email tài khoản")
     private String email;
 
@@ -30,5 +33,7 @@ public class UserProfileResponse {
 
     @Schema(description = "Thời điểm đăng nhập gần nhất")
     private LocalDateTime lastLoginAt;
-}
 
+    @Schema(description = "Thời điểm tạo tài khoản")
+    private LocalDateTime createdAt;
+}
