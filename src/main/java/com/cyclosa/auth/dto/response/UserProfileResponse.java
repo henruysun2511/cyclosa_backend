@@ -25,6 +25,9 @@ public class UserProfileResponse {
     @Schema(description = "Email tài khoản")
     private String email;
 
+    @Schema(description = "Đường dẫn ảnh đại diện")
+    private String avatarUrl;
+
     @Schema(description = "Trạng thái tài khoản")
     private UserStatus status;
 

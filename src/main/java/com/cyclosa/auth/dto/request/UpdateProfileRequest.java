@@ -19,4 +19,8 @@ public class UpdateProfileRequest {
     @Pattern(regexp = "^[a-zA-Z0-9_.-]+$", message = "Tên đăng nhập chỉ chứa chữ cái, chữ số, dấu chấm, dấu gạch ngang và dấu gạch dưới")
     @Schema(description = "Tên đăng nhập", example = "an.nguyen")
     private String username;
+
+    @Size(max = 500, message = "Đường dẫn ảnh đại diện không được vượt quá 500 ký tự")
+    @Schema(description = "Đường dẫn ảnh đại diện", example = "https://example.com/avatar.png")
+    private String avatarUrl;
 }

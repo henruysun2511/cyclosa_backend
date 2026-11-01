@@ -207,6 +207,11 @@ public class AuthService {
             user.setUsername(newUsername);
         }
 
+        if (request.getAvatarUrl() != null) {
+            String trimmedUrl = request.getAvatarUrl().trim();
+            user.setAvatarUrl(trimmedUrl.isEmpty() ? null : trimmedUrl);
+        }
+
         userRepository.save(user);
         log.info("Cập nhật thông tin cá nhân thành công cho user ID: {}", currentUserId);
 
