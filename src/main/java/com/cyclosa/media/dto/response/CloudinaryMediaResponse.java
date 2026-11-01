@@ -26,3 +26,4 @@ public class CloudinaryMediaResponse {
     @Schema(description = "Loại tài nguyên", example = "image")
     private String resourceType;
 }
+

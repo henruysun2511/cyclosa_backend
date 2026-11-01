@@ -16,3 +16,4 @@ public class DeleteMediaRequest {
     @Schema(description = "Mã định danh duy nhất của tệp tin trên Cloudinary", example = "cyclosa/avatars/an_nguyen_123456")
     private String publicId;
 }
+

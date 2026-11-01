@@ -23,3 +23,4 @@ public enum MediaErrorCode implements ErrorCode {
     private final String message;
     private final HttpStatus httpStatus;
 }
+
