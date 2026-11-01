@@ -18,6 +18,9 @@ public class UserResponse {
     @Schema(description = "ID người dùng")
     private UUID id;
 
+    @Schema(description = "Tên đăng nhập của tài khoản", example = "admin")
+    private String username;
+
     @Schema(description = "Email tài khoản", example = "admin@cyclosa.com")
     private String email;
 

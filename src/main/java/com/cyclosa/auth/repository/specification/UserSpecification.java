@@ -16,10 +16,13 @@ public final class UserSpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            // 1. Tìm kiếm theo từ khóa (email)
+            // 1. Tìm kiếm theo từ khóa (username hoặc email)
             if (filter.getKeyword() != null && !filter.getKeyword().isBlank()) {
                 String pattern = "%" + filter.getKeyword().trim().toLowerCase() + "%";
-                predicates.add(cb.like(cb.lower(root.get("email")), pattern));
+                predicates.add(cb.or(
+                        cb.like(cb.lower(root.get("username")), pattern),
+                        cb.like(cb.lower(root.get("email")), pattern)
+                ));
             }
 
             // 2. Lọc theo trạng thái

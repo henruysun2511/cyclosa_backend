@@ -49,11 +49,20 @@ public class UserService {
             throw new AppException(AuthErrorCode.EMAIL_ALREADY_EXISTS);
         }
 
-        // 2. Tạo User ở trạng thái PENDING_ACTIVATION
-        String username = email.split("@")[0].toLowerCase();
-        if (userRepository.existsByUsernameAndDeletedFalse(username)) {
-            username = username + "_" + (System.currentTimeMillis() % 10000);
+        // 2. Xác định Username (lấy từ request hoặc tự sinh từ prefix email)
+        String username;
+        if (request.getUsername() != null && !request.getUsername().trim().isBlank()) {
+            username = request.getUsername().trim().toLowerCase();
+            if (userRepository.existsByUsernameAndDeletedFalse(username)) {
+                throw new AppException(AuthErrorCode.USERNAME_ALREADY_EXISTS);
+            }
+        } else {
+            username = email.split("@")[0].toLowerCase();
+            if (userRepository.existsByUsernameAndDeletedFalse(username)) {
+                username = username + "_" + (System.currentTimeMillis() % 10000);
+            }
         }
+
         User user = User.builder()
                 .username(username)
                 .email(email)

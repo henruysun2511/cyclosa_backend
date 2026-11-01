@@ -29,7 +29,8 @@ public enum AuthErrorCode implements ErrorCode {
     PASSWORD_CONFIRM_MISMATCH   (1015, "Mật khẩu xác nhận không khớp", HttpStatus.BAD_REQUEST),
     PASSWORD_SAME_AS_OLD        (1016, "Mật khẩu mới không được trùng với mật khẩu hiện tại", HttpStatus.BAD_REQUEST),
     NO_PASSWORD_SET             (1017, "Tài khoản chưa thiết lập mật khẩu (đăng nhập bằng Google)", HttpStatus.BAD_REQUEST),
-    CURRENT_PASSWORD_INCORRECT  (1018, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST);
+    CURRENT_PASSWORD_INCORRECT  (1018, "Mật khẩu hiện tại không chính xác", HttpStatus.BAD_REQUEST),
+    USERNAME_ALREADY_EXISTS     (1019, "Tên đăng nhập đã tồn tại trong hệ thống", HttpStatus.CONFLICT);
 
     private final int code;
     private final String message;
