@@ -11,16 +11,15 @@ import org.hibernate.annotations.SQLRestriction;
 
 @Entity
 @Table(name = "companies", indexes = {
-        @Index(name = "idx_companies_code", columnList = "code", unique = true),
-        @Index(name = "idx_companies_deleted", columnList = "deleted")
+        @Index(name = "idx_companies_code", columnList = "code", unique = true)
 })
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLDelete(sql = "UPDATE companies SET deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted = false")
+@SQLDelete(sql = "UPDATE companies SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Company extends BaseEntity {
 
     @Column(name = "code", nullable = false, unique = true, length = 50)
@@ -47,9 +46,4 @@ public class Company extends BaseEntity {
     @Column(name = "status", nullable = false, length = 20)
     @Builder.Default
     private String status = "ACTIVE";
-
-    @Column(name = "deleted", nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
 }
-

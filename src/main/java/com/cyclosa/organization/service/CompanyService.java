@@ -2,12 +2,14 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.organization.dto.request.CompanyFilterRequest;
 import com.cyclosa.organization.dto.request.CreateCompanyRequest;
 import com.cyclosa.organization.dto.request.UpdateCompanyRequest;
 import com.cyclosa.organization.dto.response.CompanyResponse;
 import com.cyclosa.organization.entity.Company;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.CompanyMapper;
 import com.cyclosa.organization.repository.CompanyRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,16 +30,18 @@ public class CompanyService {
     private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "status", "createdAt");
 
     private final CompanyRepository companyRepository;
+    private final CompanyMapper companyMapper;
 
     public PageData<CompanyResponse> getCompanies(CompanyFilterRequest filter) {
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
         Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
-        Page<Company> page = companyRepository.search(filter.getKeyword(), filter.getStatus(), pageable);
-        return PageData.of(page, this::mapToResponse);
+        Page<Company> page = companyRepository.search(kw, filter.getStatus(), pageable);
+        return PageData.of(page, companyMapper::toResponse);
     }
 
     public CompanyResponse getCompanyById(UUID id) {
         Company company = findCompanyOrThrow(id);
-        return mapToResponse(company);
+        return companyMapper.toResponse(company);
     }
 
     @Transactional
@@ -46,40 +50,24 @@ public class CompanyService {
             throw new AppException(OrganizationErrorCode.COMPANY_CODE_EXISTS);
         }
 
-        Company company = Company.builder()
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .taxCode(request.getTaxCode())
-                .address(request.getAddress())
-                .phone(request.getPhone())
-                .email(request.getEmail())
-                .logoUrl(request.getLogoUrl())
-                .status("ACTIVE")
-                .deleted(false)
-                .build();
+        Company company = companyMapper.toEntity(request);
+        company.setCode(request.getCode().toUpperCase().trim());
+        company.setName(request.getName().trim());
 
         company = companyRepository.save(company);
         log.info("Đã tạo mới công ty: id={}, code={}", company.getId(), company.getCode());
-        return mapToResponse(company);
+        return companyMapper.toResponse(company);
     }
 
     @Transactional
     public CompanyResponse updateCompany(UUID id, UpdateCompanyRequest request) {
         Company company = findCompanyOrThrow(id);
-
+        companyMapper.updateEntityFromDto(request, company);
         company.setName(request.getName().trim());
-        company.setTaxCode(request.getTaxCode());
-        company.setAddress(request.getAddress());
-        company.setPhone(request.getPhone());
-        company.setEmail(request.getEmail());
-        company.setLogoUrl(request.getLogoUrl());
-        if (request.getStatus() != null) {
-            company.setStatus(request.getStatus());
-        }
 
         company = companyRepository.save(company);
         log.info("Đã cập nhật công ty: id={}", company.getId());
-        return mapToResponse(company);
+        return companyMapper.toResponse(company);
     }
 
     @Transactional
@@ -93,21 +81,4 @@ public class CompanyService {
         return companyRepository.findById(id)
                 .orElseThrow(() -> new AppException(OrganizationErrorCode.COMPANY_NOT_FOUND));
     }
-
-    private CompanyResponse mapToResponse(Company company) {
-        return CompanyResponse.builder()
-                .id(company.getId())
-                .code(company.getCode())
-                .name(company.getName())
-                .taxCode(company.getTaxCode())
-                .address(company.getAddress())
-                .phone(company.getPhone())
-                .email(company.getEmail())
-                .logoUrl(company.getLogoUrl())
-                .status(company.getStatus())
-                .createdAt(company.getCreatedAt())
-                .updatedAt(company.getUpdatedAt())
-                .build();
-    }
 }
-

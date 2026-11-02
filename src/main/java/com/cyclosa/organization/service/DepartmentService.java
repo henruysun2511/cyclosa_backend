@@ -2,7 +2,9 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.organization.dto.request.CreateDepartmentRequest;
+import com.cyclosa.organization.dto.request.DepartmentFilterRequest;
 import com.cyclosa.organization.dto.request.MoveDepartmentRequest;
 import com.cyclosa.organization.dto.request.PermissionInheritanceRequest;
 import com.cyclosa.organization.dto.request.UpdateDepartmentRequest;
@@ -14,6 +16,7 @@ import com.cyclosa.organization.entity.CostCenter;
 import com.cyclosa.organization.entity.Department;
 import com.cyclosa.organization.entity.DepartmentVersion;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.DepartmentMapper;
 import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.CostCenterRepository;
 import com.cyclosa.organization.repository.DepartmentRepository;
@@ -39,14 +42,19 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class DepartmentService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "createdAt");
+
     private final DepartmentRepository departmentRepository;
     private final DepartmentVersionRepository versionRepository;
     private final CompanyRepository companyRepository;
     private final CostCenterRepository costCenterRepository;
+    private final DepartmentMapper departmentMapper;
 
-    public PageData<DepartmentResponse> getDepartments(UUID companyId, String keyword, Pageable pageable) {
-        verifyCompanyExists(companyId);
-        Page<Department> page = departmentRepository.search(companyId, keyword, pageable);
+    public PageData<DepartmentResponse> getDepartments(DepartmentFilterRequest filter) {
+        verifyCompanyExists(filter.getCompanyId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
+        Page<Department> page = departmentRepository.search(filter.getCompanyId(), kw, pageable);
         LocalDate today = LocalDate.now();
 
         return PageData.of(page, d -> {
@@ -79,19 +87,11 @@ public class DepartmentService {
                 versions.stream().map(DepartmentVersion::getCostCenterId).filter(Objects::nonNull).collect(Collectors.toSet())
         );
 
-        return versions.stream().map(v -> DepartmentVersionResponse.builder()
-                .id(v.getId())
-                .departmentId(v.getDepartment().getId())
-                .effectiveFrom(v.getEffectiveFrom())
-                .name(v.getName())
-                .parentDepartmentId(v.getParentDepartmentId())
-                .parentDepartmentName(v.getParentDepartmentId() != null ? parentNameMap.get(v.getParentDepartmentId()) : null)
-                .costCenterId(v.getCostCenterId())
-                .costCenterName(v.getCostCenterId() != null ? costCenterNameMap.get(v.getCostCenterId()) : null)
-                .managerEmployeeId(v.getManagerEmployeeId())
-                .isPermissionInherited(v.getIsPermissionInherited())
-                .createdAt(v.getCreatedAt())
-                .build()).toList();
+        return versions.stream().map(v -> {
+            String parentName = v.getParentDepartmentId() != null ? parentNameMap.get(v.getParentDepartmentId()) : null;
+            String ccName = v.getCostCenterId() != null ? costCenterNameMap.get(v.getCostCenterId()) : null;
+            return departmentMapper.toVersionResponse(v, parentName, ccName);
+        }).toList();
     }
 
     public List<DepartmentNodeResponse> getDepartmentTree(UUID companyId, LocalDate asOfDate) {
@@ -159,7 +159,6 @@ public class DepartmentService {
                 .companyId(request.getCompanyId())
                 .code(request.getCode().toUpperCase().trim())
                 .dissolvedDate(null)
-                .deleted(false)
                 .build();
 
         department = departmentRepository.save(department);
@@ -172,7 +171,6 @@ public class DepartmentService {
                 .costCenterId(request.getCostCenterId())
                 .managerEmployeeId(request.getManagerEmployeeId())
                 .isPermissionInherited(request.getIsPermissionInherited() != null ? request.getIsPermissionInherited() : true)
-                .deleted(false)
                 .build();
 
         version = versionRepository.save(version);
@@ -220,7 +218,6 @@ public class DepartmentService {
                         .costCenterId(request.getCostCenterId())
                         .managerEmployeeId(request.getManagerEmployeeId())
                         .isPermissionInherited(request.getIsPermissionInherited() != null ? request.getIsPermissionInherited() : latest.getIsPermissionInherited())
-                        .deleted(false)
                         .build();
                 targetVersion = versionRepository.save(targetVersion);
             }
@@ -233,7 +230,6 @@ public class DepartmentService {
                     .costCenterId(request.getCostCenterId())
                     .managerEmployeeId(request.getManagerEmployeeId())
                     .isPermissionInherited(request.getIsPermissionInherited() != null ? request.getIsPermissionInherited() : true)
-                    .deleted(false)
                     .build();
             targetVersion = versionRepository.save(targetVersion);
         }
@@ -270,7 +266,6 @@ public class DepartmentService {
                     .costCenterId(latest.getCostCenterId())
                     .managerEmployeeId(latest.getManagerEmployeeId())
                     .isPermissionInherited(latest.getIsPermissionInherited())
-                    .deleted(false)
                     .build();
             newVersion = versionRepository.save(newVersion);
         }
@@ -317,14 +312,14 @@ public class DepartmentService {
                 .isValid(isValid)
                 .invalidReason(invalidReason)
                 .affectedSubDepartmentCount(subIds.size())
-                .affectedEmployeeCount(0) // Liên kết module Nhân viên ở giai đoạn sau
+                .affectedEmployeeCount(0)
                 .affectedDepartmentIds(subIds)
                 .build();
     }
 
     @Transactional
     public void updatePermissionInheritance(UUID id, PermissionInheritanceRequest request) {
-        Department department = findDepartmentOrThrow(id);
+        findDepartmentOrThrow(id);
         DepartmentVersion latest = versionRepository.findLatestVersion(id)
                 .orElseThrow(() -> new AppException(OrganizationErrorCode.DEPARTMENT_NOT_FOUND));
 
@@ -502,25 +497,6 @@ public class DepartmentService {
             }
         }
 
-        boolean isActive = dept.getDissolvedDate() == null || dept.getDissolvedDate().isAfter(LocalDate.now());
-
-        return DepartmentResponse.builder()
-                .id(dept.getId())
-                .companyId(dept.getCompanyId())
-                .code(dept.getCode())
-                .name(version != null ? version.getName() : dept.getCode())
-                .parentDepartmentId(version != null ? version.getParentDepartmentId() : null)
-                .parentDepartmentName(parentName)
-                .costCenterId(version != null ? version.getCostCenterId() : null)
-                .costCenterName(costCenterName)
-                .managerEmployeeId(version != null ? version.getManagerEmployeeId() : null)
-                .isPermissionInherited(version != null ? version.getIsPermissionInherited() : true)
-                .effectiveFrom(version != null ? version.getEffectiveFrom() : null)
-                .dissolvedDate(dept.getDissolvedDate())
-                .isActive(isActive)
-                .createdAt(dept.getCreatedAt())
-                .updatedAt(dept.getUpdatedAt())
-                .build();
+        return departmentMapper.toResponse(dept, version, parentName, costCenterName);
     }
 }
-

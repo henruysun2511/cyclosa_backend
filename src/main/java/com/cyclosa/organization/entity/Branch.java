@@ -15,16 +15,15 @@ import java.util.UUID;
 @Entity
 @Table(name = "branches", indexes = {
         @Index(name = "idx_branches_region_id", columnList = "region_id"),
-        @Index(name = "idx_branches_code", columnList = "code"),
-        @Index(name = "idx_branches_deleted", columnList = "deleted")
+        @Index(name = "idx_branches_code", columnList = "code")
 })
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLDelete(sql = "UPDATE branches SET deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted = false")
+@SQLDelete(sql = "UPDATE branches SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class Branch extends BaseEntity {
 
     @Column(name = "region_id", nullable = false)
@@ -52,9 +51,4 @@ public class Branch extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
-
-    @Column(name = "deleted", nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
 }
-

@@ -2,11 +2,14 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.organization.dto.request.CreateJobLevelRequest;
+import com.cyclosa.organization.dto.request.JobLevelFilterRequest;
 import com.cyclosa.organization.dto.request.UpdateJobLevelRequest;
 import com.cyclosa.organization.dto.response.JobLevelResponse;
 import com.cyclosa.organization.entity.JobLevel;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.JobLevelMapper;
 import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.JobLevelRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -25,25 +29,30 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class JobLevelService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "rankOrder", "createdAt");
+
     private final JobLevelRepository jobLevelRepository;
     private final CompanyRepository companyRepository;
+    private final JobLevelMapper jobLevelMapper;
 
-    public PageData<JobLevelResponse> getJobLevels(UUID companyId, String keyword, Pageable pageable) {
-        verifyCompanyExists(companyId);
-        Page<JobLevel> page = jobLevelRepository.search(companyId, keyword, pageable);
-        return PageData.of(page, this::mapToResponse);
+    public PageData<JobLevelResponse> getJobLevels(JobLevelFilterRequest filter) {
+        verifyCompanyExists(filter.getCompanyId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("rankOrder", ALLOWED_SORT_FIELDS);
+        Page<JobLevel> page = jobLevelRepository.search(filter.getCompanyId(), kw, pageable);
+        return PageData.of(page, jobLevelMapper::toResponse);
     }
 
     public List<JobLevelResponse> getAllJobLevelsByCompany(UUID companyId) {
         verifyCompanyExists(companyId);
         return jobLevelRepository.findAllByCompanyIdOrderByRankOrderAsc(companyId).stream()
-                .map(this::mapToResponse)
+                .map(jobLevelMapper::toResponse)
                 .toList();
     }
 
     public JobLevelResponse getJobLevelById(UUID id) {
         JobLevel jobLevel = findJobLevelOrThrow(id);
-        return mapToResponse(jobLevel);
+        return jobLevelMapper.toResponse(jobLevel);
     }
 
     @Transactional
@@ -58,17 +67,13 @@ public class JobLevelService {
             throw new AppException(OrganizationErrorCode.JOB_LEVEL_RANK_EXISTS);
         }
 
-        JobLevel jobLevel = JobLevel.builder()
-                .companyId(request.getCompanyId())
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .rankOrder(request.getRankOrder())
-                .deleted(false)
-                .build();
+        JobLevel jobLevel = jobLevelMapper.toEntity(request);
+        jobLevel.setCode(request.getCode().toUpperCase().trim());
+        jobLevel.setName(request.getName().trim());
 
         jobLevel = jobLevelRepository.save(jobLevel);
         log.info("Đã tạo mới cấp bậc: id={}, code={}, rank={}", jobLevel.getId(), jobLevel.getCode(), jobLevel.getRankOrder());
-        return mapToResponse(jobLevel);
+        return jobLevelMapper.toResponse(jobLevel);
     }
 
     @Transactional
@@ -79,11 +84,12 @@ public class JobLevelService {
             throw new AppException(OrganizationErrorCode.JOB_LEVEL_RANK_EXISTS);
         }
 
+        jobLevelMapper.updateEntityFromDto(request, jobLevel);
         jobLevel.setName(request.getName().trim());
-        jobLevel.setRankOrder(request.getRankOrder());
+
         jobLevel = jobLevelRepository.save(jobLevel);
         log.info("Đã cập nhật cấp bậc: id={}, rank={}", jobLevel.getId(), jobLevel.getRankOrder());
-        return mapToResponse(jobLevel);
+        return jobLevelMapper.toResponse(jobLevel);
     }
 
     @Transactional
@@ -103,17 +109,4 @@ public class JobLevelService {
             throw new AppException(OrganizationErrorCode.COMPANY_NOT_FOUND);
         }
     }
-
-    private JobLevelResponse mapToResponse(JobLevel jobLevel) {
-        return JobLevelResponse.builder()
-                .id(jobLevel.getId())
-                .companyId(jobLevel.getCompanyId())
-                .code(jobLevel.getCode())
-                .name(jobLevel.getName())
-                .rankOrder(jobLevel.getRankOrder())
-                .createdAt(jobLevel.getCreatedAt())
-                .updatedAt(jobLevel.getUpdatedAt())
-                .build();
-    }
 }
-

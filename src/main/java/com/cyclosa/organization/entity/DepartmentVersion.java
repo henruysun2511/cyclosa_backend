@@ -13,16 +13,15 @@ import java.util.UUID;
 @Table(name = "department_versions", indexes = {
         @Index(name = "idx_dept_vers_dept_id", columnList = "department_id"),
         @Index(name = "idx_dept_vers_effective", columnList = "effective_from"),
-        @Index(name = "idx_dept_vers_parent", columnList = "parent_department_id"),
-        @Index(name = "idx_dept_vers_deleted", columnList = "deleted")
+        @Index(name = "idx_dept_vers_parent", columnList = "parent_department_id")
 })
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLDelete(sql = "UPDATE department_versions SET deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted = false")
+@SQLDelete(sql = "UPDATE department_versions SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class DepartmentVersion extends BaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -47,9 +46,4 @@ public class DepartmentVersion extends BaseEntity {
     @Column(name = "is_permission_inherited", nullable = false)
     @Builder.Default
     private Boolean isPermissionInherited = true;
-
-    @Column(name = "deleted", nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
 }
-

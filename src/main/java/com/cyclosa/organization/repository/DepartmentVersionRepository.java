@@ -29,7 +29,7 @@ public interface DepartmentVersionRepository extends JpaRepository<DepartmentVer
                    "WHERE d.company_id = :companyId " +
                    "AND (d.dissolved_date IS NULL OR d.dissolved_date > :asOfDate) " +
                    "AND dv.effective_from <= :asOfDate " +
-                   "AND dv.deleted = false AND d.deleted = false " +
+                   "AND dv.deleted_at IS NULL AND d.deleted_at IS NULL " +
                    "ORDER BY dv.department_id, dv.effective_from DESC",
            nativeQuery = true)
     List<DepartmentVersion> findActiveVersionsForCompanyAt(@Param("companyId") UUID companyId, @Param("asOfDate") LocalDate asOfDate);
@@ -37,7 +37,7 @@ public interface DepartmentVersionRepository extends JpaRepository<DepartmentVer
     @Query(value = "SELECT DISTINCT ON (dv.department_id) dv.* FROM department_versions dv " +
                    "JOIN departments d ON dv.department_id = d.id " +
                    "WHERE d.company_id = :companyId " +
-                   "AND dv.deleted = false AND d.deleted = false " +
+                   "AND dv.deleted_at IS NULL AND d.deleted_at IS NULL " +
                    "ORDER BY dv.department_id, dv.effective_from DESC",
            nativeQuery = true)
     List<DepartmentVersion> findLatestVersionsForCompany(@Param("companyId") UUID companyId);
@@ -45,4 +45,3 @@ public interface DepartmentVersionRepository extends JpaRepository<DepartmentVer
     @Query("SELECT COUNT(v) > 0 FROM DepartmentVersion v WHERE v.parentDepartmentId = :parentId")
     boolean existsByParentDepartmentId(@Param("parentId") UUID parentId);
 }
-

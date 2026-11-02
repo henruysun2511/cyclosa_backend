@@ -1,6 +1,6 @@
 -- =============================================================================
 -- CYCLOSA HRM - MODULE 01: QUẢN LÝ TỔ CHỨC (ORGANIZATION MANAGEMENT)
--- BẢNG DỮ LIỆU & DỮ LIỆU SEED MẪU CHUẨN
+-- BẢNG DỮ LIỆU & DỮ LIỆU SEED MẪU CHUẨN (CHUẨN BASEENTITY SOFT DELETE)
 -- =============================================================================
 
 -- 1. Bảng companies (Công ty / Pháp nhân)
@@ -14,7 +14,6 @@ CREATE TABLE IF NOT EXISTS companies (
     email VARCHAR(100),
     logo_url VARCHAR(500),
     status VARCHAR(20) NOT NULL DEFAULT 'ACTIVE',
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -22,7 +21,6 @@ CREATE TABLE IF NOT EXISTS companies (
     deleted_at TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_companies_code ON companies(code);
-CREATE INDEX IF NOT EXISTS idx_companies_deleted ON companies(deleted);
 
 -- 2. Bảng regions (Khu vực / Vùng miền)
 CREATE TABLE IF NOT EXISTS regions (
@@ -30,7 +28,6 @@ CREATE TABLE IF NOT EXISTS regions (
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     code VARCHAR(50) NOT NULL,
     name VARCHAR(150) NOT NULL,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -39,7 +36,6 @@ CREATE TABLE IF NOT EXISTS regions (
 );
 CREATE INDEX IF NOT EXISTS idx_regions_company_id ON regions(company_id);
 CREATE INDEX IF NOT EXISTS idx_regions_code ON regions(code);
-CREATE INDEX IF NOT EXISTS idx_regions_deleted ON regions(deleted);
 
 -- 3. Bảng branches (Chi nhánh / Văn phòng làm việc)
 CREATE TABLE IF NOT EXISTS branches (
@@ -52,7 +48,6 @@ CREATE TABLE IF NOT EXISTS branches (
     longitude NUMERIC(10, 7),
     attendance_radius_meters INT NOT NULL DEFAULT 100,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -61,7 +56,6 @@ CREATE TABLE IF NOT EXISTS branches (
 );
 CREATE INDEX IF NOT EXISTS idx_branches_region_id ON branches(region_id);
 CREATE INDEX IF NOT EXISTS idx_branches_code ON branches(code);
-CREATE INDEX IF NOT EXISTS idx_branches_deleted ON branches(deleted);
 
 -- 4. Bảng cost_centers (Trung tâm chi phí)
 CREATE TABLE IF NOT EXISTS cost_centers (
@@ -70,7 +64,6 @@ CREATE TABLE IF NOT EXISTS cost_centers (
     code VARCHAR(50) NOT NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -79,7 +72,6 @@ CREATE TABLE IF NOT EXISTS cost_centers (
 );
 CREATE INDEX IF NOT EXISTS idx_cost_centers_company_id ON cost_centers(company_id);
 CREATE INDEX IF NOT EXISTS idx_cost_centers_code ON cost_centers(code);
-CREATE INDEX IF NOT EXISTS idx_cost_centers_deleted ON cost_centers(deleted);
 
 -- 5. Bảng job_titles (Chức danh công việc)
 CREATE TABLE IF NOT EXISTS job_titles (
@@ -88,7 +80,6 @@ CREATE TABLE IF NOT EXISTS job_titles (
     code VARCHAR(50) NOT NULL,
     name VARCHAR(150) NOT NULL,
     description TEXT,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -97,7 +88,6 @@ CREATE TABLE IF NOT EXISTS job_titles (
 );
 CREATE INDEX IF NOT EXISTS idx_job_titles_company_id ON job_titles(company_id);
 CREATE INDEX IF NOT EXISTS idx_job_titles_code ON job_titles(code);
-CREATE INDEX IF NOT EXISTS idx_job_titles_deleted ON job_titles(deleted);
 
 -- 6. Bảng job_levels (Cấp bậc chức danh)
 CREATE TABLE IF NOT EXISTS job_levels (
@@ -106,7 +96,6 @@ CREATE TABLE IF NOT EXISTS job_levels (
     code VARCHAR(50) NOT NULL,
     name VARCHAR(100) NOT NULL,
     rank_order INT NOT NULL,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -115,7 +104,6 @@ CREATE TABLE IF NOT EXISTS job_levels (
 );
 CREATE INDEX IF NOT EXISTS idx_job_levels_company_id ON job_levels(company_id);
 CREATE INDEX IF NOT EXISTS idx_job_levels_rank_order ON job_levels(rank_order);
-CREATE INDEX IF NOT EXISTS idx_job_levels_deleted ON job_levels(deleted);
 
 -- 7. Bảng departments (Phòng ban / Đơn vị)
 CREATE TABLE IF NOT EXISTS departments (
@@ -123,7 +111,6 @@ CREATE TABLE IF NOT EXISTS departments (
     company_id UUID NOT NULL REFERENCES companies(id) ON DELETE CASCADE,
     code VARCHAR(50) NOT NULL,
     dissolved_date DATE,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -132,7 +119,6 @@ CREATE TABLE IF NOT EXISTS departments (
 );
 CREATE INDEX IF NOT EXISTS idx_departments_company_id ON departments(company_id);
 CREATE INDEX IF NOT EXISTS idx_departments_code ON departments(code);
-CREATE INDEX IF NOT EXISTS idx_departments_deleted ON departments(deleted);
 
 -- 8. Bảng department_versions (Phiên bản cơ cấu phòng ban theo ngày hiệu lực)
 CREATE TABLE IF NOT EXISTS department_versions (
@@ -144,7 +130,6 @@ CREATE TABLE IF NOT EXISTS department_versions (
     cost_center_id UUID REFERENCES cost_centers(id) ON DELETE SET NULL,
     manager_employee_id UUID,
     is_permission_inherited BOOLEAN NOT NULL DEFAULT TRUE,
-    deleted BOOLEAN NOT NULL DEFAULT FALSE,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP,
     created_by UUID,
@@ -154,7 +139,6 @@ CREATE TABLE IF NOT EXISTS department_versions (
 CREATE INDEX IF NOT EXISTS idx_dept_vers_dept_id ON department_versions(department_id);
 CREATE INDEX IF NOT EXISTS idx_dept_vers_effective ON department_versions(effective_from);
 CREATE INDEX IF NOT EXISTS idx_dept_vers_parent ON department_versions(parent_department_id);
-CREATE INDEX IF NOT EXISTS idx_dept_vers_deleted ON department_versions(deleted);
 
 -- =============================================================================
 -- SEED DATA MẪU CHO CÔNG TY MẸ VÀ CƠ CẤU TỔ CHỨC BAN ĐẦU
@@ -249,4 +233,3 @@ VALUES
     -- 6. Phòng Tài chính Kế toán (con của BOD)
     ('70000000-0000-0000-0000-000000000006'::uuid, '60000000-0000-0000-0000-000000000006'::uuid, '2026-01-01', 'Phòng Tài chính Kế toán', '60000000-0000-0000-0000-000000000001'::uuid, '30000000-0000-0000-0000-000000000004'::uuid, TRUE)
 ON CONFLICT DO NOTHING;
-

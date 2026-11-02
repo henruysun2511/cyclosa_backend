@@ -1,8 +1,10 @@
 package com.cyclosa.organization.controller;
 
+import com.cyclosa.common.annotation.RequirePermission;
 import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.organization.dto.request.CreateRegionRequest;
+import com.cyclosa.organization.dto.request.RegionFilterRequest;
 import com.cyclosa.organization.dto.request.UpdateRegionRequest;
 import com.cyclosa.organization.dto.response.BranchResponse;
 import com.cyclosa.organization.dto.response.RegionResponse;
@@ -13,9 +15,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,77 +27,84 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/regions")
 @RequiredArgsConstructor
-@Tag(name = "01. Cơ cấu tổ chức - Khu vực & Vùng miền", description = "APIs quản lý phân vùng địa lý")
+@Tag(name = "Regions", description = "Quản lý phân vùng địa lý")
 public class RegionController {
 
     private final RegionService regionService;
     private final BranchService branchService;
 
     @GetMapping
-    @Operation(summary = "Lấy danh sách khu vực theo công ty có phân trang")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<PageData<RegionResponse>> getRegions(
-            @Parameter(description = "ID công ty", required = true)
-            @RequestParam UUID companyId,
-            @Parameter(description = "Từ khóa tìm kiếm")
-            @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(regionService.getRegions(companyId, keyword, pageable));
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy danh sách khu vực theo công ty có phân trang", description = "Hỗ trợ lọc từ khóa và phân trang")
+    public ResponseEntity<ApiResponse<PageData<RegionResponse>>> getRegions(@ParameterObject @Valid RegionFilterRequest filter) {
+        PageData<RegionResponse> result = regionService.getRegions(filter);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy danh sách khu vực thành công"));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Lấy toàn bộ danh sách khu vực theo công ty (không phân trang)")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<List<RegionResponse>> getAllRegions(
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy toàn bộ danh sách khu vực theo công ty (không phân trang)")
+    public ResponseEntity<ApiResponse<List<RegionResponse>>> getAllRegions(
             @Parameter(description = "ID công ty", required = true)
             @RequestParam UUID companyId) {
-        return ApiResponse.ok(regionService.getAllRegionsByCompany(companyId));
+        List<RegionResponse> result = regionService.getAllRegionsByCompany(companyId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy toàn bộ danh sách khu vực thành công"));
     }
 
     @GetMapping("/{regionId}")
-    @Operation(summary = "Lấy thông tin chi tiết một khu vực theo ID")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<RegionResponse> getRegionById(
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy thông tin chi tiết một khu vực theo ID")
+    public ResponseEntity<ApiResponse<RegionResponse>> getRegionById(
             @Parameter(description = "ID khu vực", required = true)
             @PathVariable UUID regionId) {
-        return ApiResponse.ok(regionService.getRegionById(regionId));
+        RegionResponse result = regionService.getRegionById(regionId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy thông tin khu vực thành công"));
     }
 
     @GetMapping("/{regionId}/branches")
-    @Operation(summary = "Lấy danh sách các chi nhánh trực thuộc một khu vực")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<List<BranchResponse>> getBranchesByRegion(
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy danh sách các chi nhánh trực thuộc một khu vực")
+    public ResponseEntity<ApiResponse<List<BranchResponse>>> getBranchesByRegion(
             @Parameter(description = "ID khu vực", required = true)
             @PathVariable UUID regionId) {
-        return ApiResponse.ok(branchService.getBranchesByRegion(regionId));
+        List<BranchResponse> result = branchService.getBranchesByRegion(regionId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy danh sách chi nhánh theo khu vực thành công"));
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Tạo mới khu vực / vùng miền")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<RegionResponse> createRegion(@Valid @RequestBody CreateRegionRequest request) {
-        return ApiResponse.created(regionService.createRegion(request));
+    @RequirePermission("org.manage")
+    @Operation(summary = "Tạo mới khu vực / vùng miền")
+    public ResponseEntity<ApiResponse<RegionResponse>> createRegion(@Valid @RequestBody CreateRegionRequest request) {
+        RegionResponse result = regionService.createRegion(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(result, "Tạo mới khu vực thành công"));
     }
 
     @PutMapping("/{regionId}")
-    @Operation(summary = "Cập nhật thông tin khu vực")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<RegionResponse> updateRegion(
+    @RequirePermission("org.manage")
+    @Operation(summary = "Cập nhật thông tin khu vực")
+    public ResponseEntity<ApiResponse<RegionResponse>> updateRegion(
             @Parameter(description = "ID khu vực", required = true)
             @PathVariable UUID regionId,
             @Valid @RequestBody UpdateRegionRequest request) {
-        return ApiResponse.ok(regionService.updateRegion(regionId, request));
+        RegionResponse result = regionService.updateRegion(regionId, request);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Cập nhật khu vực thành công"));
     }
 
     @DeleteMapping("/{regionId}")
-    @Operation(summary = "Xóa mềm khu vực")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<Void> deleteRegion(
+    @RequirePermission("org.manage")
+    @Operation(summary = "Xóa mềm khu vực")
+    public ResponseEntity<ApiResponse<Void>> deleteRegion(
             @Parameter(description = "ID khu vực", required = true)
             @PathVariable UUID regionId) {
         regionService.deleteRegion(regionId);
-        return ApiResponse.ok(null);
+        return ResponseEntity.ok(ApiResponse.noContent("Xóa khu vực thành công"));
     }
 }
-

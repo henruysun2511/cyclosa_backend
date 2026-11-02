@@ -2,11 +2,14 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.organization.dto.request.CreateRegionRequest;
+import com.cyclosa.organization.dto.request.RegionFilterRequest;
 import com.cyclosa.organization.dto.request.UpdateRegionRequest;
 import com.cyclosa.organization.dto.response.RegionResponse;
 import com.cyclosa.organization.entity.Region;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.RegionMapper;
 import com.cyclosa.organization.repository.BranchRepository;
 import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.RegionRepository;
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -26,13 +30,18 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class RegionService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "createdAt");
+
     private final RegionRepository regionRepository;
     private final CompanyRepository companyRepository;
     private final BranchRepository branchRepository;
+    private final RegionMapper regionMapper;
 
-    public PageData<RegionResponse> getRegions(UUID companyId, String keyword, Pageable pageable) {
-        verifyCompanyExists(companyId);
-        Page<Region> page = regionRepository.search(companyId, keyword, pageable);
+    public PageData<RegionResponse> getRegions(RegionFilterRequest filter) {
+        verifyCompanyExists(filter.getCompanyId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
+        Page<Region> page = regionRepository.search(filter.getCompanyId(), kw, pageable);
         return PageData.of(page, this::mapToResponse);
     }
 
@@ -56,12 +65,9 @@ public class RegionService {
             throw new AppException(OrganizationErrorCode.REGION_CODE_EXISTS);
         }
 
-        Region region = Region.builder()
-                .companyId(request.getCompanyId())
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .deleted(false)
-                .build();
+        Region region = regionMapper.toEntity(request);
+        region.setCode(request.getCode().toUpperCase().trim());
+        region.setName(request.getName().trim());
 
         region = regionRepository.save(region);
         log.info("Đã tạo mới khu vực: id={}, code={}", region.getId(), region.getCode());
@@ -71,7 +77,9 @@ public class RegionService {
     @Transactional
     public RegionResponse updateRegion(UUID id, UpdateRegionRequest request) {
         Region region = findRegionOrThrow(id);
+        regionMapper.updateEntityFromDto(request, region);
         region.setName(request.getName().trim());
+
         region = regionRepository.save(region);
         log.info("Đã cập nhật khu vực: id={}", region.getId());
         return mapToResponse(region);
@@ -96,16 +104,8 @@ public class RegionService {
     }
 
     private RegionResponse mapToResponse(Region region) {
-        int branchCount = branchRepository.findAllByRegionId(region.getId()).size();
-        return RegionResponse.builder()
-                .id(region.getId())
-                .companyId(region.getCompanyId())
-                .code(region.getCode())
-                .name(region.getName())
-                .branchCount(branchCount)
-                .createdAt(region.getCreatedAt())
-                .updatedAt(region.getUpdatedAt())
-                .build();
+        RegionResponse res = regionMapper.toResponse(region);
+        res.setBranchCount(branchRepository.findAllByRegionId(region.getId()).size());
+        return res;
     }
 }
-

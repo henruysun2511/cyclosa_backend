@@ -1,8 +1,10 @@
 package com.cyclosa.organization.controller;
 
+import com.cyclosa.common.annotation.RequirePermission;
 import com.cyclosa.common.response.ApiResponse;
 import com.cyclosa.common.response.PageData;
 import com.cyclosa.organization.dto.request.CreateJobLevelRequest;
+import com.cyclosa.organization.dto.request.JobLevelFilterRequest;
 import com.cyclosa.organization.dto.request.UpdateJobLevelRequest;
 import com.cyclosa.organization.dto.response.JobLevelResponse;
 import com.cyclosa.organization.service.JobLevelService;
@@ -11,9 +13,9 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.web.PageableDefault;
+import org.springdoc.core.annotations.ParameterObject;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,67 +25,72 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/job-levels")
 @RequiredArgsConstructor
-@Tag(name = "01. Cơ cấu tổ chức - Cấp bậc chức danh", description = "APIs quản lý thang cấp bậc chuyên môn / quản lý")
+@Tag(name = "Job Levels", description = "Quản lý thang cấp bậc chuyên môn / quản lý")
 public class JobLevelController {
 
     private final JobLevelService jobLevelService;
 
     @GetMapping
-    @Operation(summary = "Lấy danh sách cấp bậc theo công ty có phân trang")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<PageData<JobLevelResponse>> getJobLevels(
-            @Parameter(description = "ID công ty", required = true)
-            @RequestParam UUID companyId,
-            @Parameter(description = "Từ khóa tìm kiếm")
-            @RequestParam(required = false) String keyword,
-            @PageableDefault(size = 20) Pageable pageable) {
-        return ApiResponse.ok(jobLevelService.getJobLevels(companyId, keyword, pageable));
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy danh sách cấp bậc theo công ty có phân trang", description = "Hỗ trợ lọc từ khóa và phân trang")
+    public ResponseEntity<ApiResponse<PageData<JobLevelResponse>>> getJobLevels(@ParameterObject @Valid JobLevelFilterRequest filter) {
+        PageData<JobLevelResponse> result = jobLevelService.getJobLevels(filter);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy danh sách cấp bậc thành công"));
     }
 
     @GetMapping("/all")
-    @Operation(summary = "Lấy toàn bộ cấp bậc theo công ty đã sắp xếp theo rankOrder tăng dần")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<List<JobLevelResponse>> getAllJobLevels(
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy toàn bộ cấp bậc theo công ty đã sắp xếp theo rankOrder tăng dần")
+    public ResponseEntity<ApiResponse<List<JobLevelResponse>>> getAllJobLevels(
             @Parameter(description = "ID công ty", required = true)
             @RequestParam UUID companyId) {
-        return ApiResponse.ok(jobLevelService.getAllJobLevelsByCompany(companyId));
+        List<JobLevelResponse> result = jobLevelService.getAllJobLevelsByCompany(companyId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy toàn bộ cấp bậc thành công"));
     }
 
     @GetMapping("/{jobLevelId}")
-    @Operation(summary = "Lấy thông tin chi tiết một cấp bậc theo ID")
     @PreAuthorize("@perm.has('org.view')")
-    public ApiResponse<JobLevelResponse> getJobLevelById(
+    @RequirePermission("org.view")
+    @Operation(summary = "Lấy thông tin chi tiết một cấp bậc theo ID")
+    public ResponseEntity<ApiResponse<JobLevelResponse>> getJobLevelById(
             @Parameter(description = "ID cấp bậc", required = true)
             @PathVariable UUID jobLevelId) {
-        return ApiResponse.ok(jobLevelService.getJobLevelById(jobLevelId));
+        JobLevelResponse result = jobLevelService.getJobLevelById(jobLevelId);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Lấy thông tin cấp bậc thành công"));
     }
 
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Tạo mới cấp bậc chức danh")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<JobLevelResponse> createJobLevel(@Valid @RequestBody CreateJobLevelRequest request) {
-        return ApiResponse.created(jobLevelService.createJobLevel(request));
+    @RequirePermission("org.manage")
+    @Operation(summary = "Tạo mới cấp bậc chức danh")
+    public ResponseEntity<ApiResponse<JobLevelResponse>> createJobLevel(@Valid @RequestBody CreateJobLevelRequest request) {
+        JobLevelResponse result = jobLevelService.createJobLevel(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(ApiResponse.created(result, "Tạo mới cấp bậc thành công"));
     }
 
     @PutMapping("/{jobLevelId}")
-    @Operation(summary = "Cập nhật thông tin cấp bậc")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<JobLevelResponse> updateJobLevel(
+    @RequirePermission("org.manage")
+    @Operation(summary = "Cập nhật thông tin cấp bậc")
+    public ResponseEntity<ApiResponse<JobLevelResponse>> updateJobLevel(
             @Parameter(description = "ID cấp bậc", required = true)
             @PathVariable UUID jobLevelId,
             @Valid @RequestBody UpdateJobLevelRequest request) {
-        return ApiResponse.ok(jobLevelService.updateJobLevel(jobLevelId, request));
+        JobLevelResponse result = jobLevelService.updateJobLevel(jobLevelId, request);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Cập nhật cấp bậc thành công"));
     }
 
     @DeleteMapping("/{jobLevelId}")
-    @Operation(summary = "Xóa mềm cấp bậc")
     @PreAuthorize("@perm.has('org.manage')")
-    public ApiResponse<Void> deleteJobLevel(
+    @RequirePermission("org.manage")
+    @Operation(summary = "Xóa mềm cấp bậc")
+    public ResponseEntity<ApiResponse<Void>> deleteJobLevel(
             @Parameter(description = "ID cấp bậc", required = true)
             @PathVariable UUID jobLevelId) {
         jobLevelService.deleteJobLevel(jobLevelId);
-        return ApiResponse.ok(null);
+        return ResponseEntity.ok(ApiResponse.noContent("Xóa cấp bậc thành công"));
     }
 }
-

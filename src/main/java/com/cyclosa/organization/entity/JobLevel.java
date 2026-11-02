@@ -14,16 +14,15 @@ import java.util.UUID;
 @Entity
 @Table(name = "job_levels", indexes = {
         @Index(name = "idx_job_levels_company_id", columnList = "company_id"),
-        @Index(name = "idx_job_levels_rank_order", columnList = "rank_order"),
-        @Index(name = "idx_job_levels_deleted", columnList = "deleted")
+        @Index(name = "idx_job_levels_rank_order", columnList = "rank_order")
 })
 @Getter
 @Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@SQLDelete(sql = "UPDATE job_levels SET deleted = true, deleted_at = CURRENT_TIMESTAMP WHERE id = ?")
-@SQLRestriction("deleted = false")
+@SQLDelete(sql = "UPDATE job_levels SET deleted_at = NOW() WHERE id = ?")
+@SQLRestriction("deleted_at IS NULL")
 public class JobLevel extends BaseEntity {
 
     @Column(name = "company_id", nullable = false)
@@ -37,9 +36,4 @@ public class JobLevel extends BaseEntity {
 
     @Column(name = "rank_order", nullable = false)
     private Integer rankOrder;
-
-    @Column(name = "deleted", nullable = false)
-    @Builder.Default
-    private Boolean deleted = false;
 }
-

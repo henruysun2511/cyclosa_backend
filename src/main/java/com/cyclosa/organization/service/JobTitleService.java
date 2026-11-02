@@ -2,11 +2,14 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
 import com.cyclosa.organization.dto.request.CreateJobTitleRequest;
+import com.cyclosa.organization.dto.request.JobTitleFilterRequest;
 import com.cyclosa.organization.dto.request.UpdateJobTitleRequest;
 import com.cyclosa.organization.dto.response.JobTitleResponse;
 import com.cyclosa.organization.entity.JobTitle;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.JobTitleMapper;
 import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.JobTitleRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -25,25 +29,30 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class JobTitleService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "createdAt");
+
     private final JobTitleRepository jobTitleRepository;
     private final CompanyRepository companyRepository;
+    private final JobTitleMapper jobTitleMapper;
 
-    public PageData<JobTitleResponse> getJobTitles(UUID companyId, String keyword, Pageable pageable) {
-        verifyCompanyExists(companyId);
-        Page<JobTitle> page = jobTitleRepository.search(companyId, keyword, pageable);
-        return PageData.of(page, this::mapToResponse);
+    public PageData<JobTitleResponse> getJobTitles(JobTitleFilterRequest filter) {
+        verifyCompanyExists(filter.getCompanyId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
+        Page<JobTitle> page = jobTitleRepository.search(filter.getCompanyId(), kw, pageable);
+        return PageData.of(page, jobTitleMapper::toResponse);
     }
 
     public List<JobTitleResponse> getAllJobTitlesByCompany(UUID companyId) {
         verifyCompanyExists(companyId);
         return jobTitleRepository.findAllByCompanyId(companyId).stream()
-                .map(this::mapToResponse)
+                .map(jobTitleMapper::toResponse)
                 .toList();
     }
 
     public JobTitleResponse getJobTitleById(UUID id) {
         JobTitle jobTitle = findJobTitleOrThrow(id);
-        return mapToResponse(jobTitle);
+        return jobTitleMapper.toResponse(jobTitle);
     }
 
     @Transactional
@@ -54,27 +63,24 @@ public class JobTitleService {
             throw new AppException(OrganizationErrorCode.JOB_TITLE_CODE_EXISTS);
         }
 
-        JobTitle jobTitle = JobTitle.builder()
-                .companyId(request.getCompanyId())
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .description(request.getDescription())
-                .deleted(false)
-                .build();
+        JobTitle jobTitle = jobTitleMapper.toEntity(request);
+        jobTitle.setCode(request.getCode().toUpperCase().trim());
+        jobTitle.setName(request.getName().trim());
 
         jobTitle = jobTitleRepository.save(jobTitle);
         log.info("Đã tạo mới chức danh: id={}, code={}", jobTitle.getId(), jobTitle.getCode());
-        return mapToResponse(jobTitle);
+        return jobTitleMapper.toResponse(jobTitle);
     }
 
     @Transactional
     public JobTitleResponse updateJobTitle(UUID id, UpdateJobTitleRequest request) {
         JobTitle jobTitle = findJobTitleOrThrow(id);
+        jobTitleMapper.updateEntityFromDto(request, jobTitle);
         jobTitle.setName(request.getName().trim());
-        jobTitle.setDescription(request.getDescription());
+
         jobTitle = jobTitleRepository.save(jobTitle);
         log.info("Đã cập nhật chức danh: id={}", jobTitle.getId());
-        return mapToResponse(jobTitle);
+        return jobTitleMapper.toResponse(jobTitle);
     }
 
     @Transactional
@@ -94,17 +100,4 @@ public class JobTitleService {
             throw new AppException(OrganizationErrorCode.COMPANY_NOT_FOUND);
         }
     }
-
-    private JobTitleResponse mapToResponse(JobTitle jobTitle) {
-        return JobTitleResponse.builder()
-                .id(jobTitle.getId())
-                .companyId(jobTitle.getCompanyId())
-                .code(jobTitle.getCode())
-                .name(jobTitle.getName())
-                .description(jobTitle.getDescription())
-                .createdAt(jobTitle.getCreatedAt())
-                .updatedAt(jobTitle.getUpdatedAt())
-                .build();
-    }
 }
-

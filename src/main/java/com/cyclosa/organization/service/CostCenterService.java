@@ -2,11 +2,14 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
+import com.cyclosa.organization.dto.request.CostCenterFilterRequest;
 import com.cyclosa.organization.dto.request.CreateCostCenterRequest;
 import com.cyclosa.organization.dto.request.UpdateCostCenterRequest;
 import com.cyclosa.organization.dto.response.CostCenterResponse;
 import com.cyclosa.organization.entity.CostCenter;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.CostCenterMapper;
 import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.CostCenterRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -25,25 +29,30 @@ import java.util.UUID;
 @Transactional(readOnly = true)
 public class CostCenterService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "createdAt");
+
     private final CostCenterRepository costCenterRepository;
     private final CompanyRepository companyRepository;
+    private final CostCenterMapper costCenterMapper;
 
-    public PageData<CostCenterResponse> getCostCenters(UUID companyId, String keyword, Pageable pageable) {
-        verifyCompanyExists(companyId);
-        Page<CostCenter> page = costCenterRepository.search(companyId, keyword, pageable);
-        return PageData.of(page, this::mapToResponse);
+    public PageData<CostCenterResponse> getCostCenters(CostCenterFilterRequest filter) {
+        verifyCompanyExists(filter.getCompanyId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
+        Page<CostCenter> page = costCenterRepository.search(filter.getCompanyId(), kw, pageable);
+        return PageData.of(page, costCenterMapper::toResponse);
     }
 
     public List<CostCenterResponse> getAllCostCentersByCompany(UUID companyId) {
         verifyCompanyExists(companyId);
         return costCenterRepository.findAllByCompanyId(companyId).stream()
-                .map(this::mapToResponse)
+                .map(costCenterMapper::toResponse)
                 .toList();
     }
 
     public CostCenterResponse getCostCenterById(UUID id) {
         CostCenter costCenter = findCostCenterOrThrow(id);
-        return mapToResponse(costCenter);
+        return costCenterMapper.toResponse(costCenter);
     }
 
     @Transactional
@@ -54,27 +63,24 @@ public class CostCenterService {
             throw new AppException(OrganizationErrorCode.COST_CENTER_CODE_EXISTS);
         }
 
-        CostCenter costCenter = CostCenter.builder()
-                .companyId(request.getCompanyId())
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .description(request.getDescription())
-                .deleted(false)
-                .build();
+        CostCenter costCenter = costCenterMapper.toEntity(request);
+        costCenter.setCode(request.getCode().toUpperCase().trim());
+        costCenter.setName(request.getName().trim());
 
         costCenter = costCenterRepository.save(costCenter);
         log.info("Đã tạo mới trung tâm chi phí: id={}, code={}", costCenter.getId(), costCenter.getCode());
-        return mapToResponse(costCenter);
+        return costCenterMapper.toResponse(costCenter);
     }
 
     @Transactional
     public CostCenterResponse updateCostCenter(UUID id, UpdateCostCenterRequest request) {
         CostCenter costCenter = findCostCenterOrThrow(id);
+        costCenterMapper.updateEntityFromDto(request, costCenter);
         costCenter.setName(request.getName().trim());
-        costCenter.setDescription(request.getDescription());
+
         costCenter = costCenterRepository.save(costCenter);
         log.info("Đã cập nhật trung tâm chi phí: id={}", costCenter.getId());
-        return mapToResponse(costCenter);
+        return costCenterMapper.toResponse(costCenter);
     }
 
     @Transactional
@@ -94,17 +100,4 @@ public class CostCenterService {
             throw new AppException(OrganizationErrorCode.COMPANY_NOT_FOUND);
         }
     }
-
-    private CostCenterResponse mapToResponse(CostCenter costCenter) {
-        return CostCenterResponse.builder()
-                .id(costCenter.getId())
-                .companyId(costCenter.getCompanyId())
-                .code(costCenter.getCode())
-                .name(costCenter.getName())
-                .description(costCenter.getDescription())
-                .createdAt(costCenter.getCreatedAt())
-                .updatedAt(costCenter.getUpdatedAt())
-                .build();
-    }
 }
-

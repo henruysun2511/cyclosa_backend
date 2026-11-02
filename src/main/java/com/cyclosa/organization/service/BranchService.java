@@ -2,12 +2,15 @@ package com.cyclosa.organization.service;
 
 import com.cyclosa.common.exception.AppException;
 import com.cyclosa.common.response.PageData;
+import com.cyclosa.common.util.PageableUtils;
+import com.cyclosa.organization.dto.request.BranchFilterRequest;
 import com.cyclosa.organization.dto.request.CreateBranchRequest;
 import com.cyclosa.organization.dto.request.UpdateBranchRequest;
 import com.cyclosa.organization.dto.response.BranchResponse;
 import com.cyclosa.organization.entity.Branch;
 import com.cyclosa.organization.entity.Region;
 import com.cyclosa.organization.exception.OrganizationErrorCode;
+import com.cyclosa.organization.mapper.BranchMapper;
 import com.cyclosa.organization.repository.BranchRepository;
 import com.cyclosa.organization.repository.RegionRepository;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -28,12 +32,17 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class BranchService {
 
+    private static final Set<String> ALLOWED_SORT_FIELDS = Set.of("code", "name", "isActive", "createdAt");
+
     private final BranchRepository branchRepository;
     private final RegionRepository regionRepository;
+    private final BranchMapper branchMapper;
 
-    public PageData<BranchResponse> getBranches(UUID regionId, String keyword, Boolean isActive, Pageable pageable) {
-        Region region = findRegionOrThrow(regionId);
-        Page<Branch> page = branchRepository.search(regionId, keyword, isActive, pageable);
+    public PageData<BranchResponse> getBranches(BranchFilterRequest filter) {
+        Region region = findRegionOrThrow(filter.getRegionId());
+        String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
+        Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
+        Page<Branch> page = branchRepository.search(filter.getRegionId(), kw, filter.getIsActive(), pageable);
         return PageData.of(page, b -> mapToResponse(b, region.getName()));
     }
 
@@ -68,17 +77,9 @@ public class BranchService {
             throw new AppException(OrganizationErrorCode.BRANCH_CODE_EXISTS);
         }
 
-        Branch branch = Branch.builder()
-                .regionId(request.getRegionId())
-                .code(request.getCode().toUpperCase().trim())
-                .name(request.getName().trim())
-                .address(request.getAddress())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
-                .attendanceRadiusMeters(request.getAttendanceRadiusMeters() != null ? request.getAttendanceRadiusMeters() : 100)
-                .isActive(true)
-                .deleted(false)
-                .build();
+        Branch branch = branchMapper.toEntity(request);
+        branch.setCode(request.getCode().toUpperCase().trim());
+        branch.setName(request.getName().trim());
 
         branch = branchRepository.save(branch);
         log.info("Đã tạo mới chi nhánh: id={}, code={}", branch.getId(), branch.getCode());
@@ -90,16 +91,8 @@ public class BranchService {
         Branch branch = findBranchOrThrow(id);
         Region region = findRegionOrThrow(branch.getRegionId());
 
+        branchMapper.updateEntityFromDto(request, branch);
         branch.setName(request.getName().trim());
-        branch.setAddress(request.getAddress());
-        branch.setLatitude(request.getLatitude());
-        branch.setLongitude(request.getLongitude());
-        if (request.getAttendanceRadiusMeters() != null) {
-            branch.setAttendanceRadiusMeters(request.getAttendanceRadiusMeters());
-        }
-        if (request.getIsActive() != null) {
-            branch.setIsActive(request.getIsActive());
-        }
 
         branch = branchRepository.save(branch);
         log.info("Đã cập nhật chi nhánh: id={}", branch.getId());
@@ -124,20 +117,8 @@ public class BranchService {
     }
 
     private BranchResponse mapToResponse(Branch branch, String regionName) {
-        return BranchResponse.builder()
-                .id(branch.getId())
-                .regionId(branch.getRegionId())
-                .regionName(regionName)
-                .code(branch.getCode())
-                .name(branch.getName())
-                .address(branch.getAddress())
-                .latitude(branch.getLatitude())
-                .longitude(branch.getLongitude())
-                .attendanceRadiusMeters(branch.getAttendanceRadiusMeters())
-                .isActive(branch.getIsActive())
-                .createdAt(branch.getCreatedAt())
-                .updatedAt(branch.getUpdatedAt())
-                .build();
+        BranchResponse res = branchMapper.toResponse(branch);
+        res.setRegionName(regionName);
+        return res;
     }
 }
-

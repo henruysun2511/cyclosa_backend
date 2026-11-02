@@ -49,7 +49,6 @@ public class OrganizationDataSeeder implements CommandLineRunner {
                 .phone("02473008888")
                 .email("contact@cyclosa.vn")
                 .status("ACTIVE")
-                .deleted(false)
                 .build();
         company.setId(DEFAULT_COMPANY_ID);
         company = companyRepository.save(company);
@@ -59,7 +58,6 @@ public class OrganizationDataSeeder implements CommandLineRunner {
                 .companyId(company.getId())
                 .code("REG_NORTH")
                 .name("Khu vực Miền Bắc")
-                .deleted(false)
                 .build();
         regNorth = regionRepository.save(regNorth);
 
@@ -67,7 +65,6 @@ public class OrganizationDataSeeder implements CommandLineRunner {
                 .companyId(company.getId())
                 .code("REG_SOUTH")
                 .name("Khu vực Miền Nam")
-                .deleted(false)
                 .build();
         regSouth = regionRepository.save(regSouth);
 
@@ -81,7 +78,6 @@ public class OrganizationDataSeeder implements CommandLineRunner {
                 .longitude(new BigDecimal("105.7836360"))
                 .attendanceRadiusMeters(150)
                 .isActive(true)
-                .deleted(false)
                 .build();
         branchRepository.save(branchHn);
 
@@ -94,87 +90,85 @@ public class OrganizationDataSeeder implements CommandLineRunner {
                 .longitude(new BigDecimal("106.7218330"))
                 .attendanceRadiusMeters(150)
                 .isActive(true)
-                .deleted(false)
                 .build();
         branchRepository.save(branchHcm);
 
         // 4. Trung tâm chi phí
         CostCenter ccBod = costCenterRepository.save(CostCenter.builder()
                 .companyId(company.getId()).code("CC_BOD").name("Khối Điều hành Ban Tổng Giám đốc")
-                .description("Ngân sách điều hành cấp cao").deleted(false).build());
+                .description("Ngân sách điều hành cấp cao").build());
 
         CostCenter ccTech = costCenterRepository.save(CostCenter.builder()
                 .companyId(company.getId()).code("CC_TECH").name("Khối Công nghệ & Sản phẩm")
-                .description("Ngân sách R&D và hạ tầng kỹ thuật").deleted(false).build());
+                .description("Ngân sách R&D và hạ tầng kỹ thuật").build());
 
         CostCenter ccHr = costCenterRepository.save(CostCenter.builder()
                 .companyId(company.getId()).code("CC_HR_ADMIN").name("Khối Nhân sự & Hành chính")
-                .description("Ngân sách quản trị nhân sự").deleted(false).build());
+                .description("Ngân sách quản trị nhân sự").build());
 
         CostCenter ccFin = costCenterRepository.save(CostCenter.builder()
                 .companyId(company.getId()).code("CC_FINANCE").name("Khối Tài chính Kế toán")
-                .description("Ngân sách tài chính").deleted(false).build());
+                .description("Ngân sách tài chính").build());
 
         // 5. Cấp bậc chức danh
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_01").name("Level 1 - Thực tập sinh (Intern)").rankOrder(1).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_02").name("Level 2 - Nhân viên (Junior)").rankOrder(2).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_03").name("Level 3 - Chuyên viên (Mid-level)").rankOrder(3).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_04").name("Level 4 - Chuyên viên cao cấp (Senior)").rankOrder(4).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_05").name("Level 5 - Trưởng nhóm (Team Leader)").rankOrder(5).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_06").name("Level 6 - Trưởng phòng (Manager)").rankOrder(6).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_07").name("Level 7 - Giám đốc khối (Director)").rankOrder(7).deleted(false).build());
-        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_08").name("Level 8 - Ban Giám đốc điều hành (C-Level)").rankOrder(8).deleted(false).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_01").name("Level 1 - Thực tập sinh (Intern)").rankOrder(1).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_02").name("Level 2 - Nhân viên (Junior)").rankOrder(2).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_03").name("Level 3 - Chuyên viên (Mid-level)").rankOrder(3).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_04").name("Level 4 - Chuyên viên cao cấp (Senior)").rankOrder(4).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_05").name("Level 5 - Trưởng nhóm (Team Leader)").rankOrder(5).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_06").name("Level 6 - Trưởng phòng (Manager)").rankOrder(6).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_07").name("Level 7 - Giám đốc khối (Director)").rankOrder(7).build());
+        jobLevelRepository.save(JobLevel.builder().companyId(company.getId()).code("LVL_08").name("Level 8 - Ban Giám đốc điều hành (C-Level)").rankOrder(8).build());
 
         // 6. Chức danh công việc
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CEO").name("Tổng Giám đốc Điều hành").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CTO").name("Giám đốc Công nghệ").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CFO").name("Giám đốc Tài chính").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CHRO").name("Giám đốc Nhân sự").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("DEV_LEAD").name("Trưởng nhóm Lập trình").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("DEV_SR").name("Kỹ sư Phần mềm cao cấp").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("QA_LEAD").name("Trưởng nhóm Quản lý Chất lượng").deleted(false).build());
-        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("HR_SPEC").name("Chuyên viên Nhân sự").deleted(false).build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CEO").name("Tổng Giám đốc Điều hành").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CTO").name("Giám đốc Công nghệ").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CFO").name("Giám đốc Tài chính").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("CHRO").name("Giám đốc Nhân sự").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("DEV_LEAD").name("Trưởng nhóm Lập trình").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("DEV_SR").name("Kỹ sư Phần mềm cao cấp").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("QA_LEAD").name("Trưởng nhóm Quản lý Chất lượng").build());
+        jobTitleRepository.save(JobTitle.builder().companyId(company.getId()).code("HR_SPEC").name("Chuyên viên Nhân sự").build());
 
         // 7. Cây phòng ban
         LocalDate effectiveDate = LocalDate.of(2026, 1, 1);
 
         // Dept BOD (Root)
-        Department deptBod = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_BOD").deleted(false).build());
+        Department deptBod = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_BOD").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptBod).name("Ban Tổng Giám đốc").effectiveFrom(effectiveDate)
-                .parentDepartmentId(null).costCenterId(ccBod.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(null).costCenterId(ccBod.getId()).isPermissionInherited(true).build());
 
         // Dept TECH (con của BOD)
-        Department deptTech = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_TECH").deleted(false).build());
+        Department deptTech = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_TECH").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptTech).name("Khối Công nghệ & Sản phẩm").effectiveFrom(effectiveDate)
-                .parentDepartmentId(deptBod.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(deptBod.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).build());
 
         // Dept DEV (con của TECH)
-        Department deptDev = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_DEV").deleted(false).build());
+        Department deptDev = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_DEV").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptDev).name("Phòng Phát triển Phần mềm").effectiveFrom(effectiveDate)
-                .parentDepartmentId(deptTech.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(deptTech.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).build());
 
         // Dept QA (con của TECH)
-        Department deptQa = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_QA").deleted(false).build());
+        Department deptQa = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_QA").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptQa).name("Phòng Đảm bảo Chất lượng (QA)").effectiveFrom(effectiveDate)
-                .parentDepartmentId(deptTech.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(deptTech.getId()).costCenterId(ccTech.getId()).isPermissionInherited(true).build());
 
         // Dept HR (con của BOD)
-        Department deptHr = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_HR").deleted(false).build());
+        Department deptHr = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_HR").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptHr).name("Ban Nhân sự & Hành chính").effectiveFrom(effectiveDate)
-                .parentDepartmentId(deptBod.getId()).costCenterId(ccHr.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(deptBod.getId()).costCenterId(ccHr.getId()).isPermissionInherited(true).build());
 
         // Dept FIN (con của BOD)
-        Department deptFin = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_FIN").deleted(false).build());
+        Department deptFin = departmentRepository.save(Department.builder().companyId(company.getId()).code("DEPT_FIN").build());
         departmentVersionRepository.save(DepartmentVersion.builder()
                 .department(deptFin).name("Phòng Tài chính Kế toán").effectiveFrom(effectiveDate)
-                .parentDepartmentId(deptBod.getId()).costCenterId(ccFin.getId()).isPermissionInherited(true).deleted(false).build());
+                .parentDepartmentId(deptBod.getId()).costCenterId(ccFin.getId()).isPermissionInherited(true).build());
 
         log.info("Hoàn tất nạp dữ liệu mẫu Module Quản lý tổ chức thành công!");
     }
 }
-
