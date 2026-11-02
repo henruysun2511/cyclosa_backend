@@ -2,8 +2,9 @@
 
 > **Tài liệu căn cứ & tham chiếu:**
 > - Nghiệp vụ chi tiết: [`Nghiep-vu.docx`](file:///f:/Project/CYCLOSA/ba/Nghiep-vu.docx) (Mục 1: Quản lý tổ chức - Organization Management)
+> - Thiết kế giao diện nguyên mẫu: [`DocuCore UI System v3.html`](file:///f:/Project/CYCLOSA/DocuCore%20UI%20System%20v3.html) (Màn hình `[25] Sơ đồ tổ chức (lõi) - core/org`)
 > - Thiết kế CSDL & Data Dictionary: [`database.md`](file:///f:/Project/CYCLOSA/ba/database.md) (§8.1 & §8.2 Module 1: Organization)
-> - Danh mục API chuẩn: [`api-list.md`](file:///f:/Project/CYCLOSA/ba/api-list.md) (Mục 1: Quản lý tổ chức - 37 APIs)
+> - Danh mục API chuẩn: [`api-list.md`](file:///f:/Project/CYCLOSA/ba/api-list.md) (Mục 1: Quản lý tổ chức)
 > - Quy chuẩn phân quyền liên kết: [`module-phan-quyen.md`](file:///f:/Project/CYCLOSA/cyclosa_be/docs/ba/module-phan-quyen.md) (Module 03: DataScope `DEPARTMENT`, `COMPANY`)
 > - Module nền tảng xác thực: [`module-auth.md`](file:///f:/Project/CYCLOSA/cyclosa_be/docs/ba/module-auth.md) (Module 0: Users & Multi-tenancy)
 > - Chuẩn kiến trúc codebase: [`com.cyclosa.product`](file:///f:/Project/CYCLOSA/cyclosa_be/src/main/java/com/cyclosa/product) (Direct `@Service` class, không dùng `impl/`)
@@ -17,10 +18,10 @@ Trong hệ sinh thái Quản trị Nguồn nhân lực Doanh nghiệp CYCLOSA HR
 
 $$\mathbf{Nhân\ sự} = \mathbf{Đơn\ vị\ tổ\ chức\ (Phòng\ ban)} + \mathbf{Địa\ lý\ (Chi\ nhánh)} + \mathbf{Vị\ trí\ việc\ làm\ (Chức\ danh\ \&\ Cấp\ bậc)}$$
 
-Ba chiều này hoạt động **hoàn toàn độc lập** với nhau:
-1. **Chiều Tổ chức (`Department`):** Quản lý cấu trúc quản trị hành chính theo mô hình cây nhiều cấp (Khối $\rightarrow$ Ban $\rightarrow$ Phòng $\rightarrow$ Đội/Nhóm).
-2. **Chiều Địa lý (`Region` & `Branch`):** Quản lý địa bàn kinh doanh và các văn phòng/cơ sở vật lý, nơi nhân viên thực tế làm việc và thực hiện chấm công định vị vệ tinh GPS.
-3. **Chiều Chức danh & Cấp bậc (`JobTitle` & `JobLevel`):** Quản lý năng lực chuyên môn, khung tiêu chuẩn chức danh và thứ tự cấp bậc thẩm quyền.
+Ba chiều này hoạt động **hoàn toàn độc lập** với nhau (theo mã thiết kế `DocuCore UI System v3`):
+1. **Chiều Tổ chức (`Department` - Mã `F-C02`):** Cây kế thừa quyền xuống đơn vị con. Quản lý cấu trúc quản trị hành chính theo mô hình cây nhiều cấp (Khối $\rightarrow$ Ban $\rightarrow$ Phòng $\rightarrow$ Đội/Nhóm).
+2. **Chiều Địa lý (`Region` & `Branch` - Mã `F-C03`):** Cây riêng, không suy từ đơn vị. Quản lý địa bàn kinh doanh và các văn phòng/cơ sở vật lý, nơi nhân viên thực tế làm việc và thực hiện chấm công định vị vệ tinh GPS.
+3. **Chiều Chức danh & Cấp bậc (`JobTitle` & `JobLevel` - Mã `F-C04`):** Danh mục phẳng, độc lập với hai cây trên. Quản lý năng lực chuyên môn, khung tiêu chuẩn chức danh và thứ tự cấp bậc thẩm quyền (`rank_order`).
 
 *Ví dụ thực tế:* 
 - Nhân viên Nguyễn Văn A thuộc **Phòng Backend**, làm việc tại **Chi nhánh Cầu Giấy (Hà Nội)** với chức danh **Lập trình viên Backend**, cấp bậc **Senior**.
@@ -38,6 +39,7 @@ Tổ chức doanh nghiệp luôn vận động và tái cấu trúc (sáp nhập
   - `parent_department_id`: Đơn vị cấp trên trực tiếp (phục vụ dựng cây phân cấp).
   - `cost_center_id`: Trung tâm chi phí hạch toán ngân sách.
   - `manager_employee_id`: Trưởng bộ phận phụ trách.
+  - `is_permission_inherited`: Cờ cho phép kế thừa quyền xuống các đơn vị con (mặc định `TRUE`).
   - `effective_from`: Ngày bắt đầu có hiệu lực của phiên bản.
 
 **Quy tắc truy vấn lịch sử (Time-Travel Querying):**
@@ -46,12 +48,12 @@ $$\text{effective\_from} \le T \quad \text{với}\ \max(\text{effective\_from})$
 
 ---
 
-### 1.3. Cơ chế Kế thừa Quyền & Phạm vi Dữ liệu theo Cây Tổ chức (Hierarchical Data Scope)
-Theo quy chuẩn của Module 03 (Phân quyền):
-* Khi người dùng được cấp quyền với phạm vi dữ liệu `DEPARTMENT`, hệ thống tự động cho phép người dùng truy xuất dữ liệu của:
-  $$\text{Scope}(D) = \{ D \} \cup \text{Descendants}(D)$$
-  *(Đơn vị được cấp quyền và toàn bộ các phòng ban con cháu đệ quy trực thuộc).*
-* *Ví dụ:* Giám đốc Khối Công nghệ được xem toàn bộ hồ sơ nhân sự của Khối Công nghệ, bao gồm Phòng Phát triển phần mềm, Phòng QA, Đội Backend, Đội Frontend mà không cần phải gán quyền lẻ cho từng phòng ban con.
+### 1.3. Cơ chế Kế thừa Quyền & Kiểm soát Kế thừa (`is_permission_inherited`)
+Theo quy chuẩn của Module 03 (Phân quyền) và thiết kế giao diện nguyên mẫu `core/org`:
+* Khi người dùng được cấp quyền với phạm vi dữ liệu `DEPARTMENT`, hệ thống tự động cho phép người dùng truy xuất dữ liệu của đơn vị đó và các phòng ban con cháu đệ quy trực thuộc.
+* **Cơ chế Bật/Tắt kế thừa (Permission Inheritance Toggle):**
+  - Mỗi phiên bản phòng ban có cờ `is_permission_inherited` (tương ứng với Toggle Switch *"Kế thừa quyền xuống đơn vị con"* trên UI).
+  - Khi một phòng ban đặt `is_permission_inherited = FALSE` (ví dụ: *Ban Kiểm soát*, *Phòng Pháp chế*, *Ban Thanh tra nội bộ*), quyền quản trị từ các cấp phòng ban cha sẽ **dừng lại** tại đơn vị đó và không tự động lan truyền xuống dưới, bảo đảm bí mật thông tin nội bộ.
 
 ---
 
@@ -70,12 +72,42 @@ Mỗi chi nhánh (`Branch`) thuộc một Vùng miền (`Region`) cụ thể:
    - Khi điều chuyển phòng ban $A$ về dưới $B$, hệ thống bắt buộc kiểm tra:
      $$B \notin \text{Descendants}(A) \quad \text{và} \quad B \ne A$$
 2. **Xem trước tác động điều chuyển (Impact Preview):**
-   - Trước khi phê duyệt chuyển nhánh phòng ban, hệ thống tổng hợp báo cáo xem trước: số lượng đơn vị con bị kéo theo, tổng số nhân viên bị ảnh hưởng công việc.
+   - Trước khi phê duyệt chuyển nhánh phòng ban, hệ thống tổng hợp báo cáo xem trước: số lượng đơn vị con bị kéo theo, tổng số nhân viên bị ảnh hưởng công việc, số luật phân quyền liên quan.
 3. **Quy tắc Giải thể phòng ban (`dissolved_date`):**
    - Không được phép giải thể hoặc xóa phòng ban nếu vẫn còn phòng ban con đang hoạt động hoặc còn nhân viên đang được phân công làm việc tại đơn vị.
 4. **Bảo toàn tính toàn vẹn đa công ty (Tenant Boundary):**
    - Một phòng ban con bắt buộc phải cùng thuộc `company_id` với phòng ban cha.
    - Không lưu lặp `company_id` ở bảng chi nhánh (`branches`) vì đã xác định qua `region_id -> regions.company_id`.
+
+---
+
+### 1.6. Đối chiếu Chi tiết Giao diện Màn hình `[25] Sơ đồ tổ chức (lõi)` từ `DocuCore UI System v3.html`
+
+Màn hình `core/org` trong file giao diện nguyên mẫu quy định rõ 5 khối chức năng chính mà Backend cần cung cấp dữ liệu tương ứng:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ [F-C02] Đơn vị tổ chức          [F-C03] Địa lý                  [F-C04] Vị trí việc làm  │
+│ (Cây kế thừa quyền)             (Vùng / chi nhánh riêng)        (Danh mục phẳng)       │
+├──────────────────────────────────────────────────────────┬─────────────────────────────┤
+│ 🌲 CÂY SƠ ĐỒ TỔ CHỨC (Tree View)                         │ 📋 CHI TIẾT ĐƠN VỊ ĐƯỢC CHỌN│
+│ - Tên đơn vị, Mã đơn vị, Người đứng đầu, Số nhân sự     │ - Cấp trong cây, Quy mô     │
+│ - Thụt lề theo cấp phân cấp (indent)                     │ - Ngày hiệu lực & Version   │
+│ - Kéo thả đổi cấp trên / nhấp xem chi tiết               │ - [x] Bật/tắt kế thừa quyền │
+├──────────────────────────────────────────────────────────┼─────────────────────────────┤
+│ ⚠️ XEM TRƯỚC ẢNH HƯỞNG KHI ĐỔI CƠ CẤU (Impact Preview)   │ 👥 NHÂN SỰ TRONG ĐƠN VỊ     │
+│ - Thống kê số người đổi phạm vi truy cập                 │ - Avatar, Họ tên, Chức danh │
+│ - Thống kê số đơn vị trực thuộc bị kéo theo              │ - Nút "Mở trong QL người    │
+│ - Lưu phiên bản cây để giải trình quá khứ                │   dùng →"                   │
+└──────────────────────────────────────────────────────────┴─────────────────────────────┘
+```
+
+1. **Thanh 3 Chiều Tổ chức (Org Dimensions):** Cho phép chuyển đổi linh hoạt giữa cây Phòng ban (`F-C02`), cây Địa lý (`F-C03`) và danh mục Vị trí việc làm (`F-C04`).
+2. **Cây Sơ đồ Tổ chức (Org Tree View):** Hiển thị trực quan theo phân cấp, hiển thị Tên đơn vị, Mã đơn vị, Trưởng bộ phận (`head`) và Quy mô nhân sự (`stat`).
+3. **Khối Xem trước Tác động Điều chuyển (Impact Preview Box):** Khi người dùng chuẩn bị chuyển nhánh phòng ban (ví dụ: chuyển P. Kế toán từ CN Đà Nẵng sang Hội sở), khối này thống kê số nhân sự bị đổi phạm vi truy cập, số luồng phê duyệt và hồ sơ bị ảnh hưởng.
+4. **Bảng Thông tin Chi tiết Đơn vị (Selected Node Panel):** Hiển thị cấp trong cây, ngày hiệu lực phiên bản, và **công tắc (toggle switch) Bật/Tắt kế thừa quyền xuống đơn vị con**.
+5. **Danh sách Nhân sự trong Đơn vị (Department Members Panel):** Danh sách nhân viên đang làm việc kèm chức danh, cấp truy cập và nút liên kết *"Mở trong Quản lý người dùng →"*.
+6. **Thao tác Xuất Sơ đồ (Export Action):** Kết xuất cây tổ chức hiện tại kèm người đứng đầu và số nhân sự ra file (Excel/PDF) có ghi rõ ngày chốt cơ cấu và số phiên bản cây.
 
 ---
 
@@ -149,6 +181,7 @@ erDiagram
         UUID parent_department_id FK "Đơn vị cấp trên trực tiếp"
         UUID cost_center_id FK "Trung tâm chi phí liên kết"
         UUID manager_employee_id FK "Trưởng bộ phận"
+        BOOLEAN is_permission_inherited "Cờ kế thừa quyền xuống con"
     }
 
     job_titles {
@@ -227,9 +260,10 @@ erDiagram
 | `department_id` | `UUID` | `FK -> departments.id, NOT NULL` | Tham chiếu đơn vị gốc |
 | `effective_from` | `DATE` | `NOT NULL` | Ngày bắt đầu có hiệu lực |
 | `name` | `VARCHAR(200)` | `NOT NULL` | Tên đơn vị trong phiên bản |
-| `parent_department_id` | `UUID` | `FK -> departments.id, NULL` | Đơn vị cấp trên (NULL = cấp gốc: Khối) |
+| `parent_department_id` | `UUID` | `FK -> departments.id, NULL` | Đơn vị cấp trên trực tiếp (NULL = cấp gốc: Khối) |
 | `cost_center_id` | `UUID` | `FK -> cost_centers.id, NULL` | Trung tâm chi phí liên kết |
 | `manager_employee_id` | `UUID` | `NULL` | Trưởng bộ phận phụ trách |
+| `is_permission_inherited` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | **Cờ kế thừa quyền xuống đơn vị con** |
 
 *Ràng buộc duy nhất:* `UNIQUE (department_id, effective_from)`  
 *Ràng buộc toàn vẹn:* `CHECK (parent_department_id <> department_id)`
@@ -269,14 +303,14 @@ erDiagram
 
 ---
 
-## 3. DANH MỤC ENDPOINTS & CONTRACT SPECIFICATION (37 APIS)
+## 3. DANH MỤC ENDPOINTS & CONTRACT SPECIFICATION (39 APIS)
 
-Toàn bộ 37 endpoints theo chuẩn của [`api-list.md`](file:///f:/Project/CYCLOSA/ba/api-list.md):
+Toàn bộ 39 endpoints theo chuẩn của [`api-list.md`](file:///f:/Project/CYCLOSA/ba/api-list.md) kết hợp mở rộng từ thiết kế `DocuCore UI System v3`:
 
 ```
 Quyền yêu cầu:
-- organization.view   : Quyền tra cứu, xem sơ đồ tổ chức và danh mục
-- organization.manage : Quyền tạo, chỉnh sửa, điều chuyển và giải thể đơn vị
+- organization.view   : Quyền tra cứu, xem sơ đồ tổ chức, xuất dữ liệu và danh mục
+- organization.manage : Quyền tạo, chỉnh sửa, điều chuyển, bật/tắt kế thừa và giải thể đơn vị
 ```
 
 ### 3.1. Nhóm Doanh nghiệp / Pháp nhân (Companies - 4 APIs)
@@ -329,20 +363,22 @@ Quyền yêu cầu:
 | 25 | `PUT` | `/api/v1/job-levels/{jobLevelId}` | Cập nhật cấp bậc | `organization.manage` |
 | 26 | `DELETE` | `/api/v1/job-levels/{jobLevelId}` | Xóa cấp bậc (chưa có nhân viên tham chiếu) | `organization.manage` |
 
-### 3.7. Nhóm Cơ cấu Phòng ban & Sơ đồ tổ chức (Departments - 11 APIs)
+### 3.7. Nhóm Cơ cấu Phòng ban & Sơ đồ tổ chức (Departments - 13 APIs)
 | STT | Phương thức | Endpoint | Mô tả chức năng | Quyền yêu cầu |
 |:---:|:---:|---|---|:---:|
 | 27 | `GET` | `/api/v1/departments` | Danh sách phẳng các phòng ban (Query: `companyId`, `includeDissolved`, `asOf`) | `organization.view` |
 | 28 | `GET` | `/api/v1/departments/tree` | **Sơ đồ tổ chức dạng cây (Org Tree)**. Query: `companyId`, `asOf` (tra cứu quá khứ) | `organization.view` |
-| 29 | `POST` | `/api/v1/departments` | Tạo phòng ban mới (tự động sinh version đầu tiên `effectiveFrom`) | `organization.manage` |
-| 30 | `GET` | `/api/v1/departments/{departmentId}` | Chi tiết phòng ban tại thời điểm `asOf` | `organization.view` |
-| 31 | `PUT` | `/api/v1/departments/{departmentId}` | Sửa tên/trung tâm chi phí (tạo bản ghi `department_versions` mới) | `organization.manage` |
-| 32 | `PUT` | `/api/v1/departments/{departmentId}/manager` | Bổ nhiệm/thay đổi người quản lý trưởng bộ phận | `organization.manage` |
-| 33 | `GET` | `/api/v1/departments/{departmentId}/move-impact` | **Xem trước tác động điều chuyển**: Thống kê số phòng ban con và nhân viên bị kéo theo | `organization.manage` |
-| 34 | `POST` | `/api/v1/departments/{departmentId}/move` | **Điều chuyển phòng ban sang cấp trên mới** (Chặn đệ quy vòng lặp) | `organization.manage` |
-| 35 | `DELETE` | `/api/v1/departments/{departmentId}` | Giải thể phòng ban (đặt `dissolved_date`) | `organization.manage` |
-| 36 | `GET` | `/api/v1/departments/{departmentId}/versions` | Tra cứu toàn bộ lịch sử thay đổi cơ cấu của phòng ban | `organization.view` |
-| 37 | `GET` | `/api/v1/departments/{departmentId}/employees` | Danh sách nhân viên đang thuộc đơn vị (Query: `includeChildren`, `asOf`) | `organization.view` |
+| 29 | `GET` | `/api/v1/departments/export` | **Xuất sơ đồ tổ chức ra Excel/PDF** kèm ngày chốt cơ cấu và số phiên bản cây | `organization.view` |
+| 30 | `POST` | `/api/v1/departments` | Tạo phòng ban mới (tự động sinh version đầu tiên `effectiveFrom`) | `organization.manage` |
+| 31 | `GET` | `/api/v1/departments/{departmentId}` | Chi tiết phòng ban tại thời điểm `asOf` | `organization.view` |
+| 32 | `PUT` | `/api/v1/departments/{departmentId}` | Sửa tên/trung tâm chi phí (tạo bản ghi `department_versions` mới) | `organization.manage` |
+| 33 | `PUT` | `/api/v1/departments/{departmentId}/manager` | Bổ nhiệm/thay đổi người quản lý trưởng bộ phận | `organization.manage` |
+| 34 | `PUT` | `/api/v1/departments/{departmentId}/permission-inheritance` | **Bật/Tắt cờ kế thừa quyền** xuống các đơn vị con (`isPermissionInherited`) | `organization.manage` |
+| 35 | `GET` | `/api/v1/departments/{departmentId}/move-impact` | **Xem trước tác động điều chuyển**: Thống kê số phòng ban con và nhân viên bị kéo theo | `organization.manage` |
+| 36 | `POST` | `/api/v1/departments/{departmentId}/move` | **Điều chuyển phòng ban sang cấp trên mới** (Chặn đệ quy vòng lặp) | `organization.manage` |
+| 37 | `DELETE` | `/api/v1/departments/{departmentId}` | Giải thể phòng ban (đặt `dissolved_date`) | `organization.manage` |
+| 38 | `GET` | `/api/v1/departments/{departmentId}/versions` | Tra cứu toàn bộ lịch sử thay đổi cơ cấu của phòng ban | `organization.view` |
+| 39 | `GET` | `/api/v1/departments/{departmentId}/employees` | Danh sách nhân viên đang thuộc đơn vị (Query: `includeChildren`, `asOf`) | `organization.view` |
 
 ---
 
@@ -356,7 +392,7 @@ com.cyclosa.organization
 │   ├── CompanyController.java          # REST APIs cho Doanh nghiệp
 │   ├── RegionController.java           # REST APIs cho Vùng miền
 │   ├── BranchController.java           # REST APIs cho Chi nhánh & GPS
-│   ├── DepartmentController.java       # REST APIs cho Cơ cấu Phòng ban & Tree
+│   ├── DepartmentController.java       # REST APIs cho Cơ cấu Phòng ban, Tree & Export
 │   ├── CostCenterController.java       # REST APIs cho Trung tâm chi phí
 │   ├── JobTitleController.java         # REST APIs cho Chức danh
 │   └── JobLevelController.java         # REST APIs cho Cấp bậc
@@ -364,7 +400,7 @@ com.cyclosa.organization
 │   ├── CompanyService.java             # Direct @Service class
 │   ├── RegionService.java              # Direct @Service class
 │   ├── BranchService.java              # Direct @Service class
-│   ├── DepartmentService.java          # Direct @Service (Dựng cây, kiểm tra vòng lặp, phiên bản)
+│   ├── DepartmentService.java          # Direct @Service (Dựng cây, kiểm tra vòng lặp, phiên bản, xuất file)
 │   ├── CostCenterService.java          # Direct @Service class
 │   ├── JobTitleService.java            # Direct @Service class
 │   └── JobLevelService.java            # Direct @Service class
@@ -382,7 +418,7 @@ com.cyclosa.organization
 │   ├── Region.java                     # extends BaseEntity
 │   ├── Branch.java                     # extends BaseEntity
 │   ├── Department.java                 # extends BaseEntity
-│   ├── DepartmentVersion.java          # extends BaseEntity
+│   ├── DepartmentVersion.java          # extends BaseEntity (chứa is_permission_inherited)
 │   ├── CostCenter.java                 # extends BaseEntity
 │   ├── JobTitle.java                   # extends BaseEntity
 │   └── JobLevel.java                   # extends BaseEntity
@@ -396,6 +432,7 @@ com.cyclosa.organization
 │   │   ├── UpdateDepartmentRequest.java
 │   │   ├── MoveDepartmentRequest.java
 │   │   ├── AssignManagerRequest.java
+│   │   ├── ToggleInheritanceRequest.java
 │   │   └── ...
 │   └── response
 │       ├── CompanyResponse.java
@@ -480,8 +517,8 @@ Dải mã lỗi dành riêng cho Module 01: **`1400 - 1499`**
 
 | Giai đoạn | Nhiệm vụ kỹ thuật | Đầu ra nghiệm thu |
 | :--- | :--- | :--- |
-| **Sprint 1.1** | **Database Migration & Entities**<br>- Tạo script Flyway `V3__create_organization_tables.sql`.<br>- Khai báo các thực thể JPA `Company`, `Region`, `Branch`, `Department`, `DepartmentVersion`, `CostCenter`, `JobTitle`, `JobLevel`. | Bảng CSDL tạo thành công, `mvnw test-compile` đạt 0 lỗi. |
+| **Sprint 1.1** | **Database Migration & Entities**<br>- Tạo script Flyway `V3__create_organization_tables.sql`.<br>- Khai báo các thực thể JPA `Company`, `Region`, `Branch`, `Department`, `DepartmentVersion` (kèm `isPermissionInherited`), `CostCenter`, `JobTitle`, `JobLevel`. | Bảng CSDL tạo thành công, `mvnw test-compile` đạt 0 lỗi. |
 | **Sprint 1.2** | **Công ty, Vùng miền & Chi nhánh (GPS Geofence)**<br>- Triển khai CRUD Công ty, Vùng miền, Chi nhánh.<br>- Thẩm định tọa độ GPS và bán kính chấm công. | 13 APIs (STT 1-13) hoạt động trơn tru. |
 | **Sprint 1.3** | **Chức danh, Cấp bậc & Trung tâm chi phí**<br>- CRUD `JobTitle`, `JobLevel` (sắp xếp `rank_order`), `CostCenter`. | 13 APIs (STT 14-26) hoàn thiện. |
-| **Sprint 1.4** | **Cơ cấu Phòng ban & Sơ đồ tổ chức đa cấp (Org Tree)**<br>- Quản lý phiên bản hiệu lực `department_versions`.<br>- Thuật toán dựng cây Org Tree (`/departments/tree`).<br>- Thuật toán chống vòng lặp (Cycle Detection) khi điều chuyển.<br>- Xem trước tác động điều chuyển (`/move-impact`).<br>- Giải thể phòng ban (`dissolved_date`). | 11 APIs (STT 27-37) hoàn thiện với đầy đủ unit test logic cây. |
-| **Sprint 1.5** | **Kiểm thử tích hợp & Cập nhật Tài liệu**<br>- Kiểm thử toàn diện 37 API endpoints.<br>- Cập nhật [`API_TRACKING.md`](file:///f:/Project/CYCLOSA/cyclosa_fe/docs/API_TRACKING.md). | Module 01 sẵn sàng làm nền tảng cho Module 05 (Hồ sơ nhân sự) và Frontend. |
+| **Sprint 1.4** | **Cơ cấu Phòng ban & Sơ đồ tổ chức đa cấp (Org Tree & Export)**<br>- Quản lý phiên bản hiệu lực `department_versions`.<br>- Thuật toán dựng cây Org Tree (`/departments/tree`).<br>- Xuất sơ đồ tổ chức (`/departments/export`).<br>- Bật/tắt cờ kế thừa quyền (`/permission-inheritance`).<br>- Thuật toán chống vòng lặp (Cycle Detection) khi điều chuyển.<br>- Xem trước tác động điều chuyển (`/move-impact`).<br>- Giải thể phòng ban (`dissolved_date`). | 13 APIs (STT 27-39) hoàn thiện với đầy đủ unit test logic cây. |
+| **Sprint 1.5** | **Kiểm thử tích hợp & Cập nhật Tài liệu**<br>- Kiểm thử toàn diện 39 API endpoints.<br>- Cập nhật [`API_TRACKING.md`](file:///f:/Project/CYCLOSA/cyclosa_fe/docs/API_TRACKING.md). | Module 01 sẵn sàng làm nền tảng cho Module 05 (Hồ sơ nhân sự) và Frontend. |
