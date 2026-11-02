@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,6 +20,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class OrganizationDataSeeder implements CommandLineRunner {
 
+    private final JdbcTemplate jdbcTemplate;
     private final CompanyRepository companyRepository;
     private final RegionRepository regionRepository;
     private final BranchRepository branchRepository;
@@ -33,25 +35,38 @@ public class OrganizationDataSeeder implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (companyRepository.existsById(DEFAULT_COMPANY_ID)) {
-            log.info("Dữ liệu tổ chức mặc định đã tồn tại, bỏ qua Seeding.");
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT count(*) FROM companies WHERE id = ? OR code = ?",
+                Integer.class,
+                DEFAULT_COMPANY_ID,
+                "CYC_CORP"
+        );
+        if (count != null && count > 0) {
+            log.info("Dữ liệu tổ chức mặc định đã tồn tại trong database, bỏ qua Seeding.");
             return;
         }
 
         log.info("Bắt đầu khởi tạo dữ liệu mẫu Module Quản lý tổ chức CYCLOSA...");
 
-        // 1. Công ty
-        Company company = Company.builder()
-                .code("CYC_CORP")
-                .name("Công ty Cổ phần Tập đoàn CYCLOSA")
-                .taxCode("0109998888")
-                .address("Tòa nhà Keangnam Landmark 72, Đường Phạm Hùng, Nam Từ Liêm, Hà Nội")
-                .phone("02473008888")
-                .email("contact@cyclosa.vn")
-                .status("ACTIVE")
-                .build();
-        company.setId(DEFAULT_COMPANY_ID);
-        company = companyRepository.save(company);
+        // 1. Chèn Công ty mặc định với UUID cố định qua JdbcTemplate để tránh xung đột Hibernate merge()
+        jdbcTemplate.update("""
+            INSERT INTO companies (id, code, name, tax_code, address, phone, email, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
+            ON CONFLICT (id) DO NOTHING
+        """,
+                DEFAULT_COMPANY_ID,
+                "CYC_CORP",
+                "Công ty Cổ phần Tập đoàn CYCLOSA",
+                "0109998888",
+                "Tòa nhà Keangnam Landmark 72, Đường Phạm Hùng, Nam Từ Liêm, Hà Nội",
+                "02473008888",
+                "contact@cyclosa.vn",
+                "ACTIVE"
+        );
+
+        Company company = companyRepository.findById(DEFAULT_COMPANY_ID)
+                .orElseGet(() -> companyRepository.findByCode("CYC_CORP")
+                        .orElseThrow(() -> new IllegalStateException("Không tìm thấy công ty mặc định sau khi seed")));
 
         // 2. Vùng miền
         Region regNorth = Region.builder()
