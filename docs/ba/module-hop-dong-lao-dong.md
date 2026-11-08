@@ -443,3 +443,4 @@ gantt
 3. Modal Soạn thảo hợp đồng mới, Modal Xem trước PDF & Lịch sử phiên bản.
 4. Giao diện Ký điện tử cho nhân viên (Xem văn bản, bấm Gửi mã OTP, nhập OTP xác nhận ký).
 5. Kiểm thử E2E: Tạo hợp đồng -> Phê duyệt -> Ký điện tử -> Kiểm tra băm toàn vẹn -> Tái ký hợp đồng.
+
