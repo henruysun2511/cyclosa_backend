@@ -25,10 +25,12 @@ public interface DepartmentRepository extends JpaRepository<Department, UUID> {
 
     boolean existsByCompanyIdAndCodeAndIdNot(UUID companyId, String code, UUID id);
 
-    @Query("SELECT d FROM Department d JOIN d.versions v WHERE d.companyId = :companyId " +
-           "AND (:keyword IS NULL OR LOWER(d.code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(v.name) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "GROUP BY d")
+    @Query(value = "SELECT DISTINCT d FROM Department d LEFT JOIN d.versions v WHERE d.companyId = :companyId " +
+           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(d.code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(v.name) LIKE LOWER(CONCAT('%', :keyword, '%')))",
+           countQuery = "SELECT COUNT(DISTINCT d) FROM Department d LEFT JOIN d.versions v WHERE d.companyId = :companyId " +
+           "AND (:keyword IS NULL OR :keyword = '' OR LOWER(d.code) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "OR LOWER(v.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Department> search(@Param("companyId") UUID companyId, @Param("keyword") String keyword, Pageable pageable);
 }
 
