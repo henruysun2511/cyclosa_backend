@@ -21,9 +21,9 @@ public interface CompanyRepository extends JpaRepository<Company, UUID> {
     boolean existsByCodeAndIdNot(String code, UUID id);
 
     @Query("SELECT c FROM Company c WHERE " +
-           "(:keyword IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
-           "OR LOWER(c.code) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
-           "AND (:status IS NULL OR c.status = :status)")
+           "(cast(:keyword as string) IS NULL OR LOWER(c.name) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%')) " +
+           "OR LOWER(c.code) LIKE LOWER(CONCAT('%', cast(:keyword as string), '%'))) " +
+           "AND (cast(:status as string) IS NULL OR c.status = cast(:status as string))")
     Page<Company> search(@Param("keyword") String keyword, @Param("status") String status, Pageable pageable);
 }
 

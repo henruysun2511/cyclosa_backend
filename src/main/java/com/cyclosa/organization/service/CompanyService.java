@@ -35,7 +35,12 @@ public class CompanyService {
     public PageData<CompanyResponse> getCompanies(CompanyFilterRequest filter) {
         String kw = PageableUtils.normalizeKeyword(filter.getKeyword());
         Pageable pageable = filter.toPageable("createdAt", ALLOWED_SORT_FIELDS);
-        Page<Company> page = companyRepository.search(kw, filter.getStatus(), pageable);
+        Page<Company> page;
+        if (kw == null && (filter.getStatus() == null || filter.getStatus().isBlank())) {
+            page = companyRepository.findAll(pageable);
+        } else {
+            page = companyRepository.search(kw, filter.getStatus(), pageable);
+        }
         return PageData.of(page, companyMapper::toResponse);
     }
 
