@@ -239,7 +239,116 @@ erDiagram
 
 ---
 
-### 2.2. Kịch bản DDL PostgreSQL Chi tiết (Production-ready SQL)
+### 2.2. Data Dictionary — Bảng `workflow_definitions` (Định nghĩa quy trình phê duyệt)
+Mục đích: Thiết lập khung quy trình phê duyệt chuẩn cho từng loại chứng từ nhân sự áp dụng theo phạm vi Công ty / Pháp nhân.
+
+| Tên cột | Kiểu dữ liệu | Ràng buộc | Mô tả chi tiết nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY` | Khóa chính định danh duy nhất quy trình |
+| `company_id` | `UUID` | `FK -> companies.id, NOT NULL` | Công ty / Pháp nhân sở hữu và áp dụng quy trình |
+| `request_type` | `VARCHAR(50)` | `NOT NULL` | Loại chứng từ áp dụng: `CONTRACT`, `CONTRACT_APPENDIX`, `RECRUITMENT_REQUEST`, `OFFER`, `LEAVE_REQUEST`, `TRANSFER_REQUEST`, `RESIGNATION`, `PROBATION_EVAL`, `ORG_SCENARIO`... |
+| `name` | `VARCHAR(255)` | `NOT NULL` | Tên quy trình hiển thị (VD: "Quy trình Phê duyệt Hợp đồng Lao động & Phụ cấp Khối Văn phòng") |
+| `description` | `TEXT` | `NULL` | Diễn giải chi tiết mục đích, phạm vi và đối tượng áp dụng của quy trình |
+| `is_active` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | Cờ kích hoạt (`true` = Đang áp dụng; `false` = Ngừng kích hoạt / Lưu trữ) |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm khởi tạo quy trình |
+| `updated_at` | `TIMESTAMP WITH TIME ZONE` | `NULL` | Thời điểm cập nhật cấu hình quy trình gần nhất |
+| `created_by` | `VARCHAR(100)` | `NULL` | Username / Email người tạo cấu hình |
+| `updated_by` | `VARCHAR(100)` | `NULL` | Username / Email người cập nhật cấu hình cuối cùng |
+
+*Ràng buộc duy nhất:* `UNIQUE (company_id, request_type, is_active)` — Đảm bảo trong cùng 1 công ty, tại mỗi thời điểm chỉ có duy nhất 01 quy trình được kích hoạt (`is_active = true`) cho mỗi loại chứng từ `request_type`.
+
+---
+
+### 2.3. Data Dictionary — Bảng `workflow_definition_steps` (Các bước tuần tự của quy trình)
+Mục đích: Định nghĩa các mốc phê duyệt tuần tự (Step 1 $\rightarrow$ Step 2 $\rightarrow$ Step 3...), chỉ định thẩm quyền người duyệt và điều kiện rẽ nhánh.
+
+| Tên cột | Kiểu dữ liệu | Ràng buộc | Mô tả chi tiết nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY` | Khóa chính định danh duy nhất bước định nghĩa |
+| `definition_id` | `UUID` | `FK -> workflow_definitions.id, NOT NULL` | Thuộc quy trình định nghĩa nào (Xóa quy trình sẽ Cascade xóa các bước) |
+| `step_order` | `INT` | `NOT NULL, CHECK (step_order >= 1)` | Thứ tự thực hiện bước (1, 2, 3... chạy theo thứ tự tăng dần) |
+| `step_name` | `VARCHAR(150)` | `NOT NULL` | Tên bước duyệt (VD: "Quản lý trực tiếp xác nhận", "Trưởng phòng Nhân sự duyệt lương", "CEO phê duyệt vượt khung") |
+| `approver_type` | `VARCHAR(50)` | `NOT NULL` | Cơ chế xác định người duyệt: `DIRECT_MANAGER`, `DEPARTMENT_HEAD`, `ROLE`, `SPECIFIC_EMPLOYEE` |
+| `approver_role_id` | `UUID` | `FK -> roles.id, NULL` | Khóa ngoại tới vai trò phê duyệt. Bắt buộc khi `approver_type = 'ROLE'` |
+| `approver_employee_id` | `UUID` | `FK -> employees.id, NULL` | Khóa ngoại tới nhân viên được chỉ định đích danh. Bắt buộc khi `approver_type = 'SPECIFIC_EMPLOYEE'` |
+| `condition_type` | `VARCHAR(50)` | `NOT NULL, DEFAULT 'ALWAYS'` | Điều kiện kích hoạt bước: `ALWAYS`, `SALARY_ABOVE_BAND`, `AMOUNT_ABOVE_THRESHOLD` |
+| `condition_threshold` | `NUMERIC(18,2)` | `NULL` | Ngưỡng giá trị kích hoạt (Số tiền VND) khi `condition_type = 'AMOUNT_ABOVE_THRESHOLD'` |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm tạo bước cấu hình |
+
+*Ràng buộc nghiệp vụ & Kiểm tra:*
+- `UNIQUE (definition_id, step_order)`: Trong cùng 1 quy trình, không được phép trùng số thứ tự bước.
+- `CHECK`: Khi `approver_type = 'ROLE'` thì `approver_role_id` không được `NULL`; khi `approver_type = 'SPECIFIC_EMPLOYEE'` thì `approver_employee_id` không được `NULL`.
+
+---
+
+### 2.4. Data Dictionary — Bảng `workflow_requests` (Hồ sơ yêu cầu phê duyệt thực tế)
+Mục đích: Thực thể đại diện cho một phiếu yêu cầu phê duyệt được sinh ra khi người dùng bấm "Gửi phê duyệt" trên bất kỳ phân hệ nghiệp vụ nào.
+
+| Tên cột | Kiểu dữ liệu | Ràng buộc | Mô tả chi tiết nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY` | Khóa chính định danh duy nhất yêu cầu phê duyệt |
+| `definition_id` | `UUID` | `FK -> workflow_definitions.id, NOT NULL` | Quy trình định nghĩa được áp dụng tại thời điểm nộp đơn |
+| `request_type` | `VARCHAR(50)` | `NOT NULL` | Loại chứng từ nghiệp vụ (Denormalized từ `workflow_definitions` để tăng tốc độ truy vấn Hộp thư) |
+| `reference_id` | `UUID` | `NOT NULL` | Khóa ngoại đa hình (Polymorphic ID) trỏ tới ID của chứng từ nghiệp vụ (`contracts.id`, `recruitment_requests.id`, `offers.id`...) |
+| `reference_code` | `VARCHAR(100)` | `NULL` | Mã chứng từ hiển thị phục vụ tra cứu nhanh (VD: "HĐ-2026/001", "REQ-TECH-04", "OFF-2026-88") |
+| `title` | `VARCHAR(255)` | `NOT NULL` | Tiêu đề tóm tắt yêu cầu (VD: "Phê duyệt HĐLĐ cho nhân viên Nguyễn Văn A - Vị trí Senior Frontend") |
+| `requested_by_user_id` | `UUID` | `FK -> users.id, NOT NULL` | Tài khoản người dùng thực hiện bấm gửi yêu cầu phê duyệt |
+| `requester_employee_id`| `UUID` | `FK -> employees.id, NULL` | Hồ sơ nhân viên tương ứng của người gửi yêu cầu (nếu tài khoản đã gắn với nhân sự) |
+| `request_amount` | `NUMERIC(18,2)` | `NULL` | Giá trị tiền gắn kèm yêu cầu (Mức lương, Tổng ngân sách...) để Engine đánh giá điều kiện `AMOUNT_ABOVE_THRESHOLD` |
+| `metadata` | `JSONB` | `NOT NULL, DEFAULT '{}'` | Dữ liệu ngữ cảnh bổ trợ (Context Payload) truyền từ module nghiệp vụ (VD: `jobOpeningSalaryMax`, `departmentName`, `candidateName`...) |
+| `submitted_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm chính thức nộp hồ sơ trình duyệt |
+| `cancelled_at` | `TIMESTAMP WITH TIME ZONE` | `NULL` | Thời điểm người gửi rút lại / Hủy yêu cầu (`NULL` = Chưa hủy) |
+| `cancel_reason` | `TEXT` | `NULL` | Lý do người gửi rút lại hồ sơ yêu cầu |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm tạo bản ghi hệ thống |
+
+---
+
+### 2.5. Data Dictionary — Bảng `workflow_request_steps` (Chi tiết thực thi từng bước duyệt)
+Mục đích: Lưu trữ trạng thái chi tiết của từng bước duyệt trong một hồ sơ cụ thể: Ai duyệt, duyệt khi nào, kết quả ra sao, nhận xét là gì.
+
+| Tên cột | Kiểu dữ liệu | Ràng buộc | Mô tả chi tiết nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY` | Khóa chính định danh duy nhất bước thực thi |
+| `request_id` | `UUID` | `FK -> workflow_requests.id, NOT NULL` | Thuộc yêu cầu phê duyệt nào (Cascade xóa khi hủy/xóa request) |
+| `definition_step_id` | `UUID` | `FK -> workflow_definition_steps.id, NOT NULL` | Tham chiếu tới cấu hình bước định nghĩa gốc |
+| `step_order` | `INT` | `NOT NULL` | Thứ tự bước thực thi |
+| `step_name` | `VARCHAR(150)` | `NOT NULL` | Tên bước duyệt tại thời điểm tạo yêu cầu |
+| `assignee_employee_id` | `UUID` | `FK -> employees.id, NOT NULL` | Nhân viên được hệ thống chỉ định thẩm quyền duyệt bước này (đã giải mã từ Quản lý trực tiếp, Trưởng phòng, Role, hoặc Ủy quyền) |
+| `decision` | `VARCHAR(30)` | `NULL` | Quyết định phê duyệt: `APPROVED` (Chấp thuận), `REJECTED` (Từ chối), `SKIPPED` (Tự động bỏ qua do không thỏa mãn điều kiện), `NULL` (Chưa xử lý) |
+| `decided_at` | `TIMESTAMP WITH TIME ZONE` | `NULL` | Thời điểm người duyệt bấm nút phê duyệt hoặc từ chối |
+| `comment` | `TEXT` | `NULL` | Ý kiến chỉ đạo, nhận xét, hoặc lý do từ chối (Bắt buộc nhập $\ge 5$ ký tự khi `decision = 'REJECTED'`) |
+| `is_current` | `BOOLEAN` | `NOT NULL, DEFAULT FALSE` | Cờ đánh dấu bước **đang chờ xử lý** (`true` = Đang là lượt của người này; `false` = Chưa đến lượt hoặc đã xử lý xong) |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm tạo bản ghi bước |
+
+*Ràng buộc duy nhất & Chỉ mục:*
+- `UNIQUE (request_id, definition_step_id)`: Mỗi bước định nghĩa chỉ xuất hiện tối đa 1 lần trong 1 yêu cầu.
+- `INDEX idx_wf_step_assignee_pending`: Tối ưu hóa cực nhanh cho truy vấn **Hộp thư việc cần tôi duyệt (`/workflow-requests/inbox`)** thông qua điều kiện `WHERE is_current = true`.
+
+---
+
+### 2.6. Data Dictionary — Bảng `workflow_delegations` (Ủy quyền phê duyệt thay thế)
+Mục đích: Cho phép lãnh đạo/cấp quản lý ủy quyền thẩm quyền duyệt chứng từ cho cấp phó hoặc nhân sự chỉ định trong thời gian đi công tác, nghỉ phép, đào tạo.
+
+| Tên cột | Kiểu dữ liệu | Ràng buộc | Mô tả chi tiết nghiệp vụ |
+| :--- | :--- | :--- | :--- |
+| `id` | `UUID` | `PRIMARY KEY` | Khóa chính định danh duy nhất lượt ủy quyền |
+| `company_id` | `UUID` | `FK -> companies.id, NOT NULL` | Công ty / Pháp nhân diễn ra ủy quyền |
+| `delegator_employee_id`| `UUID` | `FK -> employees.id, NOT NULL` | Nhân viên ủy quyền (Người đang giữ quyền duyệt gốc) |
+| `delegatee_employee_id`| `UUID` | `FK -> employees.id, NOT NULL` | Nhân viên nhận ủy quyền (Người được giao duyệt thay) |
+| `request_type` | `VARCHAR(50)` | `NOT NULL, DEFAULT 'ALL'` | Loại chứng từ được ủy quyền: `ALL` (Toàn bộ) hoặc mã cụ thể (`CONTRACT`, `LEAVE_REQUEST`...) |
+| `start_date` | `DATE` | `NOT NULL` | Ngày bắt đầu có hiệu lực ủy quyền |
+| `end_date` | `DATE` | `NOT NULL` | Ngày kết thúc hiệu lực ủy quyền |
+| `reason` | `TEXT` | `NOT NULL` | Lý do ủy quyền (Đi công tác nước ngoài, nghỉ chế độ thai sản, công việc đột xuất...) |
+| `is_active` | `BOOLEAN` | `NOT NULL, DEFAULT TRUE` | Cờ kích hoạt lượt ủy quyền (`true` = Hiệu lực; `false` = Thu hồi ủy quyền trước hạn) |
+| `created_at` | `TIMESTAMP WITH TIME ZONE` | `NOT NULL, DEFAULT CURRENT_TIMESTAMP` | Thời điểm tạo lệnh ủy quyền |
+
+*Ràng buộc nghiệp vụ & Kiểm tra:*
+- `CHECK (end_date >= start_date)`: Ngày kết thúc không được trước ngày bắt đầu.
+- `CHECK (delegator_employee_id <> delegatee_employee_id)`: Không được tự ủy quyền cho chính mình.
+
+---
+
+### 2.7. Kịch bản DDL PostgreSQL Chi tiết (Production-ready SQL)
 
 ```sql
 -- =============================================================================
@@ -606,3 +715,4 @@ gantt
 1. Xây dựng trang Hộp thư Phê duyệt `/approvals` với 3 tabs: *Chờ tôi duyệt*, *Tôi đã gửi*, *Lịch sử đã duyệt*.
 2. Xây dựng Component tái sử dụng `<ApprovalTimeline />` nhúng vào trang chi tiết hợp đồng `/contracts/[id]` và chi tiết tuyển dụng.
 3. Xây dựng màn hình trực quan cấu hình quy trình `/settings/workflows`.
+
