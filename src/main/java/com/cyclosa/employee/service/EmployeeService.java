@@ -228,8 +228,15 @@ public class EmployeeService {
                 Sort.by(Sort.Direction.DESC, "createdAt")
         );
 
-        Page<Employee> page = employeeRepository.search(filter.getCompanyId(), kw, pageable);
         LocalDate today = LocalDate.now();
+        Page<Employee> page = employeeRepository.searchWithFilters(
+                filter.getCompanyId(),
+                filter.getDepartmentId(),
+                filter.getStatus(),
+                kw,
+                today,
+                pageable
+        );
 
         return PageData.of(page, emp -> {
             EmployeeWorkAssignment currentAssignment = workAssignmentRepository

@@ -27,13 +27,23 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
     @Query("SELECT c FROM Contract c WHERE (:companyId IS NULL OR c.employerCompanyId = :companyId) " +
            "AND (:employeeId IS NULL OR c.employeeId = :employeeId) " +
            "AND (:contractType IS NULL OR c.contractType = :contractType) " +
-           "AND (:status IS NULL OR c.status = :status) " +
+           "AND (:status IS NULL OR c.status = :status OR (:status = com.cyclosa.contract.entity.enums.ContractStatus.IN_SIGNING AND c.status = com.cyclosa.contract.entity.enums.ContractStatus.PENDING_SIGNATURE) OR (:status = com.cyclosa.contract.entity.enums.ContractStatus.PENDING_SIGNATURE AND c.status = com.cyclosa.contract.entity.enums.ContractStatus.IN_SIGNING)) " +
+           "AND (:expiringBefore IS NULL OR (c.endDate IS NOT NULL AND c.endDate <= :expiringBefore AND c.status = com.cyclosa.contract.entity.enums.ContractStatus.ACTIVE)) " +
+           "AND (:keyword IS NULL OR :keyword = '' " +
+           "     OR LOWER(c.contractNo) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR EXISTS (" +
+           "         SELECT 1 FROM com.cyclosa.employee.entity.Employee e WHERE e.id = c.employeeId " +
+           "         AND (LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "              OR LOWER(CONCAT(e.lastName, ' ', e.firstName)) LIKE LOWER(CONCAT('%', :keyword, '%')))" +
+           "     )) " +
            "ORDER BY c.createdAt DESC")
     Page<Contract> findByCompanyAndFilter(
             @Param("companyId") UUID companyId,
             @Param("employeeId") UUID employeeId,
             @Param("contractType") ContractType contractType,
             @Param("status") ContractStatus status,
+            @Param("keyword") String keyword,
+            @Param("expiringBefore") LocalDate expiringBefore,
             Pageable pageable
     );
 

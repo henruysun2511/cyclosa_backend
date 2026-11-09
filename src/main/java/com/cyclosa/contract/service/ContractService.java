@@ -56,9 +56,12 @@ public class ContractService {
             UUID employeeId,
             ContractType contractType,
             ContractStatus status,
+            String keyword,
+            LocalDate expiringBefore,
             Pageable pageable
     ) {
-        Page<Contract> page = contractRepository.findByCompanyAndFilter(companyId, employeeId, contractType, status, pageable);
+        String kw = com.cyclosa.common.util.PageableUtils.normalizeKeyword(keyword);
+        Page<Contract> page = contractRepository.findByCompanyAndFilter(companyId, employeeId, contractType, status, kw, expiringBefore, pageable);
         return PageData.of(page, this::mapToSummaryResponse);
     }
 

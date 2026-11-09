@@ -20,11 +20,13 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,11 +52,13 @@ public class ContractController {
             @RequestParam(required = false) UUID employeeId,
             @RequestParam(required = false) ContractType contractType,
             @RequestParam(required = false) ContractStatus status,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate expiringBefore,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size
     ) {
         PageData<ContractDto.ContractSummaryResponse> result = contractService.getContracts(
-                companyId, employeeId, contractType, status, PageRequest.of(Math.max(0, page), Math.max(1, size))
+                companyId, employeeId, contractType, status, search, expiringBefore, PageRequest.of(Math.max(0, page), Math.max(1, size))
         );
         return ResponseEntity.ok(ApiResponse.ok(result, "Lấy danh sách hợp đồng thành công"));
     }

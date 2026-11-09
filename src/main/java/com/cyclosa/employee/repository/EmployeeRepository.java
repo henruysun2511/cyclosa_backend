@@ -39,6 +39,46 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
            "OR LOWER(e.personalEmail) LIKE LOWER(CONCAT('%', :keyword, '%')))")
     Page<Employee> search(@Param("companyId") UUID companyId, @Param("keyword") String keyword, Pageable pageable);
 
+    @Query("SELECT DISTINCT e FROM Employee e " +
+           "WHERE (:companyId IS NULL OR e.companyId = :companyId) " +
+           "AND (:keyword IS NULL OR :keyword = '' " +
+           "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR LOWER(CONCAT(e.lastName, ' ', e.firstName)) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR LOWER(e.phone) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+           "     OR LOWER(e.personalEmail) LIKE LOWER(CONCAT('%', :keyword, '%'))) " +
+           "AND (:departmentId IS NULL OR EXISTS (" +
+           "     SELECT 1 FROM EmployeeWorkAssignment a " +
+           "     WHERE a.employee.id = e.id " +
+           "     AND a.department.id = :departmentId " +
+           "     AND a.effectiveFrom <= :asOfDate " +
+           "     AND NOT EXISTS (" +
+           "         SELECT 1 FROM EmployeeWorkAssignment a2 " +
+           "         WHERE a2.employee.id = e.id " +
+           "         AND a2.effectiveFrom <= :asOfDate " +
+           "         AND a2.effectiveFrom > a.effectiveFrom" +
+           "     )" +
+           ")) " +
+           "AND (:status IS NULL OR EXISTS (" +
+           "     SELECT 1 FROM EmployeeStatusHistory s " +
+           "     WHERE s.employee.id = e.id " +
+           "     AND s.status = :status " +
+           "     AND s.effectiveFrom <= :asOfDate " +
+           "     AND NOT EXISTS (" +
+           "         SELECT 1 FROM EmployeeStatusHistory s2 " +
+           "         WHERE s2.employee.id = e.id " +
+           "         AND s2.effectiveFrom <= :asOfDate " +
+           "         AND s2.effectiveFrom > s.effectiveFrom" +
+           "     )" +
+           "))")
+    Page<Employee> searchWithFilters(
+            @Param("companyId") UUID companyId,
+            @Param("departmentId") UUID departmentId,
+            @Param("status") com.cyclosa.employee.entity.enums.EmployeeStatus status,
+            @Param("keyword") String keyword,
+            @Param("asOfDate") java.time.LocalDate asOfDate,
+            Pageable pageable
+    );
+
     @Query("SELECT COUNT(e) FROM Employee e WHERE e.companyId = :companyId AND e.employeeCode LIKE CONCAT(:prefix, '%')")
     long countByPrefix(@Param("companyId") UUID companyId, @Param("prefix") String prefix);
 }
