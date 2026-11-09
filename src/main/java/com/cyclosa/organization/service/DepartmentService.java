@@ -27,6 +27,7 @@ import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -49,6 +50,7 @@ public class DepartmentService {
     private final CompanyRepository companyRepository;
     private final CostCenterRepository costCenterRepository;
     private final DepartmentMapper departmentMapper;
+    private final JdbcTemplate jdbcTemplate;
 
     public PageData<DepartmentResponse> getDepartments(DepartmentFilterRequest filter) {
         verifyCompanyExists(filter.getCompanyId());
@@ -107,11 +109,15 @@ public class DepartmentService {
                 activeVersions.stream().map(DepartmentVersion::getCostCenterId).filter(Objects::nonNull).collect(Collectors.toSet())
         );
 
+        // Đếm số lượng nhân viên thực tế đang công tác theo từng phòng ban
+        Map<UUID, Integer> memberCountMap = getMemberCountsForCompany(companyId, queryDate);
+
         Map<UUID, DepartmentNodeResponse> nodeMap = new HashMap<>();
         List<DepartmentNodeResponse> rootNodes = new ArrayList<>();
 
         for (DepartmentVersion v : activeVersions) {
             Department dept = v.getDepartment();
+            int directCount = memberCountMap.getOrDefault(dept.getId(), 0);
             DepartmentNodeResponse node = DepartmentNodeResponse.builder()
                     .id(dept.getId())
                     .code(dept.getCode())
@@ -122,7 +128,7 @@ public class DepartmentService {
                     .managerEmployeeId(v.getManagerEmployeeId())
                     .isPermissionInherited(v.getIsPermissionInherited())
                     .effectiveFrom(v.getEffectiveFrom())
-                    .memberCount(0)
+                    .memberCount(directCount)
                     .children(new ArrayList<>())
                     .build();
             nodeMap.put(dept.getId(), node);
@@ -136,7 +142,48 @@ public class DepartmentService {
             }
         }
 
+        // Tính tổng số lượng nhân sự bao gồm các nhánh phòng ban con
+        for (DepartmentNodeResponse root : rootNodes) {
+            aggregateSubtreeMembers(root);
+        }
+
         return rootNodes;
+    }
+
+    private Map<UUID, Integer> getMemberCountsForCompany(UUID companyId, LocalDate queryDate) {
+        String sql = """
+            SELECT wa.department_id, count(DISTINCT wa.employee_id) AS cnt
+            FROM employee_work_assignments wa
+            JOIN employees e ON wa.employee_id = e.id
+            WHERE e.company_id = ?
+              AND e.deleted_at IS NULL
+              AND wa.effective_from <= ?
+              AND NOT EXISTS (
+                  SELECT 1 FROM employee_work_assignments later
+                  WHERE later.employee_id = wa.employee_id
+                    AND later.effective_from <= ?
+                    AND (later.effective_from > wa.effective_from OR (later.effective_from = wa.effective_from AND later.id > wa.id))
+              )
+            GROUP BY wa.department_id
+        """;
+        Map<UUID, Integer> map = new HashMap<>();
+        try {
+            jdbcTemplate.query(sql, rs -> {
+                map.put((UUID) rs.getObject(1), rs.getInt(2));
+            }, companyId, queryDate, queryDate);
+        } catch (Exception ex) {
+            log.warn("Không thể truy vấn số lượng nhân viên phòng ban: {}", ex.getMessage());
+        }
+        return map;
+    }
+
+    private int aggregateSubtreeMembers(DepartmentNodeResponse node) {
+        int total = node.getMemberCount() != null ? node.getMemberCount() : 0;
+        for (DepartmentNodeResponse child : node.getChildren()) {
+            total += aggregateSubtreeMembers(child);
+        }
+        node.setMemberCount(total);
+        return total;
     }
 
     @Transactional
