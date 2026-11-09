@@ -115,6 +115,27 @@ public class ContractTemplateController {
                 .body(ApiResponse.created(result, "Tải lên phiên bản mẫu mới thành công"));
     }
 
+    @PostMapping("/contract-templates/{templateId}/versions/{versionId}/publish")
+    @PreAuthorize("@perm.has('contract.view') or @perm.has('contract.create')")
+    @Operation(summary = "Kích hoạt áp dụng phiên bản mẫu")
+    public ResponseEntity<ApiResponse<Void>> publishVersion(
+            @PathVariable UUID templateId,
+            @PathVariable UUID versionId
+    ) {
+        templateService.publishVersion(templateId, versionId);
+        return ResponseEntity.ok(ApiResponse.ok(null, "Kích hoạt phiên bản mẫu thành công"));
+    }
+
+    @PostMapping("/contract-templates/render-preview")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "Xem trước nội dung hợp đồng khi gán dữ liệu biến vào mẫu")
+    public ResponseEntity<ApiResponse<String>> renderPreview(
+            @RequestBody(required = false) ContractTemplateDto.RenderPreviewRequest request
+    ) {
+        String result = templateService.renderPreview(request);
+        return ResponseEntity.ok(ApiResponse.ok(result, "Render xem trước mẫu hợp đồng thành công"));
+    }
+
     @GetMapping("/contract-template-versions/{versionId}/download")
     @PreAuthorize("@perm.has('contract.view')")
     @RequirePermission("contract.view")

@@ -24,13 +24,25 @@ public class ContractTemplateDto {
         @NotBlank(message = "Tên mẫu hợp đồng không được để trống")
         private String name;
 
-        @NotNull(message = "Loại mẫu không được để trống")
         private TemplateKind templateKind;
+        private TemplateKind kind;
+        private String templateCode;
 
         private ContractType contractType;
         private UUID jobTitleId;
         private UUID departmentId;
         private UUID branchId;
+
+        private TemplateFormat format;
+        private String contentRaw;
+        private String sampleDataJson;
+        private String description;
+
+        public TemplateKind getEffectiveTemplateKind() {
+            if (templateKind != null) return templateKind;
+            if (kind != null) return kind;
+            return TemplateKind.LABOR_CONTRACT;
+        }
     }
 
     @Getter
@@ -42,14 +54,21 @@ public class ContractTemplateDto {
         @NotBlank(message = "Tên mẫu hợp đồng không được để trống")
         private String name;
 
-        @NotNull(message = "Loại mẫu không được để trống")
         private TemplateKind templateKind;
+        private TemplateKind kind;
 
         private ContractType contractType;
         private UUID jobTitleId;
         private UUID departmentId;
         private UUID branchId;
         private Boolean active;
+        private String description;
+
+        public TemplateKind getEffectiveTemplateKind() {
+            if (templateKind != null) return templateKind;
+            if (kind != null) return kind;
+            return TemplateKind.LABOR_CONTRACT;
+        }
     }
 
     @Getter
@@ -58,13 +77,25 @@ public class ContractTemplateDto {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateVersionRequest {
-        @NotNull(message = "Định dạng tệp mẫu không được để trống")
         private TemplateFormat format;
-
-        @NotBlank(message = "Đường dẫn tệp mẫu không được để trống")
         private String fileUrl;
-
         private String description;
+        private String contentRaw;
+        private String sampleDataJson;
+    }
+
+    @Getter
+    @Setter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class RenderPreviewRequest {
+        private UUID templateId;
+        private UUID versionId;
+        private String contentRaw;
+        private String contentPayload;
+        private String sampleDataJson;
+        private java.util.Map<String, Object> data;
     }
 
     @Getter
