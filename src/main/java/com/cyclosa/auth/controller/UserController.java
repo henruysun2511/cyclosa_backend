@@ -22,7 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
-@Tag(name = "0. Quản lý Tài khoản (User Management)", description = "Các API dành cho Quản trị viên để tạo, xem, khóa/mở khóa tài khoản")
+@Tag(name = "Users", description = "Các API dành cho Quản trị viên để tạo, xem, khóa/mở khóa tài khoản")
 public class UserController {
 
     private final UserService userService;

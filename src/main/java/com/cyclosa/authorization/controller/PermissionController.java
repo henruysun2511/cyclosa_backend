@@ -17,7 +17,7 @@ import java.util.Map;
 @RestController
 @RequestMapping("/api/v1/permissions")
 @RequiredArgsConstructor
-@Tag(name = "03. Phân quyền - Quyền chức năng", description = "APIs tra cứu danh mục quyền chức năng hệ thống")
+@Tag(name = "Permissions", description = "APIs tra cứu danh mục quyền chức năng hệ thống")
 public class PermissionController {
 
     private final PermissionService permissionService;

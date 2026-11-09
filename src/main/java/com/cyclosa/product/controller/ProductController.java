@@ -22,7 +22,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/products")
 @RequiredArgsConstructor
-@Tag(name = "Product Sample Module", description = "Module mẫu chuẩn CRUD, lọc động, phân trang và xóa mềm")
+@Tag(name = "Products", description = "Module mẫu chuẩn CRUD, lọc động, phân trang và xóa mềm")
 public class ProductController {
 
     private final ProductService productService;

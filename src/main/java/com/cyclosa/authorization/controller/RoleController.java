@@ -26,7 +26,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/v1/roles")
 @RequiredArgsConstructor
-@Tag(name = "03. Phân quyền - Quản lý Vai trò", description = "APIs quản lý vai trò và thiết lập ma trận phân quyền")
+@Tag(name = "Roles", description = "APIs quản lý vai trò và thiết lập ma trận phân quyền")
 public class RoleController {
 
     private final RoleService roleService;

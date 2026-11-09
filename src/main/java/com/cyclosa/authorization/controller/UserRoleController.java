@@ -19,7 +19,7 @@ import java.util.UUID;
 
 @RestController
 @RequiredArgsConstructor
-@Tag(name = "03. Phân quyền - Gán Vai trò & Quyền Hiệu lực", description = "APIs gán vai trò người dùng theo pháp nhân công ty và tra cứu quyền hiệu lực")
+@Tag(name = "User Roles", description = "APIs gán vai trò người dùng theo pháp nhân công ty và tra cứu quyền hiệu lực")
 public class UserRoleController {
 
     private final UserRoleService userRoleService;
