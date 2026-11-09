@@ -95,7 +95,11 @@ public class RolePermissionDataInitializer implements ApplicationRunner {
                 new PermissionDefinition("WORKPLACE", "MANAGE", "workplace.manage", "Quản lý cơ sở vật chất và cấp phát tài sản"),
 
                 // AUDIT
-                new PermissionDefinition("AUDIT", "VIEW", "audit.view", "Xem nhật ký kiểm toán và báo cáo tuân thủ")
+                new PermissionDefinition("AUDIT", "VIEW", "audit.view", "Xem nhật ký kiểm toán và báo cáo tuân thủ"),
+
+                // WORKFLOW
+                new PermissionDefinition("WORKFLOW", "VIEW", "workflow.view", "Xem danh sách và tiến trình phê duyệt hồ sơ"),
+                new PermissionDefinition("WORKFLOW", "MANAGE", "workflow.manage", "Cấu hình quy trình phê duyệt của công ty")
         );
 
         Map<String, Permission> permMap = new HashMap<>();

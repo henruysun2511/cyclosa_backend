@@ -17,6 +17,9 @@ import com.cyclosa.organization.repository.CompanyRepository;
 import com.cyclosa.organization.repository.DepartmentRepository;
 import com.cyclosa.organization.repository.DepartmentVersionRepository;
 import com.cyclosa.organization.repository.JobTitleRepository;
+import com.cyclosa.workflow.dto.request.SubmitWorkflowRequest;
+import com.cyclosa.workflow.enums.RequestType;
+import com.cyclosa.workflow.service.WorkflowExecutionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -49,6 +52,7 @@ public class ContractService {
     private final BranchRepository branchRepository;
     private final JobTitleRepository jobTitleRepository;
     private final ContractComplianceService complianceService;
+    private final WorkflowExecutionService workflowExecutionService;
 
     @Transactional(readOnly = true)
     public PageData<ContractDto.ContractSummaryResponse> getContracts(
@@ -235,6 +239,22 @@ public class ContractService {
 
         contract.setStatus(ContractStatus.PENDING_APPROVAL);
         contractRepository.save(contract);
+
+        String employeeName = "";
+        if (contract.getEmployeeId() != null) {
+            employeeName = employeeRepository.findById(contract.getEmployeeId())
+                    .map(Employee::getFullName).orElse("");
+        }
+
+        workflowExecutionService.submit(SubmitWorkflowRequest.builder()
+                .companyId(contract.getEmployerCompanyId())
+                .requestType(RequestType.CONTRACT)
+                .referenceId(contract.getId())
+                .referenceCode(contract.getContractNo())
+                .title("Phê duyệt Hợp đồng lao động: " + contract.getContractNo() + (employeeName.isBlank() ? "" : " - " + employeeName))
+                .requesterEmployeeId(contract.getEmployeeId())
+                .requestAmount(contract.getBaseSalary())
+                .build());
     }
 
     @Transactional
