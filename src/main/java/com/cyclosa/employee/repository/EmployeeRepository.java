@@ -31,7 +31,7 @@ public interface EmployeeRepository extends JpaRepository<Employee, UUID>, JpaSp
 
     boolean existsByUserId(UUID userId);
 
-    @Query("SELECT e FROM Employee e WHERE e.companyId = :companyId " +
+    @Query("SELECT e FROM Employee e WHERE (:companyId IS NULL OR e.companyId = :companyId) " +
            "AND (:keyword IS NULL OR :keyword = '' " +
            "OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
            "OR LOWER(CONCAT(e.lastName, ' ', e.firstName)) LIKE LOWER(CONCAT('%', :keyword, '%')) " +

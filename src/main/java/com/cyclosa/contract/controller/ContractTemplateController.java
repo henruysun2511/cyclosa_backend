@@ -33,7 +33,7 @@ public class ContractTemplateController {
     @RequirePermission("contract.view")
     @Operation(summary = "Danh sách mẫu hợp đồng phân trang")
     public ResponseEntity<ApiResponse<PageData<ContractTemplateDto.TemplateResponse>>> getTemplates(
-            @RequestParam UUID companyId,
+            @RequestParam(required = false) UUID companyId,
             @RequestParam(required = false) TemplateKind templateKind,
             @RequestParam(required = false) Boolean active,
             @RequestParam(defaultValue = "0") int page,

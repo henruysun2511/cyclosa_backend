@@ -16,7 +16,7 @@ import java.util.UUID;
 @Repository
 public interface ContractTemplateRepository extends JpaRepository<ContractTemplate, UUID> {
 
-    @Query("SELECT t FROM ContractTemplate t WHERE t.companyId = :companyId " +
+    @Query("SELECT t FROM ContractTemplate t WHERE (:companyId IS NULL OR t.companyId = :companyId) " +
            "AND (:templateKind IS NULL OR t.templateKind = :templateKind) " +
            "AND (:active IS NULL OR t.active = :active) " +
            "ORDER BY t.createdAt DESC")

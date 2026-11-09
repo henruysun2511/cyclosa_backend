@@ -46,7 +46,7 @@ public class ContractController {
     @RequirePermission("contract.view")
     @Operation(summary = "Lấy danh sách hợp đồng phân trang")
     public ResponseEntity<ApiResponse<PageData<ContractDto.ContractSummaryResponse>>> getContracts(
-            @RequestParam UUID companyId,
+            @RequestParam(required = false) UUID companyId,
             @RequestParam(required = false) UUID employeeId,
             @RequestParam(required = false) ContractType contractType,
             @RequestParam(required = false) ContractStatus status,

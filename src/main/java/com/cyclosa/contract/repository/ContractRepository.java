@@ -24,7 +24,7 @@ public interface ContractRepository extends JpaRepository<Contract, UUID> {
 
     List<Contract> findByEmployeeIdOrderByStartDateDesc(UUID employeeId);
 
-    @Query("SELECT c FROM Contract c WHERE c.employerCompanyId = :companyId " +
+    @Query("SELECT c FROM Contract c WHERE (:companyId IS NULL OR c.employerCompanyId = :companyId) " +
            "AND (:employeeId IS NULL OR c.employeeId = :employeeId) " +
            "AND (:contractType IS NULL OR c.contractType = :contractType) " +
            "AND (:status IS NULL OR c.status = :status) " +

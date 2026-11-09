@@ -629,3 +629,4 @@ gantt
   1. Khởi tạo bản ghi nhân viên trên **Module 05: Hồ sơ nhân sự (`employees`)**.
   2. Khởi tạo tiến trình tiếp nhận trên **Module 06: Hội nhập nhân sự (`onboarding_processes`)**.
   3. Sẵn sàng tạo hợp đồng thử việc hoặc chính thức trên **Module 08: Hợp đồng lao động (`contracts`)**.
+
